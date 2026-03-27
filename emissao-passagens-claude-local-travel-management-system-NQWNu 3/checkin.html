@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in - Sistema de Emissão de Passagens</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">
+                <i class="bi bi-airplane-fill me-2"></i>
+                Mais Voo
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">
+                            <i class="bi bi-house-fill"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="vendas.html">
+                            <i class="bi bi-cart-fill"></i> Vendas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pacotes.html">
+                            <i class="bi bi-box-fill"></i> Pacotes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="cotacoes.html">
+                            <i class="bi bi-calculator-fill"></i> Cotações
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pessoas.html">
+                            <i class="bi bi-people-fill"></i> Pessoas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="checkin.html">
+                            <i class="bi bi-clock-fill"></i> Check-in
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="backup.html">
+                            <i class="bi bi-cloud-arrow-down-fill"></i> Backup
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="bi bi-clock-fill me-2"></i>Monitoramento de Check-in</h2>
+                <p class="text-muted">Acompanhe os voos próximos com contador regressivo em tempo real</p>
+            </div>
+        </div>
+
+        <!-- Filtros de Período -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="filter-group">
+                            <button class="filter-btn active" onclick="filtrarPorPeriodo('hoje')">
+                                <i class="bi bi-calendar-day me-2"></i>Hoje
+                            </button>
+                            <button class="filter-btn" onclick="filtrarPorPeriodo('7dias')">
+                                <i class="bi bi-calendar-week me-2"></i>Próximos 7 dias
+                            </button>
+                            <button class="filter-btn" onclick="filtrarPorPeriodo('30dias')">
+                                <i class="bi bi-calendar-month me-2"></i>Próximos 30 dias
+                            </button>
+                            <button class="filter-btn" onclick="filtrarPorPeriodo('todos')">
+                                <i class="bi bi-calendar3 me-2"></i>Todos os voos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estatísticas Rápidas -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card stat-card danger">
+                    <div class="card-body">
+                        <div class="stat-label">Urgente (< 24h)</div>
+                        <div class="stat-value" id="urgentes">0</div>
+                        <small class="text-muted">Requerem ação imediata</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card stat-card warning">
+                    <div class="card-body">
+                        <div class="stat-label">Atenção (24-72h)</div>
+                        <div class="stat-value" id="atencao">0</div>
+                        <small class="text-muted">Próximos 3 dias</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card stat-card success">
+                    <div class="card-body">
+                        <div class="stat-label">No prazo (> 72h)</div>
+                        <div class="stat-value" id="noPrazo">0</div>
+                        <small class="text-muted">Tranquilo</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Voos -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-list-ul me-2"></i>
+                            Voos Monitorados (<span id="totalVoos">0</span>)
+                        </span>
+                        <div>
+                            <button class="btn btn-sm btn-light" onclick="ordenarPor('data')">
+                                <i class="bi bi-sort-down me-1"></i>Por Data
+                            </button>
+                            <button class="btn btn-sm btn-light" onclick="ordenarPor('urgencia')">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Por Urgência
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" id="listaVoos">
+                        <div class="empty-state">
+                            <i class="bi bi-calendar-x"></i>
+                            <p>Nenhum voo para monitorar no período selecionado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes do Voo -->
+    <div class="modal fade" id="modalDetalhes" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-info-circle me-2"></i>Detalhes do Voo
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detalhesVoo">
+                    <!-- Conteúdo dinâmico -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <a href="vendas.html" class="btn btn-primary" id="btnEditarVenda">
+                        <i class="bi bi-pencil me-2"></i>Editar Venda
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="js/storage.js"></script>
+    <script src="js/utils.js"></script>
+
+    <script>
+        let periodoAtual = 'hoje';
+        let ordenacaoAtual = 'data';
+        let modalDetalhes;
+        let intervalId;
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            modalDetalhes = new bootstrap.Modal(document.getElementById('modalDetalhes'));
+            carregarVoos();
+
+            // Atualizar a cada segundo
+            intervalId = setInterval(carregarVoos, 1000);
+        });
+
+        // Filtrar por período
+        function filtrarPorPeriodo(periodo) {
+            periodoAtual = periodo;
+
+            // Atualizar botões ativos
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.filter-btn').classList.add('active');
+
+            carregarVoos();
+        }
+
+        // Ordenar
+        function ordenarPor(tipo) {
+            ordenacaoAtual = tipo;
+            carregarVoos();
+        }
+
+        // Carregar voos
+        function carregarVoos() {
+            let vendas = StorageManager.getVendas();
+
+            // Filtrar por período
+            vendas = Utils.filtrarPorPeriodo(vendas, periodoAtual);
+
+            // Filtrar apenas voos futuros (validar se data existe)
+            const agora = new Date();
+            vendas = vendas.filter(v => {
+                if (!v.dataEmbarque || !v.horaEmbarque) return false;
+                try {
+                    const dataVoo = new Date(v.dataEmbarque + ' ' + v.horaEmbarque);
+                    return dataVoo > agora;
+                } catch (error) {
+                    console.error('Erro ao processar data da venda:', v.localizador, error);
+                    return false;
+                }
+            });
+
+            // Ordenar
+            if (ordenacaoAtual === 'data') {
+                vendas = Utils.ordenarPorData(vendas, 'dataEmbarque', 'asc');
+            } else if (ordenacaoAtual === 'urgencia') {
+                vendas.sort((a, b) => {
+                    const tempoA = Utils.calcularDiferencaHoras(a.dataEmbarque + ' ' + a.horaEmbarque).total;
+                    const tempoB = Utils.calcularDiferencaHoras(b.dataEmbarque + ' ' + b.horaEmbarque).total;
+                    return tempoA - tempoB;
+                });
+            }
+
+            // Calcular estatísticas
+            let urgentes = 0;
+            let atencao = 0;
+            let noPrazo = 0;
+
+            vendas.forEach(venda => {
+                const tempo = Utils.calcularDiferencaHoras(venda.dataEmbarque + ' ' + venda.horaEmbarque);
+                const horas = tempo.horas;
+
+                if (horas < 24) urgentes++;
+                else if (horas < 72) atencao++;
+                else noPrazo++;
+            });
+
+            document.getElementById('urgentes').textContent = urgentes;
+            document.getElementById('atencao').textContent = atencao;
+            document.getElementById('noPrazo').textContent = noPrazo;
+            document.getElementById('totalVoos').textContent = vendas.length;
+
+            exibirVoos(vendas);
+        }
+
+        // Exibir voos
+        function exibirVoos(vendas) {
+            const container = document.getElementById('listaVoos');
+
+            if (vendas.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-calendar-x"></i>
+                        <p>Nenhum voo para monitorar no período selecionado</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            vendas.forEach(venda => {
+                const cliente = StorageManager.getClienteById(venda.clienteId);
+                const fornecedor = StorageManager.getFornecedorById(venda.fornecedorId);
+                const tempo = Utils.calcularDiferencaHoras(venda.dataEmbarque + ' ' + venda.horaEmbarque);
+                const horas = tempo.horas;
+                const alertClass = Utils.getAlertClass(horas);
+                const countdownClass = Utils.getCountdownClass(horas);
+
+                let statusIcon = '';
+                let statusText = '';
+
+                if (horas < 24) {
+                    statusIcon = '<i class="bi bi-exclamation-triangle-fill text-danger"></i>';
+                    statusText = '<span class="badge bg-danger">URGENTE</span>';
+                } else if (horas < 72) {
+                    statusIcon = '<i class="bi bi-exclamation-circle-fill text-warning"></i>';
+                    statusText = '<span class="badge bg-warning">ATENÇÃO</span>';
+                } else {
+                    statusIcon = '<i class="bi bi-check-circle-fill text-success"></i>';
+                    statusText = '<span class="badge bg-success">NO PRAZO</span>';
+                }
+
+                html += `
+                    <div class="checkin-alert ${alertClass} mb-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-1 text-center">
+                                ${statusIcon}
+                            </div>
+                            <div class="col-md-5">
+                                <div class="mb-1">
+                                    <strong style="font-size: 1.1rem;">${venda.localizador}</strong>
+                                    ${statusText}
+                                </div>
+                                <div class="mb-1">
+                                    <i class="bi bi-person me-1"></i>
+                                    <strong>${cliente ? cliente.nome : 'N/A'}</strong>
+                                </div>
+                                <div>
+                                    <i class="bi bi-geo-alt me-1"></i>
+                                    ${venda.origem} → ${venda.destino}
+                                    ${venda.numeroVoo ? `<span class="badge bg-secondary ms-2">${venda.numeroVoo}</span>` : ''}
+                                </div>
+                                ${fornecedor ? `
+                                    <div class="mt-1">
+                                        <i class="bi bi-building me-1"></i>
+                                        <small>${fornecedor.nome}</small>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="mb-1">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    ${Utils.formatDate(venda.dataEmbarque)}
+                                </div>
+                                <div>
+                                    <i class="bi bi-clock me-1"></i>
+                                    ${venda.horaEmbarque}
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="countdown ${countdownClass}" style="font-size: 1.8rem;">
+                                    ${Utils.formatCountdown(tempo)}
+                                </div>
+                                <small class="text-muted">até o embarque</small>
+                                <div class="mt-2">
+                                    ${venda.linkRastreamento ? `
+                                        <a href="${venda.linkRastreamento}" target="_blank" class="btn btn-sm btn-info me-1" title="Rastrear voo">
+                                            <i class="bi bi-link-45deg me-1"></i>Rastrear
+                                        </a>
+                                    ` : ''}
+                                    <button class="btn btn-sm btn-primary" onclick="verDetalhes('${venda.id}')">
+                                        <i class="bi bi-info-circle me-1"></i>Detalhes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Ver detalhes do voo
+        function verDetalhes(vendaId) {
+            const venda = StorageManager.getVendaById(vendaId);
+            if (!venda) return;
+
+            const cliente = StorageManager.getClienteById(venda.clienteId);
+            const fornecedor = StorageManager.getFornecedorById(venda.fornecedorId);
+            const tempo = Utils.calcularDiferencaHoras(venda.dataEmbarque + ' ' + venda.horaEmbarque);
+            const margem = Utils.calcularMargemLucro(venda.valorVenda, venda.valorCusto);
+            const lucro = Utils.calcularLucro(venda.valorVenda, venda.valorCusto);
+            const margemClass = Utils.getMargemClass(margem);
+
+            const detalhesHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6><i class="bi bi-ticket-detailed me-2"></i>Informações do Voo</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Localizador:</th>
+                                <td><strong>${venda.localizador}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Origem:</th>
+                                <td>${venda.origem}</td>
+                            </tr>
+                            <tr>
+                                <th>Destino:</th>
+                                <td>${venda.destino}</td>
+                            </tr>
+                            <tr>
+                                <th>Data:</th>
+                                <td>${Utils.formatDate(venda.dataEmbarque)}</td>
+                            </tr>
+                            <tr>
+                                <th>Hora:</th>
+                                <td>${venda.horaEmbarque}</td>
+                            </tr>
+                            ${venda.numeroVoo ? `
+                            <tr>
+                                <th>Voo:</th>
+                                <td>${venda.numeroVoo}</td>
+                            </tr>
+                            ` : ''}
+                            ${fornecedor ? `
+                            <tr>
+                                <th>Companhia:</th>
+                                <td>${fornecedor.nome}</td>
+                            </tr>
+                            ` : ''}
+                            ${venda.linkRastreamento ? `
+                            <tr>
+                                <th>Rastreamento:</th>
+                                <td>
+                                    <a href="${venda.linkRastreamento}" target="_blank" class="btn btn-sm btn-info">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Acompanhar Voo
+                                    </a>
+                                </td>
+                            </tr>
+                            ` : ''}
+                        </table>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <h6><i class="bi bi-person me-2"></i>Informações do Cliente</h6>
+                        ${cliente ? `
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Nome:</th>
+                                <td>${cliente.nome}</td>
+                            </tr>
+                            <tr>
+                                <th>CPF:</th>
+                                <td>${Utils.formatCPF(cliente.cpf)}</td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td>${cliente.email || 'Não informado'}</td>
+                            </tr>
+                            <tr>
+                                <th>Telefone:</th>
+                                <td>${Utils.formatPhone(cliente.telefone)}</td>
+                            </tr>
+                        </table>
+                        ` : '<p class="text-muted">Cliente não encontrado</p>'}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <h6><i class="bi bi-cash-stack me-2"></i>Informações Financeiras</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Valor de Venda:</th>
+                                <td>${Utils.formatCurrency(venda.valorVenda)}</td>
+                            </tr>
+                            <tr>
+                                <th>Valor de Custo:</th>
+                                <td>${Utils.formatCurrency(venda.valorCusto)}</td>
+                            </tr>
+                            <tr>
+                                <th>Lucro:</th>
+                                <td class="${margemClass}">${Utils.formatCurrency(lucro)}</td>
+                            </tr>
+                            <tr>
+                                <th>Margem:</th>
+                                <td class="${margemClass}">${Utils.formatMargemLucro(margem)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-clock-history me-2"></i>Tempo Restante</h6>
+                            <div class="countdown ${Utils.getCountdownClass(tempo.horas)}" style="font-size: 2rem;">
+                                ${Utils.formatCountdown(tempo)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${venda.observacoes ? `
+                <div class="row">
+                    <div class="col-12">
+                        <h6><i class="bi bi-note-sticky me-2"></i>Observações</h6>
+                        <p>${venda.observacoes}</p>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+
+            document.getElementById('detalhesVoo').innerHTML = detalhesHTML;
+            modalDetalhes.show();
+        }
+
+        // Limpar intervalo ao sair da página
+        window.addEventListener('beforeunload', () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        });
+    </script>
+</body>
+</html>

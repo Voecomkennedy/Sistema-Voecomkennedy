@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Autocomplete</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 50px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .autocomplete-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .autocomplete-item:hover {
+            background-color: #f8f9fa;
+        }
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+        .codigo {
+            font-weight: bold;
+            color: #D4AF37;
+            margin-right: 8px;
+        }
+        .cidade {
+            color: #2C3E50;
+        }
+        .pais {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Teste de Autocomplete de Aeroportos</h1>
+
+        <div class="form-group">
+            <label>Origem:</label>
+            <input type="text" id="origem" placeholder="Digite código ou cidade (ex: GRU, São Paulo, Guarulhos)">
+            <div id="sugestoesOrigem" class="autocomplete-dropdown" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+            <label>Destino:</label>
+            <input type="text" id="destino" placeholder="Digite código ou cidade (ex: MCO, Orlando)">
+            <div id="sugestoesDestino" class="autocomplete-dropdown" style="display: none;"></div>
+        </div>
+
+        <div class="info">
+            <strong>Status:</strong> <span id="status">Carregando aeroportos...</span><br>
+            <strong>Aeroportos carregados:</strong> <span id="total">0</span>
+        </div>
+    </div>
+
+    <script>
+        let aeroportos = [];
+
+        // Carregar aeroportos do JSON
+        async function carregarAeroportos() {
+            try {
+                const response = await fetch('data/aeroportos.json');
+                aeroportos = await response.json();
+                document.getElementById('status').textContent = 'Aeroportos carregados com sucesso! ✓';
+                document.getElementById('total').textContent = aeroportos.length;
+                console.log(`${aeroportos.length} aeroportos carregados`);
+            } catch (error) {
+                console.error('Erro ao carregar aeroportos:', error);
+                document.getElementById('status').textContent = 'ERRO ao carregar: ' + error.message;
+            }
+        }
+
+        // Filtrar aeroportos
+        function filtrarAeroportos(texto) {
+            if (!texto || texto.length < 2) return [];
+
+            const busca = texto.toLowerCase();
+            return aeroportos.filter(aeroporto => {
+                return aeroporto.codigo.toLowerCase().includes(busca) ||
+                       aeroporto.nome.toLowerCase().includes(busca) ||
+                       aeroporto.aeroporto.toLowerCase().includes(busca) ||
+                       aeroporto.pais.toLowerCase().includes(busca);
+            }).slice(0, 15);
+        }
+
+        // Mostrar sugestões
+        function mostrarSugestoes(inputId, sugestoesId) {
+            const input = document.getElementById(inputId);
+            const sugestoesDiv = document.getElementById(sugestoesId);
+            const texto = input.value;
+
+            console.log('mostrarSugestoes chamado:', inputId, texto);
+
+            if (!texto || texto.length < 2) {
+                sugestoesDiv.style.display = 'none';
+                return;
+            }
+
+            const resultados = filtrarAeroportos(texto);
+            console.log('Resultados encontrados:', resultados.length);
+
+            if (resultados.length === 0) {
+                sugestoesDiv.style.display = 'none';
+                return;
+            }
+
+            let html = '';
+            resultados.forEach(aeroporto => {
+                const aeroportoTexto = aeroporto.aeroporto !== aeroporto.nome ? `, ${aeroporto.aeroporto}` : '';
+                html += `
+                    <div class="autocomplete-item" onclick="selecionarAeroporto('${inputId}', '${sugestoesId}', '${aeroporto.codigo}')">
+                        <span class="codigo">${aeroporto.codigo}</span>
+                        <span class="cidade">${aeroporto.nome}${aeroportoTexto}</span>
+                        <span class="pais">- ${aeroporto.pais}</span>
+                    </div>
+                `;
+            });
+
+            sugestoesDiv.innerHTML = html;
+            sugestoesDiv.style.display = 'block';
+            console.log('Dropdown exibido');
+        }
+
+        // Selecionar aeroporto
+        function selecionarAeroporto(inputId, sugestoesId, codigo) {
+            const input = document.getElementById(inputId);
+            const sugestoesDiv = document.getElementById(sugestoesId);
+
+            input.value = codigo;
+            sugestoesDiv.style.display = 'none';
+            console.log('Aeroporto selecionado:', codigo);
+        }
+
+        // Configurar autocomplete
+        function configurarAutocomplete(inputId, sugestoesId) {
+            const input = document.getElementById(inputId);
+            const sugestoesDiv = document.getElementById(sugestoesId);
+
+            console.log('Configurando autocomplete para:', inputId);
+
+            input.addEventListener('input', function() {
+                console.log('Input event:', this.value);
+                mostrarSugestoes(inputId, sugestoesId);
+            });
+
+            document.addEventListener('click', function(e) {
+                if (e.target !== input && !sugestoesDiv.contains(e.target)) {
+                    sugestoesDiv.style.display = 'none';
+                }
+            });
+
+            input.addEventListener('focus', function() {
+                if (this.value.length >= 2) {
+                    mostrarSugestoes(inputId, sugestoesId);
+                }
+            });
+        }
+
+        // Inicializar
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Página carregada');
+            carregarAeroportos();
+            configurarAutocomplete('origem', 'sugestoesOrigem');
+            configurarAutocomplete('destino', 'sugestoesDestino');
+        });
+    </script>
+</body>
+</html>

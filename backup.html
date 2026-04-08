@@ -18,7 +18,7 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="index.html">
                 <i class="bi bi-airplane-fill me-2"></i>
-                VoeComKennedy
+                Mais Voo
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -33,6 +33,16 @@
                     <li class="nav-item">
                         <a class="nav-link" href="vendas.html">
                             <i class="bi bi-cart-fill"></i> Vendas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pacotes.html">
+                            <i class="bi bi-box-fill"></i> Pacotes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="cotacoes.html">
+                            <i class="bi bi-calculator-fill"></i> Cotações
                         </a>
                     </li>
                     <li class="nav-item">
@@ -228,6 +238,7 @@
         function atualizarEstatisticas() {
             const vendas = StorageManager.getVendas();
             const pessoas = StorageManager.getPessoas();
+            const cotacoes = StorageManager.getCotacoes();
 
             const totalVendas = vendas.reduce((sum, v) => sum + parseFloat(v.valorVenda || 0), 0);
             const totalCusto = vendas.reduce((sum, v) => sum + parseFloat(v.valorCusto || 0), 0);
@@ -235,7 +246,7 @@
 
             const totalPassageiros = vendas.reduce((sum, v) => sum + parseInt(v.quantidadePassageiros || 0), 0);
 
-            const totalRegistros = vendas.length + pessoas.length;
+            const totalRegistros = vendas.length + pessoas.length + cotacoes.length;
 
             document.getElementById('totalRegistros').textContent = totalRegistros;
             document.getElementById('totalVendas').textContent = Utils.formatCurrency(totalVendas);
@@ -252,13 +263,15 @@
             try {
                 const vendas = StorageManager.getVendas();
                 const pessoas = StorageManager.getPessoas();
+                const cotacoes = StorageManager.getCotacoes();
 
                 const backup = {
                     versao: '1.0',
                     dataExportacao: new Date().toISOString(),
                     dados: {
                         vendas: vendas,
-                        pessoas: pessoas
+                        pessoas: pessoas,
+                        cotacoes: cotacoes
                     }
                 };
 
@@ -303,6 +316,11 @@
                     // Restaurar dados
                     localStorage.setItem(StorageManager.KEYS.VENDAS, JSON.stringify(backup.dados.vendas));
                     localStorage.setItem(StorageManager.KEYS.PESSOAS, JSON.stringify(backup.dados.pessoas));
+
+                    // Restaurar cotações se existirem no backup
+                    if (backup.dados.cotacoes) {
+                        localStorage.setItem(StorageManager.KEYS.COTACOES, JSON.stringify(backup.dados.cotacoes));
+                    }
 
                     Utils.showSuccess('Backup importado com sucesso!');
 

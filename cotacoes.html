@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotações - Sistema de Emissão de Passagens</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">
+                <i class="bi bi-airplane-fill me-2"></i>
+                Mais Voo
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">
+                            <i class="bi bi-house-fill"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="vendas.html">
+                            <i class="bi bi-cart-fill"></i> Vendas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pacotes.html">
+                            <i class="bi bi-box-fill"></i> Pacotes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="cotacoes.html">
+                            <i class="bi bi-calculator-fill"></i> Cotações
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pessoas.html">
+                            <i class="bi bi-people-fill"></i> Pessoas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="checkin.html">
+                            <i class="bi bi-clock-fill"></i> Check-in
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="backup.html">
+                            <i class="bi bi-cloud-arrow-down-fill"></i> Backup
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="bi bi-calculator-fill me-2"></i>Cotações de Viagens</h2>
+                <p class="text-muted">Crie orçamentos profissionais para seus clientes. Gere PDF ou copie para WhatsApp!</p>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <button class="btn btn-primary btn-lg" onclick="abrirModalCotacao()">
+                    <i class="bi bi-plus-circle me-2"></i>Nova Cotação
+                </button>
+                <button class="btn btn-outline-secondary btn-lg ms-2" onclick="carregarCotacoes()">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Atualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Estatísticas Rápidas -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-label">Total de Cotações</div>
+                        <div class="stat-value" id="totalCotacoes">0</div>
+                        <small class="text-muted">Todas as cotações</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card success">
+                    <div class="card-body">
+                        <div class="stat-label">Convertidas</div>
+                        <div class="stat-value" id="cotacoesConvertidas">0</div>
+                        <small class="text-muted">Viraram vendas</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card warning">
+                    <div class="card-body">
+                        <div class="stat-label">Em Aberto</div>
+                        <div class="stat-value" id="cotacoesAbertas">0</div>
+                        <small class="text-muted">Aguardando cliente</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stat-card danger">
+                    <div class="card-body">
+                        <div class="stat-label">Perdidas</div>
+                        <div class="stat-value" id="cotacoesPerdidas">0</div>
+                        <small class="text-muted">Não concretizadas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row align-items-end">
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">Buscar</label>
+                                <input type="text" class="form-control" id="buscaCotacao" placeholder="Cliente, origem, destino...">
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="filtroStatus" onchange="aplicarFiltros()">
+                                    <option value="todas">Todas</option>
+                                    <option value="aberta">Em Aberto</option>
+                                    <option value="convertida">Convertidas</option>
+                                    <option value="perdida">Perdidas</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label">Ordenar por</label>
+                                <select class="form-select" id="ordenacaoCotacao" onchange="aplicarFiltros()">
+                                    <option value="data_desc">Data (mais recente)</option>
+                                    <option value="data_asc">Data (mais antiga)</option>
+                                    <option value="valor_desc">Valor (maior)</option>
+                                    <option value="valor_asc">Valor (menor)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <button class="btn btn-secondary w-100" onclick="limparFiltros()">
+                                    <i class="bi bi-x-circle me-2"></i>Limpar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Cotações -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-list-ul me-2"></i>
+                        Lista de Cotações (<span id="totalRegistros">0</span>)
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Cliente</th>
+                                        <th>Rota</th>
+                                        <th>Companhia</th>
+                                        <th>Passageiros</th>
+                                        <th>Valor Total</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaCotacoes">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-4">
+                                            Nenhuma cotação cadastrada. Clique em "Nova Cotação" para começar.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cadastro/Edição de Cotação -->
+    <div class="modal fade" id="modalCotacao" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="tituloCotacao">
+                        <i class="bi bi-plus-circle me-2"></i>Nova Cotação
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formCotacao">
+                        <input type="hidden" id="cotacaoId">
+
+                        <!-- Dados do Cliente -->
+                        <h6 class="mb-3"><i class="bi bi-person-circle me-2"></i>Dados do Cliente</h6>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Nome do Cliente *</label>
+                                <input type="text" class="form-control" id="nomeCliente" required placeholder="Sudário Geraldo">
+                            </div>
+                        </div>
+
+                        <!-- Passageiros -->
+                        <h6 class="mb-3 mt-4"><i class="bi bi-people-fill me-2"></i>Passageiros</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Adultos (12+ anos)</label>
+                                <select class="form-select" id="adultos" onchange="calcularTotalPassageiros()">
+                                    <option value="0">Nenhum</option>
+                                    <option value="1" selected>1 adulto</option>
+                                    <option value="2">2 adultos</option>
+                                    <option value="3">3 adultos</option>
+                                    <option value="4">4 adultos</option>
+                                    <option value="5">5 adultos</option>
+                                    <option value="6">6 adultos</option>
+                                    <option value="7">7 adultos</option>
+                                    <option value="8">8 adultos</option>
+                                    <option value="9">9 adultos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Crianças (2-11 anos)</label>
+                                <select class="form-select" id="criancas" onchange="calcularTotalPassageiros()">
+                                    <option value="0" selected>Nenhuma</option>
+                                    <option value="1">1 criança</option>
+                                    <option value="2">2 crianças</option>
+                                    <option value="3">3 crianças</option>
+                                    <option value="4">4 crianças</option>
+                                    <option value="5">5 crianças</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Bebês (0-23 meses)</label>
+                                <select class="form-select" id="bebes" onchange="calcularTotalPassageiros()">
+                                    <option value="0" selected>Nenhum</option>
+                                    <option value="1">1 bebê</option>
+                                    <option value="2">2 bebês</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <div class="alert alert-info">
+                                    <strong>Total de Passageiros:</strong> <span id="totalPassageiros">1 adulto</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detalhes do Voo -->
+                        <h6 class="mb-3 mt-4"><i class="bi bi-airplane-fill me-2"></i>Detalhes do Voo</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3 position-relative">
+                                <label class="form-label">Origem *</label>
+                                <input type="text" class="form-control" id="origemCotacao" required placeholder="Digite código ou cidade" autocomplete="off">
+                                <div id="sugestoesOrigemCotacao" class="autocomplete-dropdown" style="display: none;"></div>
+                            </div>
+                            <div class="col-md-6 mb-3 position-relative">
+                                <label class="form-label">Destino *</label>
+                                <input type="text" class="form-control" id="destinoCotacao" required placeholder="Digite código ou cidade" autocomplete="off">
+                                <div id="sugestoesDestinoCotacao" class="autocomplete-dropdown" style="display: none;"></div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Companhia Aérea *</label>
+                                <select class="form-select" id="companhiaCotacao" required onchange="calcularCotacao()">
+                                    <option value="">Selecione...</option>
+                                    <option value="LATAM">LATAM</option>
+                                    <option value="GOL">GOL (Smiles)</option>
+                                    <option value="Azul">Azul</option>
+                                    <option value="Outra">Outra</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo de Tarifa *</label>
+                                <select class="form-select" id="tipoTarifa" required onchange="preencherBagagem()">
+                                    <option value="">Selecione...</option>
+                                    <option value="Básica">Básica</option>
+                                    <option value="Light">Light</option>
+                                    <option value="Standard">Standard</option>
+                                    <option value="Plus">Plus</option>
+                                    <option value="Executiva">Executiva</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo de Viagem *</label>
+                                <select class="form-select" id="tipoViagem" required onchange="toggleVolta()">
+                                    <option value="ida-volta">Ida e Volta</option>
+                                    <option value="so-ida">Só Ida</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Link da Companhia Aérea</label>
+                                <input type="url" class="form-control" id="linkCompanhia" placeholder="https://...">
+                                <small class="text-muted">Salve o link para consultar depois</small>
+                            </div>
+                        </div>
+
+                        <!-- Voo de IDA -->
+                        <div class="alert alert-info">
+                            <strong><i class="bi bi-arrow-right-circle me-2"></i>Voo de IDA</strong>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Data de Saída *</label>
+                                <input type="date" class="form-control" id="dataSaidaIda" required onchange="atualizarCalendarios(); calcularTempoVoo('ida')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Horário Saída *</label>
+                                <input type="time" class="form-control" id="horaSaidaIda" required onchange="calcularTempoVoo('ida')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Data de Chegada *</label>
+                                <input type="date" class="form-control" id="dataChegadaIda" required onchange="atualizarCalendarios(); calcularTempoVoo('ida')">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Horário Chegada *</label>
+                                <input type="time" class="form-control" id="horaChegadaIda" required onchange="calcularTempoVoo('ida')">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tempo Total de Voo (Editar ou calcular automaticamente)</label>
+                                <input type="text" class="form-control" id="tempoTotalIda" placeholder="8h 30min" style="background-color: #fff3cd; font-weight: bold;">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tem Conexão?</label>
+                                <select class="form-select" id="temConexaoIda" onchange="toggleParadasIda()">
+                                    <option value="direto">Voo Direto</option>
+                                    <option value="1">1 parada</option>
+                                    <option value="2">2 paradas</option>
+                                    <option value="3">3 paradas</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="paradasIdaContainer" style="display: none;"></div>
+
+                        <!-- Voo de VOLTA -->
+                        <div id="secaoVolta">
+                            <div class="alert alert-warning">
+                                <strong><i class="bi bi-arrow-left-circle me-2"></i>Voo de VOLTA</strong>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Data de Saída *</label>
+                                    <input type="date" class="form-control" id="dataSaidaVolta" onchange="atualizarCalendarios(); calcularTempoVoo('volta')">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Horário Saída *</label>
+                                    <input type="time" class="form-control" id="horaSaidaVolta" onchange="calcularTempoVoo('volta')">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Data de Chegada *</label>
+                                    <input type="date" class="form-control" id="dataChegadaVolta" onchange="atualizarCalendarios(); calcularTempoVoo('volta')">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Horário Chegada *</label>
+                                    <input type="time" class="form-control" id="horaChegadaVolta" onchange="calcularTempoVoo('volta')">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tempo Total de Voo (Editar ou calcular automaticamente)</label>
+                                    <input type="text" class="form-control" id="tempoTotalVolta" placeholder="8h 30min" style="background-color: #fff3cd; font-weight: bold;">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tem Conexão?</label>
+                                    <select class="form-select" id="temConexaoVolta" onchange="toggleParadasVolta()">
+                                        <option value="direto">Voo Direto</option>
+                                        <option value="1">1 parada</option>
+                                        <option value="2">2 paradas</option>
+                                        <option value="3">3 paradas</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="paradasVoltaContainer" style="display: none;"></div>
+                        </div>
+
+                        <!-- Cálculo de Valores -->
+                        <h6 class="mb-3 mt-4"><i class="bi bi-calculator me-2"></i>Cálculo de Valores (Interno - Cliente não vê milhas)</h6>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Tipo de Cotação *</label>
+                                <select class="form-select" id="tipoCotacao" required onchange="toggleTipoCotacao()">
+                                    <option value="por-milhas">Por Milhas</option>
+                                    <option value="valor-real">Por Valor Real (Consolidadora)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Campos Por Milhas -->
+                        <div id="camposPorMilhas">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Quantidade de Milhas *</label>
+                                    <input type="text" class="form-control" id="quantidadeMilhas" required placeholder="Ex: 15.000" oninput="calcularCotacao()">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Valor do Milheiro (R$) *</label>
+                                    <input type="text" class="form-control" id="valorMilheiro" required placeholder="Ex: 31,00" oninput="calcularCotacao()">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Taxas de Embarque (R$)</label>
+                                    <input type="text" class="form-control" id="taxasMilhas" placeholder="Ex: 250,00" oninput="calcularCotacao()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos Por Valor Real -->
+                        <div id="camposPorValor" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Valor Total à Vista (R$) *</label>
+                                    <input type="text" class="form-control" id="valorVistaReal" placeholder="Ex: 5.000,00" oninput="calcularCotacao()">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Lucro (R$) - Opcional</label>
+                                    <input type="text" class="form-control" id="lucroReal" placeholder="Ex: 500,00" oninput="calcularCotacao()">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Taxas de Embarque (R$) - Opcional</label>
+                                    <input type="text" class="form-control" id="taxasReal" placeholder="Ex: 250,00" oninput="calcularCotacao()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Observação (Empresa/Margem) -->
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Observação (Empresa/Margem)</label>
+                                <textarea class="form-control" id="observacaoCotacao" rows="2" placeholder="Ex: Consolidadora XYZ - margem 10%"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Valores Calculados Automaticamente -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <div class="card" style="background: linear-gradient(135deg, #D4AF37 0%, #C5A028 100%); color: white;">
+                                    <div class="card-body">
+                                        <h5 class="mb-3"><i class="bi bi-currency-dollar me-2"></i>Valores Calculados</h5>
+                                        <div class="row">
+                                            <div class="col-md-3 mb-2">
+                                                <small>VALOR POR PESSOA:</small>
+                                                <h4 id="valorPorPessoa">R$ 0,00</h4>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <small>VALOR TOTAL (PIX):</small>
+                                                <h4 id="valorTotalPix">R$ 0,00</h4>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <label class="form-label"><small>PARCELAS CARTÃO:</small></label>
+                                                <select class="form-select form-select-sm" id="numParcelas" onchange="calcularCotacao()">
+                                                    <option value="1">1x</option>
+                                                    <option value="2">2x</option>
+                                                    <option value="3">3x</option>
+                                                    <option value="4">4x</option>
+                                                    <option value="5" selected>5x</option>
+                                                    <option value="6">6x</option>
+                                                    <option value="7">7x</option>
+                                                    <option value="8">8x</option>
+                                                    <option value="9">9x</option>
+                                                    <option value="10">10x</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 mb-2">
+                                                <small>VALOR PARCELA:</small>
+                                                <h4 id="valorParcela">R$ 0,00</h4>
+                                                <small class="text-muted" id="totalParcelado">Total: R$ 0,00</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bagagem Incluída -->
+                        <h6 class="mb-3 mt-4"><i class="bi bi-luggage me-2"></i>Bagagem Incluída</h6>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Descrição da Franquia de Bagagem</label>
+                                <textarea class="form-control" id="bagagemIncluida" rows="3" placeholder="Ex: 1 mala de mão (10kg) + 1 bagagem despachada (23kg)"></textarea>
+                                <small class="text-muted">Preenchimento automático ao selecionar tipo de tarifa</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" onclick="salvarCotacao()">
+                        <i class="bi bi-save me-2"></i>Salvar Cotação
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jsPDF para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="js/aeroportos-data.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/utils.js"></script>
+
+    <script>
+        let modalCotacao;
+        let cotacaoEditandoId = null;
+        let aeroportos = AEROPORTOS_IATA;
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            modalCotacao = new bootstrap.Modal(document.getElementById('modalCotacao'));
+            carregarCotacoes();
+
+            // Adicionar evento de busca
+            document.getElementById('buscaCotacao').addEventListener('input', aplicarFiltros);
+
+            // Configurar autocomplete após um delay
+            setTimeout(() => {
+                configurarAutocompleteCotacao('origemCotacao', 'sugestoesOrigemCotacao');
+                configurarAutocompleteCotacao('destinoCotacao', 'sugestoesDestinoCotacao');
+            }, 100);
+        });
+
+        // Calcular total de passageiros
+        function calcularTotalPassageiros() {
+            const adultos = parseInt(document.getElementById('adultos').value) || 0;
+            const criancas = parseInt(document.getElementById('criancas').value) || 0;
+            const bebes = parseInt(document.getElementById('bebes').value) || 0;
+
+            let texto = '';
+            if (adultos > 0) texto += `${adultos} adulto${adultos > 1 ? 's' : ''}`;
+            if (criancas > 0) texto += (texto ? ', ' : '') + `${criancas} criança${criancas > 1 ? 's' : ''}`;
+            if (bebes > 0) texto += (texto ? ', ' : '') + `${bebes} bebê${bebes > 1 ? 's' : ''}`;
+
+            document.getElementById('totalPassageiros').textContent = texto || 'Nenhum passageiro';
+            calcularCotacao();
+        }
+
+        // Toggle tipo de cotação
+        function toggleTipoCotacao() {
+            const tipo = document.getElementById('tipoCotacao').value;
+
+            if (tipo === 'por-milhas') {
+                document.getElementById('camposPorMilhas').style.display = 'block';
+                document.getElementById('camposPorValor').style.display = 'none';
+            } else {
+                document.getElementById('camposPorMilhas').style.display = 'none';
+                document.getElementById('camposPorValor').style.display = 'block';
+            }
+
+            calcularCotacao();
+        }
+
+        // Toggle seção de volta
+        function toggleVolta() {
+            const tipoViagem = document.getElementById('tipoViagem').value;
+            document.getElementById('secaoVolta').style.display = tipoViagem === 'ida-volta' ? 'block' : 'none';
+        }
+
+        // Preencher bagagem automaticamente
+        function preencherBagagem() {
+            const tarifa = document.getElementById('tipoTarifa').value;
+            const campoBagagem = document.getElementById('bagagemIncluida');
+
+            const bagagens = {
+                'Básica': '1 bolsa ou mochila (por pessoa)\nSem direito a mala despachada',
+                'Light': '1 bolsa ou mochila até 10 kg (por pessoa)\n1 mala pequena até 12 kg (por pessoa)\nSujeita a ser despachada no embarque',
+                'Standard': '1 bolsa ou mochila até 10 kg (por pessoa)\nDeve ser acomodada no assento da frente\n1 bagagem despachada 23 kg (por pessoa)\nRemarcação com taxa - diferença de preço',
+                'Plus': '1 bolsa ou mochila até 10 kg (por pessoa)\nDeve ser acomodada no assento da frente\n1 bagagem despachada 23 kg (por pessoa)\nRemarcação com taxa - diferença de preço\nReembolso antes da partida do primeiro voo',
+                'Executiva': '1 bolsa ou mochila até 10 kg (por pessoa)\n1 bagagem despachada 23 kg (por pessoa)\nRemarcação sem taxa - diferença de preço\nSeleção de assento comum\nSolicitação de upgrade de cabine com trechos'
+            };
+
+            campoBagagem.value = bagagens[tarifa] || '';
+        }
+
+        // Calcular tempo de voo (automático, mas pode ser editado manualmente)
+        function calcularTempoVoo(tipo) {
+            const prefixo = tipo === 'ida' ? 'Ida' : 'Volta';
+            const dataSaida = document.getElementById(`dataSaida${prefixo}`).value;
+            const horaSaida = document.getElementById(`horaSaida${prefixo}`).value;
+            const dataChegada = document.getElementById(`dataChegada${prefixo}`).value;
+            const horaChegada = document.getElementById(`horaChegada${prefixo}`).value;
+
+            if (!dataSaida || !horaSaida || !dataChegada || !horaChegada) return;
+
+            const inicio = new Date(`${dataSaida} ${horaSaida}`);
+            const fim = new Date(`${dataChegada} ${horaChegada}`);
+            const diff = fim - inicio;
+
+            if (diff <= 0) {
+                document.getElementById(`tempoTotal${prefixo}`).value = 'Erro: chegada antes da saída';
+                return;
+            }
+
+            const horas = Math.floor(diff / (1000 * 60 * 60));
+            const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            // Só atualiza se o campo estiver vazio ou se for o cálculo automático
+            const campoTempo = document.getElementById(`tempoTotal${prefixo}`);
+            if (!campoTempo.value || campoTempo.value.includes('Erro:')) {
+                campoTempo.value = `${horas}h ${minutos}min`;
+            }
+        }
+
+        // Atualizar minDate dos calendários de forma inteligente
+        function atualizarCalendarios() {
+            const dataSaidaIda = document.getElementById('dataSaidaIda').value;
+            const dataChegadaIda = document.getElementById('dataChegadaIda').value;
+            const dataSaidaVolta = document.getElementById('dataSaidaVolta').value;
+
+            // Data de Chegada Ida: min = Data de Saída Ida
+            if (dataSaidaIda) {
+                document.getElementById('dataChegadaIda').min = dataSaidaIda;
+            }
+
+            // Data de Saída Volta: min = Data de Chegada Ida
+            if (dataChegadaIda) {
+                document.getElementById('dataSaidaVolta').min = dataChegadaIda;
+            }
+
+            // Data de Chegada Volta: min = Data de Saída Volta
+            if (dataSaidaVolta) {
+                document.getElementById('dataChegadaVolta').min = dataSaidaVolta;
+            }
+        }
+
+        // Toggle paradas IDA
+        function toggleParadasIda() {
+            const numParadas = document.getElementById('temConexaoIda').value;
+            const container = document.getElementById('paradasIdaContainer');
+
+            if (numParadas === 'direto') {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            container.style.display = 'block';
+            let html = '<div class="row mb-3"><div class="col-12"><h6 class="text-muted">Paradas - Voo de IDA</h6></div></div>';
+
+            for (let i = 1; i <= parseInt(numParadas); i++) {
+                html += `
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">Parada ${i}</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label">Cidade</label>
+                                    <input type="text" class="form-control" id="paradaIdaCidade${i}" placeholder="Ex: Brasília">
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label">Tempo de Espera</label>
+                                    <input type="text" class="form-control" id="paradaIdaTempo${i}" placeholder="Ex: 2h 30min">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Toggle paradas VOLTA
+        function toggleParadasVolta() {
+            const numParadas = document.getElementById('temConexaoVolta').value;
+            const container = document.getElementById('paradasVoltaContainer');
+
+            if (numParadas === 'direto') {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            container.style.display = 'block';
+            let html = '<div class="row mb-3"><div class="col-12"><h6 class="text-muted">Paradas - Voo de VOLTA</h6></div></div>';
+
+            for (let i = 1; i <= parseInt(numParadas); i++) {
+                html += `
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">Parada ${i}</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label">Cidade</label>
+                                    <input type="text" class="form-control" id="paradaVoltaCidade${i}" placeholder="Ex: Brasília">
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label">Tempo de Espera</label>
+                                    <input type="text" class="form-control" id="paradaVoltaTempo${i}" placeholder="Ex: 2h 30min">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // CÁLCULO DE COTAÇÃO - LÓGICA CRÍTICA
+        function calcularCotacao() {
+            const tipo = document.getElementById('tipoCotacao').value;
+            const companhia = document.getElementById('companhiaCotacao').value;
+            const adultos = parseInt(document.getElementById('adultos').value) || 0;
+            const criancas = parseInt(document.getElementById('criancas').value) || 0;
+            const bebes = parseInt(document.getElementById('bebes').value) || 0;
+            let numPassageiros = adultos + criancas + bebes;
+
+            // Se não informou passageiros, assume 1
+            if (numPassageiros === 0) {
+                numPassageiros = 1;
+            }
+
+            let custoPorPessoa, custoTotalPix;
+
+            if (tipo === 'por-milhas') {
+                const milhasInput = document.getElementById('quantidadeMilhas').value;
+                const valorMilheiroInput = document.getElementById('valorMilheiro').value;
+                const taxasInput = document.getElementById('taxasMilhas').value;
+
+                if (!milhasInput || !valorMilheiroInput) {
+                    limparResultados();
+                    return;
+                }
+
+                const milhasNum = parseFloat(milhasInput.replace(/[^\d]/g, '')) || 0;
+                const valorMilheiroNum = parseFloat(valorMilheiroInput.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                const taxasNum = taxasInput ? parseFloat(taxasInput.replace(/[^\d,]/g, '').replace(',', '.')) : 0;
+
+                // Calcular custo das milhas
+                const custoMilhas = (milhasNum / 1000) * valorMilheiroNum;
+
+                if (companhia === 'LATAM') {
+                    // LATAM: valor é POR PESSOA
+                    custoPorPessoa = custoMilhas + taxasNum;
+                    custoTotalPix = custoPorPessoa * numPassageiros;
+                } else {
+                    // GOL/Azul/Outra: valor JÁ É O TOTAL
+                    custoTotalPix = custoMilhas + taxasNum;
+                    custoPorPessoa = custoTotalPix / numPassageiros;
+                }
+
+            } else {
+                // Modo por Valor Real
+                const valorVistaInput = document.getElementById('valorVistaReal').value;
+                const lucroInput = document.getElementById('lucroReal').value;
+                const taxasInput = document.getElementById('taxasReal').value;
+
+                if (!valorVistaInput) {
+                    limparResultados();
+                    return;
+                }
+
+                const valorVistaNum = parseFloat(valorVistaInput.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                const lucroNum = lucroInput ? parseFloat(lucroInput.replace(/[^\d,]/g, '').replace(',', '.')) : 0;
+                const taxasNum = taxasInput ? parseFloat(taxasInput.replace(/[^\d,]/g, '').replace(',', '.')) : 0;
+
+                custoTotalPix = valorVistaNum + lucroNum + taxasNum;
+                custoPorPessoa = custoTotalPix / numPassageiros;
+            }
+
+            // Tabela de taxas de cartão de crédito (% Real a Somar)
+            const taxasCartao = {
+                1: 3.08,   // À vista
+                2: 5.55,
+                3: 6.20,
+                4: 6.91,
+                5: 7.58,
+                6: 8.26,
+                7: 8.42,
+                8: 9.16,
+                9: 9.90,
+                10: 10.45
+            };
+
+            // Regras de parcelamento
+            const numParcelas = parseInt(document.getElementById('numParcelas').value);
+            const maxParcelas = custoTotalPix < 1500 ? 5 : 10;
+
+            // Ajustar select de parcelas baseado no valor
+            const selectParcelas = document.getElementById('numParcelas');
+            for (let i = 0; i < selectParcelas.options.length; i++) {
+                const option = selectParcelas.options[i];
+                const value = parseInt(option.value);
+                option.disabled = value > maxParcelas;
+            }
+
+            // Se a parcela selecionada é maior que o máximo permitido, ajustar
+            let parcelasUsadas = numParcelas;
+            if (numParcelas > maxParcelas) {
+                parcelasUsadas = maxParcelas;
+                selectParcelas.value = maxParcelas;
+            }
+
+            // Aplicar taxa de juros
+            const taxaJuros = taxasCartao[parcelasUsadas] || 2.99;
+            const custoTotalCartao = custoTotalPix * (1 + taxaJuros / 100);
+            const valorParcela = custoTotalCartao / parcelasUsadas;
+
+            // Exibir resultados formatados
+            document.getElementById('valorPorPessoa').textContent = formatarMoeda(custoPorPessoa);
+            document.getElementById('valorTotalPix').textContent = formatarMoeda(custoTotalPix);
+            document.getElementById('valorParcela').textContent = formatarMoeda(valorParcela);
+            document.getElementById('totalParcelado').textContent = `Total: ${formatarMoeda(custoTotalCartao)}`;
+        }
+
+        function limparResultados() {
+            document.getElementById('valorPorPessoa').textContent = 'R$ 0,00';
+            document.getElementById('valorTotalPix').textContent = 'R$ 0,00';
+            document.getElementById('valorParcela').textContent = 'R$ 0,00';
+            document.getElementById('totalParcelado').textContent = 'Total: R$ 0,00';
+        }
+
+        function formatarMoeda(valor) {
+            return `R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        // Abrir modal
+        function abrirModalCotacao(cotacaoId = null) {
+            cotacaoEditandoId = cotacaoId;
+
+            if (cotacaoId) {
+                // Modo EDIÇÃO (implementar depois)
+                alert('Edição em desenvolvimento');
+            } else {
+                // Modo NOVA COTAÇÃO
+                document.getElementById('tituloCotacao').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Cotação';
+                document.getElementById('formCotacao').reset();
+                document.getElementById('cotacaoId').value = '';
+                limparResultados();
+                calcularTotalPassageiros();
+                toggleVolta();
+                toggleTipoCotacao();
+            }
+
+            modalCotacao.show();
+        }
+
+        // Salvar cotação
+        function salvarCotacao() {
+            const form = document.getElementById('formCotacao');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const adultos = parseInt(document.getElementById('adultos').value) || 0;
+            const criancas = parseInt(document.getElementById('criancas').value) || 0;
+            const bebes = parseInt(document.getElementById('bebes').value) || 0;
+
+            // Obter valores calculados
+            const valorPorPessoa = document.getElementById('valorPorPessoa').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
+            const valorTotalPix = document.getElementById('valorTotalPix').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
+            const valorParcela = document.getElementById('valorParcela').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
+            const totalParceladoText = document.getElementById('totalParcelado').textContent.replace('Total: ', '').replace('R$ ', '').replace('.', '').replace(',', '.');
+            const numParcelas = parseInt(document.getElementById('numParcelas').value);
+
+            // Coletar dados das paradas de IDA
+            const temConexaoIda = document.getElementById('temConexaoIda').value;
+            const paradasIda = [];
+            if (temConexaoIda !== 'direto') {
+                for (let i = 1; i <= parseInt(temConexaoIda); i++) {
+                    const cidadeElem = document.getElementById(`paradaIdaCidade${i}`);
+                    const tempoElem = document.getElementById(`paradaIdaTempo${i}`);
+                    if (cidadeElem && tempoElem) {
+                        paradasIda.push({
+                            cidade: cidadeElem.value,
+                            tempo: tempoElem.value
+                        });
+                    }
+                }
+            }
+
+            // Coletar dados das paradas de VOLTA
+            const temConexaoVolta = document.getElementById('temConexaoVolta').value;
+            const paradasVolta = [];
+            if (temConexaoVolta !== 'direto') {
+                for (let i = 1; i <= parseInt(temConexaoVolta); i++) {
+                    const cidadeElem = document.getElementById(`paradaVoltaCidade${i}`);
+                    const tempoElem = document.getElementById(`paradaVoltaTempo${i}`);
+                    if (cidadeElem && tempoElem) {
+                        paradasVolta.push({
+                            cidade: cidadeElem.value,
+                            tempo: tempoElem.value
+                        });
+                    }
+                }
+            }
+
+            const cotacao = {
+                nomeCliente: document.getElementById('nomeCliente').value,
+                adultos: adultos,
+                criancas: criancas,
+                bebes: bebes,
+                totalPassageiros: adultos + criancas + bebes || 1,
+                origem: document.getElementById('origemCotacao').value.toUpperCase(),
+                destino: document.getElementById('destinoCotacao').value.toUpperCase(),
+                companhiaAerea: document.getElementById('companhiaCotacao').value,
+                tipoTarifa: document.getElementById('tipoTarifa').value,
+                tipoViagem: document.getElementById('tipoViagem').value,
+                linkCompanhia: document.getElementById('linkCompanhia').value,
+
+                // Voo de IDA
+                dataSaidaIda: document.getElementById('dataSaidaIda').value,
+                horaSaidaIda: document.getElementById('horaSaidaIda').value,
+                dataChegadaIda: document.getElementById('dataChegadaIda').value,
+                horaChegadaIda: document.getElementById('horaChegadaIda').value,
+                tempoTotalIda: document.getElementById('tempoTotalIda').value,
+                temConexaoIda: temConexaoIda,
+                paradasIda: paradasIda,
+
+                // Voo de VOLTA
+                dataSaidaVolta: document.getElementById('dataSaidaVolta').value,
+                horaSaidaVolta: document.getElementById('horaSaidaVolta').value,
+                dataChegadaVolta: document.getElementById('dataChegadaVolta').value,
+                horaChegadaVolta: document.getElementById('horaChegadaVolta').value,
+                tempoTotalVolta: document.getElementById('tempoTotalVolta').value,
+                temConexaoVolta: temConexaoVolta,
+                paradasVolta: paradasVolta,
+
+                // Valores
+                tipoCotacao: document.getElementById('tipoCotacao').value,
+                valorPorPessoa: parseFloat(valorPorPessoa),
+                valorTotalPix: parseFloat(valorTotalPix),
+                numParcelas: numParcelas,
+                valorParcela: parseFloat(valorParcela),
+                totalParcelado: parseFloat(totalParceladoText),
+
+                observacao: document.getElementById('observacaoCotacao').value,
+                bagagemIncluida: document.getElementById('bagagemIncluida').value,
+
+                status: 'aberta',
+                dataCriacao: new Date().toISOString()
+            };
+
+            if (cotacaoEditandoId) {
+                StorageManager.updateCotacao(cotacaoEditandoId, cotacao);
+                Utils.showSuccess('Cotação atualizada com sucesso!');
+            } else {
+                StorageManager.addCotacao(cotacao);
+                Utils.showSuccess('Cotação cadastrada com sucesso!');
+            }
+
+            modalCotacao.hide();
+            carregarCotacoes();
+        }
+
+        // Carregar cotações
+        function carregarCotacoes() {
+            aplicarFiltros();
+        }
+
+        // Aplicar filtros
+        function aplicarFiltros() {
+            let cotacoes = StorageManager.getCotacoes() || [];
+
+            // Filtro de busca
+            const busca = document.getElementById('buscaCotacao').value;
+            if (busca) {
+                cotacoes = Utils.filtrarPorTexto(cotacoes, busca, ['nomeCliente', 'origem', 'destino', 'companhiaAerea']);
+            }
+
+            // Filtro de status
+            const status = document.getElementById('filtroStatus').value;
+            if (status !== 'todas') {
+                cotacoes = cotacoes.filter(c => c.status === status);
+            }
+
+            // Ordenação
+            const ordenacao = document.getElementById('ordenacaoCotacao').value;
+            switch(ordenacao) {
+                case 'data_desc':
+                    cotacoes.sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao));
+                    break;
+                case 'data_asc':
+                    cotacoes.sort((a, b) => new Date(a.dataCriacao) - new Date(b.dataCriacao));
+                    break;
+                case 'valor_desc':
+                    cotacoes.sort((a, b) => b.valorTotalPix - a.valorTotalPix);
+                    break;
+                case 'valor_asc':
+                    cotacoes.sort((a, b) => a.valorTotalPix - b.valorTotalPix);
+                    break;
+            }
+
+            exibirCotacoes(cotacoes);
+            atualizarEstatisticas();
+        }
+
+        // Exibir cotações
+        function exibirCotacoes(cotacoes) {
+            const tbody = document.getElementById('tabelaCotacoes');
+            document.getElementById('totalRegistros').textContent = cotacoes.length;
+
+            if (cotacoes.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            Nenhuma cotação encontrada com os filtros aplicados.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            cotacoes.forEach(cotacao => {
+                const statusBadge = {
+                    'aberta': '<span class="badge bg-warning">Em Aberto</span>',
+                    'convertida': '<span class="badge bg-success">Convertida</span>',
+                    'perdida': '<span class="badge bg-danger">Perdida</span>'
+                };
+
+                html += `
+                    <tr>
+                        <td>${Utils.formatDate(cotacao.dataCriacao.split('T')[0])}</td>
+                        <td>${cotacao.nomeCliente}</td>
+                        <td>${cotacao.origem} → ${cotacao.destino}</td>
+                        <td>${cotacao.companhiaAerea}</td>
+                        <td>${cotacao.totalPassageiros} pax</td>
+                        <td>${Utils.formatCurrency(cotacao.valorTotalPix)}</td>
+                        <td>${statusBadge[cotacao.status] || statusBadge['aberta']}</td>
+                        <td>
+                            <i class="bi bi-file-pdf action-icon" style="color: #dc3545;" onclick="gerarPDFCotacao('${cotacao.id}')" title="Gerar PDF"></i>
+                            <i class="bi bi-whatsapp action-icon" style="color: #25D366;" onclick="copiarParaWhatsApp('${cotacao.id}')" title="Copiar para WhatsApp"></i>
+                            ${cotacao.status === 'aberta' ? `<i class="bi bi-arrow-right-circle action-icon" style="color: #28a745;" onclick="converterParaVenda('${cotacao.id}')" title="Converter para Venda"></i>` : ''}
+                            ${cotacao.status === 'aberta' ? `<i class="bi bi-x-circle action-icon" style="color: #dc3545;" onclick="marcarComoPerdida('${cotacao.id}')" title="Marcar como Perdida"></i>` : ''}
+                            <i class="bi bi-trash action-icon delete" onclick="excluirCotacao('${cotacao.id}')" title="Excluir"></i>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Atualizar estatísticas
+        function atualizarEstatisticas() {
+            const cotacoes = StorageManager.getCotacoes() || [];
+
+            document.getElementById('totalCotacoes').textContent = cotacoes.length;
+            document.getElementById('cotacoesConvertidas').textContent = cotacoes.filter(c => c.status === 'convertida').length;
+            document.getElementById('cotacoesAbertas').textContent = cotacoes.filter(c => c.status === 'aberta').length;
+            document.getElementById('cotacoesPerdidas').textContent = cotacoes.filter(c => c.status === 'perdida').length;
+        }
+
+        // Marcar como perdida
+        function marcarComoPerdida(id) {
+            if (!confirm('Tem certeza que deseja marcar esta cotação como perdida?')) return;
+
+            const cotacao = StorageManager.getCotacaoById(id);
+            if (cotacao) {
+                cotacao.status = 'perdida';
+                StorageManager.updateCotacao(id, cotacao);
+                Utils.showSuccess('Cotação marcada como perdida');
+                carregarCotacoes();
+            }
+        }
+
+        // Excluir cotação
+        function excluirCotacao(id) {
+            if (!confirm('Tem certeza que deseja excluir esta cotação?')) return;
+
+            if (StorageManager.deleteCotacao(id)) {
+                Utils.showSuccess('Cotação excluída com sucesso!');
+                carregarCotacoes();
+            }
+        }
+
+        // Gerar PDF
+        function gerarPDFCotacao(id) {
+            try {
+                const cotacao = StorageManager.getCotacaoById(id);
+                if (!cotacao) {
+                    alert('Cotação não encontrada!');
+                    return;
+                }
+
+                if (!window.jspdf) {
+                    alert('Biblioteca PDF não carregada. Recarregue a página e tente novamente.');
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // ========== PRIMEIRA FAIXA - CABEÇALHO AZUL ESCURO ==========
+                doc.setFillColor(26, 54, 93);
+                doc.rect(0, 0, 210, 35, 'F');
+
+                // Nome da empresa
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(18);
+                doc.setFont(undefined, 'bold');
+                doc.text('VOECOMKENNEDY', 12, 15);
+
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'normal');
+                doc.text('PASSAGENS AÉREAS', 12, 21);
+
+                // Data de emissão no canto direito
+                doc.setFontSize(7);
+                doc.text('PROPOSTA GERADA EM', 198, 12, { align: 'right' });
+
+                const dataFormatada = new Date(cotacao.dataCriacao).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'bold');
+                doc.text(dataFormatada, 198, 18, { align: 'right' });
+
+                // ========== SEGUNDA FAIXA - ROTA E PASSAGEIROS ==========
+                doc.setFillColor(35, 47, 73); // Azul um pouco mais escuro
+                doc.rect(0, 35, 210, 20, 'F');
+
+                // Rota grande
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(20);
+                doc.setFont(undefined, 'bold');
+                doc.text(`${cotacao.origem.toUpperCase()}  →  ${cotacao.destino.toUpperCase()}`, 12, 47);
+
+                // Informações do lado direito
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Proposta para ${cotacao.nomeCliente}`, 198, 42, { align: 'right' });
+
+                // Passageiros
+                const passageiros = [];
+                if (cotacao.adultos > 0) passageiros.push(`${cotacao.adultos} adulto${cotacao.adultos > 1 ? 's' : ''}`);
+                if (cotacao.criancas > 0) passageiros.push(`${cotacao.criancas} criança${cotacao.criancas > 1 ? 's' : ''}`);
+                if (cotacao.bebes > 0) passageiros.push(`${cotacao.bebes} bebê${cotacao.bebes > 1 ? 's' : ''}`);
+                const textoPassageiros = passageiros.join(', ') || '1 adulto';
+
+                doc.setFontSize(7);
+                doc.text(`${cotacao.totalPassageiros} passageiro${cotacao.totalPassageiros > 1 ? 's' : ''} - ${textoPassageiros}`, 198, 48, { align: 'right' });
+
+                let y = 62;
+
+                // ========== VOO DE IDA ==========
+                // Badge IDA
+                doc.setFillColor(26, 54, 93);
+                doc.roundedRect(10, y, 15, 6, 1, 1, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'bold');
+                doc.text('IDA', 17.5, y + 4, { align: 'center' });
+
+                // Nome da companhia
+                doc.setTextColor(44, 62, 80);
+                doc.setFontSize(10);
+                doc.text(cotacao.companhiaAerea, 28, y + 4);
+
+                // Tipo de tarifa e voo no canto direito
+                const tipoVooIda = cotacao.temConexaoIda === 'direto' ? 'DIRETO' : `${cotacao.temConexaoIda} ESCALA${parseInt(cotacao.temConexaoIda) > 1 ? 'S' : ''}`;
+                doc.setFontSize(8);
+                doc.text(`${cotacao.tipoTarifa}    ${tipoVooIda}`, 198, y + 4, { align: 'right' });
+
+                y += 10;
+
+                // Card do voo com borda
+                const cardY = y;
+                doc.setDrawColor(220, 220, 220);
+                doc.setLineWidth(0.3);
+                doc.rect(10, y, 190, 28, 'S');
+
+                // Buscar nomes das cidades
+                const aeroportoOrigem = AEROPORTOS_IATA.find(a => a.codigo === cotacao.origem.toUpperCase());
+                const aeroportoDestino = AEROPORTOS_IATA.find(a => a.codigo === cotacao.destino.toUpperCase());
+                const nomeOrigem = aeroportoOrigem ? aeroportoOrigem.nome : cotacao.origem;
+                const nomeDestino = aeroportoDestino ? aeroportoDestino.nome : cotacao.destino;
+
+                // Horário de saída GRANDE
+                doc.setTextColor(44, 62, 80);
+                doc.setFontSize(20);
+                doc.setFont(undefined, 'bold');
+                doc.text(cotacao.horaSaidaIda, 15, y + 12);
+
+                // Código do aeroporto de origem
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text(cotacao.origem.toUpperCase(), 15, y + 18);
+
+                // Nome da cidade de origem
+                doc.setFontSize(7);
+                doc.setFont(undefined, 'normal');
+                doc.setTextColor(100, 100, 100);
+                doc.text(nomeOrigem, 15, y + 22);
+
+                // Duração no centro
+                doc.setTextColor(44, 62, 80);
+                doc.setFontSize(9);
+                if (cotacao.tempoTotalIda) {
+                    doc.text(cotacao.tempoTotalIda, 105, y + 12, { align: 'center' });
+                }
+
+                // Horário de chegada GRANDE
+                doc.setTextColor(44, 62, 80);
+                doc.setFontSize(20);
+                doc.setFont(undefined, 'bold');
+                doc.text(cotacao.horaChegadaIda, 195, y + 12, { align: 'right' });
+
+                // Código do aeroporto de destino
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text(cotacao.destino.toUpperCase(), 195, y + 18, { align: 'right' });
+
+                // Nome da cidade de destino
+                doc.setFontSize(7);
+                doc.setFont(undefined, 'normal');
+                doc.setTextColor(100, 100, 100);
+                doc.text(nomeDestino, 195, y + 22, { align: 'right' });
+
+                y += 28;
+
+                // Box com informações de bagagem e data
+                doc.setDrawColor(220, 220, 220);
+                doc.setLineWidth(0.3);
+                doc.rect(10, y, 190, 8, 'S');
+
+                doc.setTextColor(44, 62, 80);
+                doc.setFontSize(7);
+                doc.setFont(undefined, 'normal');
+
+                const dataIdaFormatada = new Date(cotacao.dataSaidaIda + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+                doc.text(dataIdaFormatada, 12, y + 5);
+
+                // Informações de bagagem simplificadas
+                const temBagagemMao = cotacao.bagagemIncluida && cotacao.bagagemIncluida.toLowerCase().includes('mão');
+                const temBagagemDesp = cotacao.bagagemIncluida && cotacao.bagagemIncluida.toLowerCase().includes('despacha');
+
+                doc.text(`Mao: ${temBagagemMao ? 'Inclusa' : 'Nao inclusa'}`, 80, y + 5);
+                doc.text(`Despacho: ${temBagagemDesp ? 'Inclusa' : 'Nao inclusa'}`, 140, y + 5);
+
+                y += 10;
+
+                // Mostrar escalas se houver
+                if (cotacao.temConexaoIda !== 'direto' && cotacao.paradasIda && cotacao.paradasIda.length > 0) {
+                    y += 2;
+                    doc.setFillColor(255, 248, 220);
+                    const escalasHeight = 4 + (cotacao.paradasIda.length * 5);
+                    doc.rect(10, y, 190, escalasHeight, 'F');
+
+                    doc.setTextColor(150, 100, 0);
+                    doc.setFontSize(8);
+                    doc.setFont(undefined, 'normal');
+                    let escalasY = y + 4;
+                    cotacao.paradasIda.forEach((parada) => {
+                        doc.text(`Escala de ${parada.tempo} em ${parada.cidade}`, 15, escalasY);
+                        escalasY += 5;
+                    });
+                    y += escalasHeight + 2;
+                }
+
+                y += 3;
+
+                // ========== VOO DE VOLTA (se aplicável) ==========
+                if (cotacao.tipoViagem === 'ida-volta' && cotacao.dataSaidaVolta) {
+                    // Badge VOLTA (verde)
+                    doc.setFillColor(76, 175, 80);
+                    doc.roundedRect(10, y, 20, 6, 1, 1, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(8);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('VOLTA', 20, y + 4, { align: 'center' });
+
+                    // Nome da companhia
+                    doc.setTextColor(44, 62, 80);
+                    doc.setFontSize(10);
+                    doc.text(cotacao.companhiaAerea, 33, y + 4);
+
+                    // Tipo de tarifa e voo no canto direito
+                    const tipoVooVolta = cotacao.temConexaoVolta === 'direto' ? 'DIRETO' : `${cotacao.temConexaoVolta} ESCALA${parseInt(cotacao.temConexaoVolta) > 1 ? 'S' : ''}`;
+                    doc.setFontSize(8);
+                    doc.text(`${cotacao.tipoTarifa}    ${tipoVooVolta}`, 198, y + 4, { align: 'right' });
+
+                    y += 10;
+
+                    // Card do voo com borda
+                    doc.setDrawColor(220, 220, 220);
+                    doc.setLineWidth(0.3);
+                    doc.rect(10, y, 190, 28, 'S');
+
+                    // Horário de saída GRANDE (volta - origem e destino invertidos)
+                    doc.setTextColor(44, 62, 80);
+                    doc.setFontSize(20);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(cotacao.horaSaidaVolta, 15, y + 12);
+
+                    // Código do aeroporto de destino (origem da volta)
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(cotacao.destino.toUpperCase(), 15, y + 18);
+
+                    // Nome da cidade de destino
+                    doc.setFontSize(7);
+                    doc.setFont(undefined, 'normal');
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(nomeDestino, 15, y + 22);
+
+                    // Duração no centro
+                    doc.setTextColor(44, 62, 80);
+                    doc.setFontSize(9);
+                    if (cotacao.tempoTotalVolta) {
+                        doc.text(cotacao.tempoTotalVolta, 105, y + 12, { align: 'center' });
+                    }
+
+                    // Horário de chegada GRANDE
+                    doc.setTextColor(44, 62, 80);
+                    doc.setFontSize(20);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(cotacao.horaChegadaVolta, 195, y + 12, { align: 'right' });
+
+                    // Código do aeroporto de origem (destino da volta)
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(cotacao.origem.toUpperCase(), 195, y + 18, { align: 'right' });
+
+                    // Nome da cidade de origem
+                    doc.setFontSize(7);
+                    doc.setFont(undefined, 'normal');
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(nomeOrigem, 195, y + 22, { align: 'right' });
+
+                    y += 28;
+
+                    // Box com informações de bagagem e data
+                    doc.setDrawColor(220, 220, 220);
+                    doc.setLineWidth(0.3);
+                    doc.rect(10, y, 190, 8, 'S');
+
+                    doc.setTextColor(44, 62, 80);
+                    doc.setFontSize(7);
+                    doc.setFont(undefined, 'normal');
+
+                    const dataVoltaFormatada = new Date(cotacao.dataSaidaVolta + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+                    doc.text(dataVoltaFormatada, 12, y + 5);
+
+                    doc.text(`Mao: ${temBagagemMao ? 'Inclusa' : 'Nao inclusa'}`, 80, y + 5);
+                    doc.text(`Despacho: ${temBagagemDesp ? 'Inclusa' : 'Nao inclusa'}`, 140, y + 5);
+
+                    y += 10;
+
+                    // Mostrar escalas se houver
+                    if (cotacao.temConexaoVolta !== 'direto' && cotacao.paradasVolta && cotacao.paradasVolta.length > 0) {
+                        y += 2;
+                        doc.setFillColor(255, 248, 220);
+                        const escalasHeight = 4 + (cotacao.paradasVolta.length * 5);
+                        doc.rect(10, y, 190, escalasHeight, 'F');
+
+                        doc.setTextColor(150, 100, 0);
+                        doc.setFontSize(8);
+                        doc.setFont(undefined, 'normal');
+                        let escalasY = y + 4;
+                        cotacao.paradasVolta.forEach((parada) => {
+                            doc.text(`Escala de ${parada.tempo} em ${parada.cidade}`, 15, escalasY);
+                            escalasY += 5;
+                        });
+                        y += escalasHeight + 2;
+                    }
+
+                    y += 3;
+                }
+
+                // ========== SEÇÃO DE VALORES (BOXES LADO A LADO) ==========
+                doc.setFillColor(248, 249, 250);
+                doc.rect(10, y, 190, 7, 'F');
+                doc.setTextColor(44, 62, 80);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text('VALORES', 12, y + 5);
+
+                y += 10;
+
+                // BOX ESQUERDO - PIX (fundo verde claro)
+                doc.setFillColor(232, 245, 233);
+                doc.setDrawColor(200, 230, 201);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(10, y, 92, 22, 2, 2, 'FD');
+
+                doc.setTextColor(46, 125, 50);
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'normal');
+                doc.text('TOTAL VIA PIX', 15, y + 6);
+
+                doc.setTextColor(27, 94, 32);
+                doc.setFontSize(16);
+                doc.setFont(undefined, 'bold');
+                doc.text(Utils.formatCurrency(cotacao.valorTotalPix).replace('R$ ', ''), 15, y + 14);
+
+                doc.setTextColor(69, 90, 100);
+                doc.setFontSize(7);
+                doc.setFont(undefined, 'normal');
+                doc.text(`R$ ${(cotacao.valorPorPessoa).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} por pessoa`, 15, y + 19);
+
+                // BOX DIREITO - CARTÃO (fundo cinza claro)
+                doc.setFillColor(245, 245, 245);
+                doc.setDrawColor(224, 224, 224);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(108, y, 92, 22, 2, 2, 'FD');
+
+                doc.setTextColor(66, 66, 66);
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'normal');
+                doc.text(`NO CARTÃO — ${cotacao.numParcelas} PARCELA${cotacao.numParcelas > 1 ? 'S' : ''}`, 113, y + 6);
+
+                doc.setTextColor(44, 62, 80);
+                doc.setFontSize(16);
+                doc.setFont(undefined, 'bold');
+                doc.text(`${cotacao.numParcelas}x de ${Utils.formatCurrency(cotacao.valorParcela).replace('R$ ', '')}`, 113, y + 14);
+
+                doc.setTextColor(69, 90, 100);
+                doc.setFontSize(7);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Já com juros inclusos`, 113, y + 19);
+
+                y += 27;
+
+                // ========== RODAPÉ AZUL ESCURO ==========
+                const footerY = 280;
+
+                doc.setFillColor(26, 54, 93);
+                doc.rect(0, footerY - 5, 210, 22, 'F');
+
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'bold');
+                doc.text('VOECOMKENNEDY — PASSAGENS AÉREAS', 105, footerY + 2, { align: 'center' });
+
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(7);
+                doc.text('Proposta válida conforme disponibilidade. Entre em contato para confirmar sua reserva.', 105, footerY + 8, { align: 'center' });
+
+                // Salvar PDF
+                doc.save(`cotacao-${cotacao.nomeCliente.replace(/\s+/g, '-')}.pdf`);
+                Utils.showSuccess('PDF gerado com sucesso!');
+            } catch (error) {
+                console.error('Erro ao gerar PDF:', error);
+                alert('Erro ao gerar PDF. Por favor, tente novamente.');
+            }
+        }
+
+        // Copiar para WhatsApp
+        function copiarParaWhatsApp(id) {
+            try {
+                const cotacao = StorageManager.getCotacaoById(id);
+                if (!cotacao) {
+                    alert('Cotação não encontrada!');
+                    return;
+                }
+
+                // Buscar nomes completos das cidades
+                const aeroportoOrigem = AEROPORTOS_IATA.find(a => a.codigo === cotacao.origem.toUpperCase());
+                const aeroportoDestino = AEROPORTOS_IATA.find(a => a.codigo === cotacao.destino.toUpperCase());
+
+                const nomeCompletoOrigem = aeroportoOrigem ? `${aeroportoOrigem.nome.toUpperCase()} - ${aeroportoOrigem.aeroporto.toUpperCase()} (${cotacao.origem.toUpperCase()})` : cotacao.origem.toUpperCase();
+                const nomeCompletoDestino = aeroportoDestino ? `${aeroportoDestino.nome.toUpperCase()} - ${aeroportoDestino.aeroporto.toUpperCase()} (${cotacao.destino.toUpperCase()})` : cotacao.destino.toUpperCase();
+
+                const nomeOrigemSimples = aeroportoOrigem ? `${aeroportoOrigem.nome} - ${aeroportoOrigem.aeroporto} (${cotacao.origem.toUpperCase()})` : cotacao.origem;
+                const nomeDestinoSimples = aeroportoDestino ? `${aeroportoDestino.nome} - ${aeroportoDestino.aeroporto} (${cotacao.destino.toUpperCase()})` : cotacao.destino;
+
+                // Formatar data com dia da semana
+                const formatarDataCompleta = (dataISO) => {
+                    const data = new Date(dataISO + 'T00:00:00');
+                    const diasSemana = ['DOMINGO', 'SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
+                    const dia = String(data.getDate()).padStart(2, '0');
+                    const mes = String(data.getMonth() + 1).padStart(2, '0');
+                    const diaSemana = diasSemana[data.getDay()];
+                    return { data: `${dia}/${mes}`, diaSemana };
+                };
+
+                const dataIdaFormat = formatarDataCompleta(cotacao.dataSaidaIda);
+                const dataChegadaIdaFormat = cotacao.dataChegadaIda ? formatarDataCompleta(cotacao.dataChegadaIda) : null;
+
+                // Símbolo de ida e volta ou só ida
+                const simboloViagem = cotacao.tipoViagem === 'ida-volta' ? '↔' : '→';
+
+                // Passageiros
+                const passageiros = [];
+                if (cotacao.adultos > 0) passageiros.push(`${cotacao.adultos} adulto${cotacao.adultos > 1 ? 's' : ''}`);
+                if (cotacao.criancas > 0) passageiros.push(`${cotacao.criancas} criança${cotacao.criancas > 1 ? 's' : ''}`);
+                if (cotacao.bebes > 0) passageiros.push(`${cotacao.bebes} bebê${cotacao.bebes > 1 ? 's' : ''}`);
+                const textoPassageiros = passageiros.join(', ') || '1 adulto';
+
+                // Montar mensagem
+                let mensagem = `────\n`;
+                mensagem += `${nomeCompletoOrigem} ${simboloViagem} ${nomeCompletoDestino}\n`;
+                mensagem += `────\n`;
+                mensagem += `${cotacao.companhiaAerea}\n`;
+                mensagem += `${textoPassageiros}\n`;
+                mensagem += `────\n`;
+                mensagem += `TARIFA ${cotacao.tipoTarifa.toUpperCase()}\n`;
+                mensagem += `────\n`;
+                mensagem += `💰 VALORES\n\n`;
+                mensagem += `${Utils.formatCurrency(cotacao.valorTotalPix)} - PIX\n\n`;
+                mensagem += `💳 CARTÃO\n`;
+                mensagem += `${cotacao.numParcelas}x de ${Utils.formatCurrency(cotacao.valorParcela)}\n`;
+                mensagem += `${Utils.formatCurrency(cotacao.totalParcelado)} total parcelado\n`;
+                mensagem += `────\n`;
+                mensagem += `IDA: ${dataIdaFormat.data} – ${dataIdaFormat.diaSemana}\n`;
+                mensagem += `${cotacao.horaSaidaIda} (${nomeOrigemSimples}) → ${cotacao.horaChegadaIda} (${nomeDestinoSimples})`;
+
+                // Se chega em dia diferente
+                if (dataChegadaIdaFormat && dataChegadaIdaFormat.data !== dataIdaFormat.data) {
+                    mensagem += ` (Chega ${dataChegadaIdaFormat.data})`;
+                }
+                mensagem += `\n\n`;
+
+                // Duração total IDA
+                if (cotacao.tempoTotalIda) {
+                    mensagem += `Duração total: ${cotacao.tempoTotalIda}\n`;
+                }
+
+                // Tipo de voo e paradas IDA
+                if (cotacao.temConexaoIda === 'direto') {
+                    mensagem += `Voo Direto\n`;
+                } else if (cotacao.temConexaoIda && cotacao.temConexaoIda !== 'direto') {
+                    const numParadas = parseInt(cotacao.temConexaoIda);
+                    mensagem += `🔄 ${numParadas} parada${numParadas > 1 ? 's' : ''}\n`;
+                    if (cotacao.paradasIda && cotacao.paradasIda.length > 0) {
+                        cotacao.paradasIda.forEach((parada, index) => {
+                            mensagem += `  ${index + 1}. ${parada.cidade} (Espera: ${parada.tempo})\n`;
+                        });
+                    }
+                }
+                mensagem += `────\n`;
+
+                // VOLTA (se aplicável)
+                if (cotacao.tipoViagem === 'ida-volta' && cotacao.dataSaidaVolta) {
+                    const dataVoltaFormat = formatarDataCompleta(cotacao.dataSaidaVolta);
+                    const dataChegadaVoltaFormat = cotacao.dataChegadaVolta ? formatarDataCompleta(cotacao.dataChegadaVolta) : null;
+
+                    mensagem += `VOLTA: ${dataVoltaFormat.data} – ${dataVoltaFormat.diaSemana}\n`;
+                    mensagem += `${cotacao.horaSaidaVolta} (${nomeDestinoSimples}) → ${cotacao.horaChegadaVolta} (${nomeOrigemSimples})`;
+
+                    if (dataChegadaVoltaFormat && dataChegadaVoltaFormat.data !== dataVoltaFormat.data) {
+                        mensagem += ` (Chega ${dataChegadaVoltaFormat.data})`;
+                    }
+                    mensagem += `\n\n`;
+
+                    // Duração total VOLTA
+                    if (cotacao.tempoTotalVolta) {
+                        mensagem += `Duração total: ${cotacao.tempoTotalVolta}\n`;
+                    }
+
+                    // Tipo de voo e paradas VOLTA
+                    if (cotacao.temConexaoVolta === 'direto') {
+                        mensagem += `Voo Direto\n`;
+                    } else if (cotacao.temConexaoVolta && cotacao.temConexaoVolta !== 'direto') {
+                        const numParadas = parseInt(cotacao.temConexaoVolta);
+                        mensagem += `🔄 ${numParadas} parada${numParadas > 1 ? 's' : ''}\n`;
+                        if (cotacao.paradasVolta && cotacao.paradasVolta.length > 0) {
+                            cotacao.paradasVolta.forEach((parada, index) => {
+                                mensagem += `  ${index + 1}. ${parada.cidade} (Espera: ${parada.tempo})\n`;
+                            });
+                        }
+                    }
+                    mensagem += `────\n`;
+                }
+
+                // Bagagem
+                if (cotacao.bagagemIncluida) {
+                    mensagem += `📦 Bagagem (por pessoa)\n`;
+                    mensagem += `${cotacao.bagagemIncluida}\n`;
+                    mensagem += `────\n`;
+                }
+
+                mensagem += `✅ Taxas inclusas\n`;
+                mensagem += `────\n`;
+                mensagem += `⚠️ AS TARIFAS SÃO DINÂMICAS E PODEM SOFRER ALTERAÇÕES SEM AVISO PRÉVIO POR PARTE DA COMPANHIA AÉREA.\n`;
+                mensagem += `────`;
+
+                // Copiar para clipboard
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(mensagem).then(() => {
+                        Utils.showSuccess('Texto copiado para a área de transferência! Cole no WhatsApp.');
+                    }).catch(err => {
+                        console.error('Erro ao copiar:', err);
+                        mostrarTextoParaCopiar(mensagem);
+                    });
+                } else {
+                    // Fallback para navegadores antigos
+                    mostrarTextoParaCopiar(mensagem);
+                }
+            } catch (error) {
+                console.error('Erro ao gerar mensagem WhatsApp:', error);
+                alert('Erro ao gerar mensagem. Por favor, tente novamente.');
+            }
+        }
+
+        // Fallback: mostrar texto em modal para copiar manualmente
+        function mostrarTextoParaCopiar(texto) {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+                <div style="background:white;padding:20px;border-radius:8px;max-width:600px;width:90%;">
+                    <h5>Copie o texto abaixo para o WhatsApp:</h5>
+                    <textarea id="textoParaCopiar" style="width:100%;height:300px;font-family:monospace;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:4px;">${texto}</textarea>
+                    <div style="margin-top:10px;text-align:right;">
+                        <button onclick="document.getElementById('textoParaCopiar').select();document.execCommand('copy');alert('Texto copiado!');this.parentElement.parentElement.parentElement.remove();" class="btn btn-primary">Copiar</button>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove();" class="btn btn-secondary">Fechar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('textoParaCopiar').select();
+        }
+
+        // Converter para venda
+        function converterParaVenda(id) {
+            if (!confirm('Deseja converter esta cotação para uma venda? A cotação será marcada como "Convertida".')) return;
+
+            const cotacao = StorageManager.converterCotacaoParaVenda(id);
+            if (!cotacao) {
+                alert('Cotação não encontrada!');
+                return;
+            }
+
+            // Salvar dados temporários para preencher o formulário de venda
+            localStorage.setItem('cotacao_para_venda', JSON.stringify(cotacao));
+
+            // Redirecionar para página de vendas
+            window.location.href = 'vendas.html?from_cotacao=true';
+        }
+
+        // Limpar filtros
+        function limparFiltros() {
+            document.getElementById('buscaCotacao').value = '';
+            document.getElementById('filtroStatus').value = 'todas';
+            document.getElementById('ordenacaoCotacao').value = 'data_desc';
+            carregarCotacoes();
+        }
+
+        // Configurar autocomplete
+        function configurarAutocompleteCotacao(inputId, sugestoesId) {
+            const input = document.getElementById(inputId);
+            const sugestoesDiv = document.getElementById(sugestoesId);
+
+            if (!input || !sugestoesDiv) return;
+
+            input.addEventListener('input', function() {
+                mostrarSugestoesCotacao(inputId, sugestoesId);
+            });
+
+            document.addEventListener('click', function(e) {
+                if (e.target !== input && !sugestoesDiv.contains(e.target)) {
+                    sugestoesDiv.style.display = 'none';
+                }
+            });
+
+            input.addEventListener('focus', function() {
+                if (this.value.length >= 2) {
+                    mostrarSugestoesCotacao(inputId, sugestoesId);
+                }
+            });
+        }
+
+        function mostrarSugestoesCotacao(inputId, sugestoesId) {
+            const input = document.getElementById(inputId);
+            const sugestoesDiv = document.getElementById(sugestoesId);
+            const texto = input.value;
+
+            if (!texto || texto.length < 2) {
+                sugestoesDiv.style.display = 'none';
+                return;
+            }
+
+            const resultados = filtrarAeroportos(texto);
+
+            if (resultados.length === 0) {
+                sugestoesDiv.style.display = 'none';
+                return;
+            }
+
+            let html = '';
+            resultados.forEach(aeroporto => {
+                const aeroportoTexto = aeroporto.aeroporto !== aeroporto.nome ? `, ${aeroporto.aeroporto}` : '';
+                html += `
+                    <div class="autocomplete-item" onclick="selecionarAeroportoCotacao('${inputId}', '${sugestoesId}', '${aeroporto.codigo}')">
+                        <span class="codigo">${aeroporto.codigo}</span>
+                        <span class="cidade">${aeroporto.nome}${aeroportoTexto}</span>
+                        <span class="pais">- ${aeroporto.pais}</span>
+                    </div>
+                `;
+            });
+
+            sugestoesDiv.innerHTML = html;
+            sugestoesDiv.style.display = 'block';
+        }
+
+        function filtrarAeroportos(texto) {
+            if (!texto || texto.length < 2) return [];
+
+            const busca = texto.toLowerCase();
+            return aeroportos.filter(aeroporto => {
+                return aeroporto.codigo.toLowerCase().includes(busca) ||
+                       aeroporto.nome.toLowerCase().includes(busca) ||
+                       aeroporto.aeroporto.toLowerCase().includes(busca) ||
+                       aeroporto.pais.toLowerCase().includes(busca);
+            }).slice(0, 15);
+        }
+
+        function selecionarAeroportoCotacao(inputId, sugestoesId, codigo) {
+            const input = document.getElementById(inputId);
+            const sugestoesDiv = document.getElementById(sugestoesId);
+
+            input.value = codigo;
+            sugestoesDiv.style.display = 'none';
+        }
+    </script>
+
+    <style>
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .autocomplete-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .autocomplete-item:hover {
+            background-color: #f8f9fa;
+        }
+        .autocomplete-item .codigo {
+            font-weight: bold;
+            color: #D4AF37;
+            margin-right: 8px;
+        }
+        .autocomplete-item .cidade {
+            color: #2C3E50;
+        }
+        .autocomplete-item .pais {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+    </style>
+</body>
+</html>

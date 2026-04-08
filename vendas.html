@@ -58,7 +58,7 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="index.html">
                 <i class="bi bi-airplane-fill me-2"></i>
-                VoeComKennedy
+                Mais Voo
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -73,6 +73,16 @@
                     <li class="nav-item">
                         <a class="nav-link active" href="vendas.html">
                             <i class="bi bi-cart-fill"></i> Vendas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pacotes.html">
+                            <i class="bi bi-box-fill"></i> Pacotes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="cotacoes.html">
+                            <i class="bi bi-calculator-fill"></i> Cotações
                         </a>
                     </li>
                     <li class="nav-item">
@@ -119,34 +129,81 @@
                 <div class="card">
                     <div class="card-body">
                         <div class="row align-items-end">
-                            <div class="col-md-4 mb-2">
+                            <div class="col-md-3 mb-2">
                                 <label class="form-label">Buscar</label>
                                 <input type="text" class="form-control" id="busca" placeholder="Localizador, cliente, origem, destino...">
                             </div>
-                            <div class="col-md-3 mb-2">
+                            <div class="col-md-2 mb-2">
                                 <label class="form-label">Período</label>
-                                <select class="form-select" id="filtroPeriodo" onchange="aplicarFiltros()">
+                                <select class="form-select" id="filtroPeriodo" onchange="toggleDataCustomizada(); aplicarFiltros();">
                                     <option value="todos">Todas as vendas</option>
                                     <option value="hoje">Hoje</option>
-                                    <option value="7dias">Próximos 7 dias</option>
-                                    <option value="30dias">Próximos 30 dias</option>
+                                    <option value="7dias">Últimos 7 dias</option>
+                                    <option value="30dias">Últimos 30 dias</option>
+                                    <option value="60dias">Últimos 60 dias</option>
+                                    <option value="90dias">Últimos 90 dias</option>
+                                    <option value="customizado">Período customizado</option>
                                 </select>
                             </div>
-                            <div class="col-md-3 mb-2">
+                            <div class="col-md-2 mb-2" id="dataInicioContainer" style="display: none;">
+                                <label class="form-label">Data Início</label>
+                                <input type="date" class="form-control" id="dataInicio" onchange="aplicarFiltros()">
+                            </div>
+                            <div class="col-md-2 mb-2" id="dataFimContainer" style="display: none;">
+                                <label class="form-label">Data Fim</label>
+                                <input type="date" class="form-control" id="dataFim" onchange="aplicarFiltros()">
+                            </div>
+                            <div class="col-md-2 mb-2">
                                 <label class="form-label">Ordenar por</label>
                                 <select class="form-select" id="ordenacao" onchange="aplicarFiltros()">
-                                    <option value="data_desc">Data de embarque (mais recente)</option>
-                                    <option value="data_asc">Data de embarque (mais antiga)</option>
+                                    <option value="data_desc">Data da venda (mais recente)</option>
+                                    <option value="data_asc">Data da venda (mais antiga)</option>
                                     <option value="valor_desc">Valor (maior)</option>
                                     <option value="valor_asc">Valor (menor)</option>
                                 </select>
                             </div>
-                            <div class="col-md-2 mb-2">
+                            <div class="col-md-1 mb-2">
                                 <button class="btn btn-secondary w-100" onclick="limparFiltros()">
-                                    <i class="bi bi-x-circle me-2"></i>Limpar
+                                    <i class="bi bi-x-circle"></i>
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mini Dashboard com Estatísticas do Período -->
+        <div class="row mb-4" id="miniDashboard" style="display: none;">
+            <div class="col-md-3 col-sm-6 mb-2">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-label">Vendas no Período</div>
+                        <div class="stat-value" id="statTotalVendas">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-2">
+                <div class="card stat-card success">
+                    <div class="card-body">
+                        <div class="stat-label">Faturamento</div>
+                        <div class="stat-value" id="statFaturamento">R$ 0,00</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-2">
+                <div class="card stat-card warning">
+                    <div class="card-body">
+                        <div class="stat-label">Lucro</div>
+                        <div class="stat-value" id="statLucro">R$ 0,00</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-2">
+                <div class="card stat-card info">
+                    <div class="card-body">
+                        <div class="stat-label">Margem Média</div>
+                        <div class="stat-value" id="statMargem">0%</div>
                     </div>
                 </div>
             </div>
@@ -254,17 +311,33 @@
                         <!-- Dados do Voo -->
                         <h6 class="mb-3 mt-4"><i class="bi bi-airplane-fill me-2"></i>Dados do Voo</h6>
 
+                        <!-- Container para localizadores dinâmicos -->
+                        <div id="localizadoresContainer">
+                            <div class="row localizador-item" data-index="1">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Localizador 1 *</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control localizador-input" id="localizador_1" required placeholder="Ex: HGPTGK">
+                                        <button type="button" class="btn btn-outline-success" onclick="adicionarLocalizador()" title="Adicionar outro localizador">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Número da Compra</label>
+                                    <input type="text" class="form-control" id="numeroCompra" placeholder="Ex: A95Z4975MDUI">
+                                    <small class="text-muted">Opcional - algumas companhias fornecem</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Companhia Aérea *</label>
+                                    <select class="form-select" id="companhiaAerea" required>
+                                        <option value="">Selecione a companhia</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Localizador *</label>
-                                <input type="text" class="form-control" id="localizador" required placeholder="Ex: ABC123">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Companhia Aérea *</label>
-                                <select class="form-select" id="companhiaAerea" required>
-                                    <option value="">Selecione a companhia</option>
-                                </select>
-                            </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Número do Voo</label>
                                 <input type="text" class="form-control" id="numeroVoo" placeholder="Ex: G31234">
@@ -315,13 +388,88 @@
                             </div>
                         </div>
 
+                        <!-- Companhia diferente na volta -->
+                        <div class="row mb-2">
+                            <div class="col-md-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="companhiaDiferenteVolta" onchange="toggleCompanhiaVolta()">
+                                    <label class="form-check-label fw-semibold" for="companhiaDiferenteVolta">
+                                        <i class="bi bi-shuffle me-1 text-warning"></i>Voo de volta com <strong>companhia aérea diferente</strong>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="voltaCompanhiaFields" style="display:none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Companhia Aérea da Volta *</label>
+                                    <select class="form-select" id="companhiaAereaVolta">
+                                        <option value="">Selecione a companhia</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Localizador da Volta</label>
+                                    <input type="text" class="form-control text-uppercase" id="localizadorVolta" placeholder="Ex: ABCDEF" maxlength="20">
+                                    <small class="text-muted">Localizador específico da companhia da volta</small>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-10 mb-3">
+                                    <label class="form-label"><i class="bi bi-link-45deg me-1"></i>Link de Rastreamento da Volta</label>
+                                    <input type="url" class="form-control" id="linkRastreamentoVolta" placeholder="https://..." oninput="toggleBotaoRastreamentoVolta()">
+                                    <small class="text-muted">Link da companhia da volta para acompanhar o voo de retorno</small>
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="button" class="btn btn-info w-100" id="btnAbrirLinkVolta" onclick="abrirLinkRastreamentoVolta()" style="display:none;">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Abrir
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Fornecedor -->
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
+                        <div class="row align-items-end">
+                            <div class="col-md-10 mb-3">
                                 <label class="form-label">Fornecedor (Consolidadora)</label>
                                 <select class="form-select" id="fornecedorId">
                                     <option value="">Nenhum (opcional)</option>
                                 </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <button type="button" class="btn btn-outline-success w-100" id="btnAdicionarFornecedor2" onclick="toggleFornecedor2()" title="Adicionar segundo fornecedor">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row" id="fornecedor2Row" style="display:none;">
+                            <div class="col-md-10 mb-3">
+                                <label class="form-label">Fornecedor 2 (Volta)</label>
+                                <select class="form-select" id="fornecedorId2">
+                                    <option value="">Nenhum (opcional)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-outline-danger w-100" onclick="removerFornecedor2()" title="Remover segundo fornecedor">
+                                    <i class="bi bi-dash-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Link de Rastreamento -->
+                        <h6 class="mb-3 mt-4"><i class="bi bi-link-45deg me-2"></i>Link de Rastreamento</h6>
+                        <div class="row">
+                            <div class="col-md-10 mb-3">
+                                <label class="form-label">URL de Rastreamento do Voo</label>
+                                <input type="url" class="form-control" id="linkRastreamento" placeholder="https://..." oninput="toggleBotaoRastreamento()">
+                                <small class="text-muted">Cole o link do site da companhia aérea para acompanhar o voo</small>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-info w-100" id="btnAbrirLink" onclick="abrirLinkRastreamento()" style="display: none;">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Abrir
+                                </button>
                             </div>
                         </div>
 
@@ -352,6 +500,37 @@
                             </div>
                         </div>
 
+                        <!-- Data da Venda -->
+                        <h6 class="mb-3 mt-4"><i class="bi bi-calendar-check me-2"></i>Data da Venda</h6>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="dataVendaAutomatica" checked onchange="toggleDataVenda()">
+                                    <label class="form-check-label" for="dataVendaAutomatica">
+                                        <strong>Data Automática</strong> <small class="text-muted">(usar data/hora atual)</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row" id="campoDataVendaManual" style="display: none;">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Data da Venda *</label>
+                                <input type="date" class="form-control" id="dataVendaManual">
+                                <small class="text-muted">Quando a venda foi realmente efetuada</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Hora da Venda *</label>
+                                <input type="time" class="form-control" id="horaVendaManual">
+                            </div>
+                        </div>
+                        <div class="row" id="infoDataAutomatica">
+                            <div class="col-12 mb-3">
+                                <div class="alert alert-success">
+                                    <i class="bi bi-check-circle me-2"></i>A data/hora atual será registrada automaticamente ao salvar
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Forma de Pagamento -->
                         <h6 class="mb-3 mt-4"><i class="bi bi-credit-card me-2"></i>Forma de Pagamento</h6>
                         <div class="row">
@@ -368,20 +547,21 @@
                             </div>
                             <div class="col-md-6 mb-3" id="campoParcelas" style="display: none;">
                                 <label class="form-label">Quantidade de Parcelas *</label>
-                                <select class="form-select" id="parcelas">
-                                    <option value="1">1x (à vista)</option>
-                                    <option value="2">2x</option>
-                                    <option value="3">3x</option>
-                                    <option value="4">4x</option>
-                                    <option value="5">5x</option>
-                                    <option value="6">6x</option>
-                                    <option value="7">7x</option>
-                                    <option value="8">8x</option>
-                                    <option value="9">9x</option>
-                                    <option value="10">10x</option>
-                                    <option value="11">11x</option>
-                                    <option value="12">12x</option>
+                                <select class="form-select" id="parcelas" onchange="atualizarInfoTaxa()">
+                                    <option value="1">1x (à vista) - Taxa: 3,08%</option>
+                                    <option value="2">2x - Taxa: 5,55%</option>
+                                    <option value="3">3x - Taxa: 6,20%</option>
+                                    <option value="4">4x - Taxa: 6,91%</option>
+                                    <option value="5">5x - Taxa: 7,58%</option>
+                                    <option value="6">6x - Taxa: 8,26%</option>
+                                    <option value="7">7x - Taxa: 8,42%</option>
+                                    <option value="8">8x - Taxa: 9,16%</option>
+                                    <option value="9">9x - Taxa: 9,90%</option>
+                                    <option value="10">10x - Taxa: 10,45%</option>
                                 </select>
+                                <small class="text-muted">
+                                    ⚠️ Valores &lt; R$ 1.500: máx 5x | Valores ≥ R$ 1.500: máx 10x
+                                </small>
                             </div>
                         </div>
 
@@ -509,6 +689,40 @@
             });
         }
 
+        // Mostrar/esconder botão de abrir link
+        function toggleBotaoRastreamento() {
+            const linkInput = document.getElementById('linkRastreamento');
+            const btnAbrir = document.getElementById('btnAbrirLink');
+            btnAbrir.style.display = (linkInput.value && linkInput.value.trim() !== '') ? 'block' : 'none';
+        }
+
+        function abrirLinkRastreamento() {
+            const link = document.getElementById('linkRastreamento').value;
+            if (link && link.trim() !== '') window.open(link, '_blank');
+        }
+
+        function toggleBotaoRastreamentoVolta() {
+            const linkInput = document.getElementById('linkRastreamentoVolta');
+            const btnAbrir = document.getElementById('btnAbrirLinkVolta');
+            btnAbrir.style.display = (linkInput.value && linkInput.value.trim() !== '') ? 'block' : 'none';
+        }
+
+        function abrirLinkRastreamentoVolta() {
+            const link = document.getElementById('linkRastreamentoVolta').value;
+            if (link && link.trim() !== '') window.open(link, '_blank');
+        }
+
+        function toggleFornecedor2() {
+            document.getElementById('fornecedor2Row').style.display = '';
+            document.getElementById('btnAdicionarFornecedor2').style.display = 'none';
+        }
+
+        function removerFornecedor2() {
+            document.getElementById('fornecedor2Row').style.display = 'none';
+            document.getElementById('btnAdicionarFornecedor2').style.display = 'block';
+            document.getElementById('fornecedorId2').value = '';
+        }
+
         // Inicializar modal
         document.addEventListener('DOMContentLoaded', () => {
             modalVenda = new bootstrap.Modal(document.getElementById('modalVenda'));
@@ -519,7 +733,100 @@
 
             // Adicionar evento de busca
             document.getElementById('busca').addEventListener('input', aplicarFiltros);
+
+            // Verificar se veio de uma cotação
+            verificarCotacaoParaVenda();
         });
+
+        // Verificar se há dados de cotação para converter em venda
+        function verificarCotacaoParaVenda() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fromCotacao = urlParams.get('from_cotacao');
+
+            if (fromCotacao === 'true') {
+                const dadosCotacao = localStorage.getItem('cotacao_para_venda');
+
+                if (dadosCotacao) {
+                    try {
+                        const cotacao = JSON.parse(dadosCotacao);
+
+                        // Limpar dados temporários
+                        localStorage.removeItem('cotacao_para_venda');
+
+                        // Preencher formulário com dados da cotação
+                        setTimeout(() => {
+                            preencherFormularioComCotacao(cotacao);
+                        }, 500);
+                    } catch (error) {
+                        console.error('Erro ao carregar cotação:', error);
+                    }
+                }
+            }
+        }
+
+        // Preencher formulário de venda com dados da cotação
+        function preencherFormularioComCotacao(cotacao) {
+            document.getElementById('tituloModal').innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Nova Venda (de Cotação)';
+
+            // Dados do voo
+            document.getElementById('origem').value = cotacao.origem || '';
+            document.getElementById('destino').value = cotacao.destino || '';
+            document.getElementById('dataEmbarque').value = cotacao.dataSaidaIda || '';
+            document.getElementById('horaEmbarque').value = cotacao.horaSaidaIda || '';
+
+            // Se tem volta
+            if (cotacao.tipoViagem === 'ida-volta' && cotacao.dataSaidaVolta) {
+                document.getElementById('dataVolta').value = cotacao.dataSaidaVolta || '';
+                document.getElementById('horaVolta').value = cotacao.horaSaidaVolta || '';
+            }
+
+            // Companhia - tentar encontrar a companhia correspondente
+            const companhias = StorageManager.getCompanhias();
+            const companhia = companhias.find(c => c.nome.toLowerCase().includes(cotacao.companhiaAerea.toLowerCase()));
+            if (companhia) {
+                document.getElementById('companhiaAerea').value = companhia.codigo;
+            }
+
+            // Link de rastreamento
+            if (cotacao.linkCompanhia) {
+                document.getElementById('linkRastreamento').value = cotacao.linkCompanhia;
+                toggleBotaoRastreamento();
+            }
+
+            // Valores - usar o valor calculado da cotação
+            document.getElementById('valorVenda').value = cotacao.valorTotalPix.toFixed(2);
+            document.getElementById('valorCusto').value = '0.00'; // Usuário precisa preencher
+
+            // Passageiros
+            const totalPassageiros = (cotacao.adultos || 0) + (cotacao.criancas || 0) + (cotacao.bebes || 0);
+            if (totalPassageiros > 0 && totalPassageiros <= 9) {
+                document.getElementById('quantidadePassageiros').value = totalPassageiros;
+                gerarCamposPassageiros();
+            }
+
+            // Observações - incluir informações da cotação
+            let obs = `Convertido de cotação #${cotacao.id}\n`;
+            obs += `Cliente original: ${cotacao.nomeCliente}\n`;
+            obs += `Tipo de tarifa: ${cotacao.tipoTarifa}\n`;
+            if (cotacao.observacao) {
+                obs += `Obs: ${cotacao.observacao}`;
+            }
+            document.getElementById('observacoes').value = obs;
+
+            // Calcular margem
+            calcularMargem();
+
+            // Abrir modal
+            modalVenda.show();
+
+            // Limpar URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // Mostrar mensagem
+            setTimeout(() => {
+                Utils.showSuccess('Dados da cotação foram carregados! Preencha os dados restantes e salve a venda.');
+            }, 1000);
+        }
 
         // Carregar clientes no select (apenas tipo 'cliente')
         function carregarClientes() {
@@ -532,17 +839,119 @@
         // Carregar fornecedores no select (apenas tipo 'fornecedor')
         function carregarFornecedores() {
             const fornecedores = StorageManager.getFornecedores();
-            const select = document.getElementById('fornecedorId');
             const optionsHTML = fornecedores.map(f => `<option value="${f.id}">${f.nome}</option>`).join('');
-            select.innerHTML = '<option value="">Nenhum (opcional)</option>' + optionsHTML;
+            const base = '<option value="">Nenhum (opcional)</option>' + optionsHTML;
+
+            document.getElementById('fornecedorId').innerHTML = base;
+            document.getElementById('fornecedorId2').innerHTML = base;
         }
 
         // Carregar companhias aéreas
         function carregarCompanhias() {
             const companhias = StorageManager.getCompanhias();
-            const select = document.getElementById('companhiaAerea');
             const optionsHTML = companhias.map(c => `<option value="${c.codigo}">${c.codigo} - ${c.nome}</option>`).join('');
+
+            const select = document.getElementById('companhiaAerea');
             select.innerHTML = '<option value="">Selecione a companhia</option>' + optionsHTML;
+
+            const selectVolta = document.getElementById('companhiaAereaVolta');
+            selectVolta.innerHTML = '<option value="">Selecione a companhia</option>' + optionsHTML;
+        }
+
+        function toggleCompanhiaVolta() {
+            const checked = document.getElementById('companhiaDiferenteVolta').checked;
+            const fields = document.getElementById('voltaCompanhiaFields');
+            fields.style.display = checked ? '' : 'none';
+            if (!checked) {
+                document.getElementById('companhiaAereaVolta').value = '';
+                document.getElementById('localizadorVolta').value = '';
+            }
+        }
+
+        // ========== GERENCIAMENTO DE MÚLTIPLOS LOCALIZADORES ==========
+        let contadorLocalizadores = 1;
+
+        function adicionarLocalizador() {
+            contadorLocalizadores++;
+            const container = document.getElementById('localizadoresContainer');
+
+            const novoLocalizador = document.createElement('div');
+            novoLocalizador.className = 'row localizador-item mt-2';
+            novoLocalizador.setAttribute('data-index', contadorLocalizadores);
+            novoLocalizador.innerHTML = `
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Localizador ${contadorLocalizadores}</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control localizador-input" id="localizador_${contadorLocalizadores}" placeholder="Ex: ABC123">
+                        <button type="button" class="btn btn-outline-danger" onclick="removerLocalizador(${contadorLocalizadores})" title="Remover este localizador">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(novoLocalizador);
+        }
+
+        function removerLocalizador(index) {
+            const item = document.querySelector(`.localizador-item[data-index="${index}"]`);
+            if (item) {
+                item.remove();
+            }
+        }
+
+        function limparLocalizadores() {
+            const container = document.getElementById('localizadoresContainer');
+            const primeiroItem = container.querySelector('.localizador-item[data-index="1"]');
+
+            // Remover todos exceto o primeiro
+            const todosItens = container.querySelectorAll('.localizador-item');
+            todosItens.forEach((item, i) => {
+                if (i > 0) item.remove();
+            });
+
+            // Limpar o primeiro
+            if (primeiroItem) {
+                const input = primeiroItem.querySelector('.localizador-input');
+                if (input) input.value = '';
+            }
+
+            contadorLocalizadores = 1;
+        }
+
+        function obterLocalizadores() {
+            const inputs = document.querySelectorAll('.localizador-input');
+            const localizadores = [];
+
+            inputs.forEach(input => {
+                const valor = input.value.trim().toUpperCase();
+                if (valor) {
+                    localizadores.push(valor);
+                }
+            });
+
+            return localizadores;
+        }
+
+        function preencherLocalizadores(localizadores) {
+            // Limpar campos existentes primeiro
+            limparLocalizadores();
+
+            if (!localizadores || localizadores.length === 0) return;
+
+            // Se for string única (retrocompatibilidade), converter para array
+            if (typeof localizadores === 'string') {
+                localizadores = [localizadores];
+            }
+
+            // Preencher o primeiro
+            document.getElementById('localizador_1').value = localizadores[0] || '';
+
+            // Adicionar campos adicionais se necessário
+            for (let i = 1; i < localizadores.length; i++) {
+                adicionarLocalizador();
+                document.getElementById(`localizador_${i + 1}`).value = localizadores[i];
+            }
         }
 
         // Gerar campos dinâmicos de passageiros
@@ -591,13 +1000,18 @@
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-8 mb-3">
+                                <div class="col-md-5 mb-3">
                                     <label class="form-label">Nome Completo *</label>
                                     <input type="text" class="form-control" id="passageiroNome_${i}" required>
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <label class="form-label">CPF</label>
                                     <input type="text" class="form-control" id="passageiroCpf_${i}" maxlength="14">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Localizador <small class="text-muted">(opcional)</small></label>
+                                    <input type="text" class="form-control" id="passageiroLocalizador_${i}" placeholder="Se diferente do principal">
+                                    <small class="text-muted">Use quando o passageiro tiver localizador próprio</small>
                                 </div>
                             </div>
                         </div>
@@ -647,6 +1061,7 @@
             if (formaPagamento === 'credito_parcelado') {
                 campoParcelas.style.display = 'block';
                 document.getElementById('parcelas').required = true;
+                aplicarRegrasParcelas();
             } else {
                 campoParcelas.style.display = 'none';
                 document.getElementById('parcelas').required = false;
@@ -654,10 +1069,68 @@
             }
         }
 
+        // Aplicar regras de parcelamento baseadas no valor
+        function aplicarRegrasParcelas() {
+            const valorVenda = parseFloat(document.getElementById('valorVenda').value) || 0;
+            const selectParcelas = document.getElementById('parcelas');
+            const maxParcelas = valorVenda < 1500 ? 5 : 10;
+
+            // Habilitar/desabilitar opções baseadas no valor
+            for (let i = 0; i < selectParcelas.options.length; i++) {
+                const option = selectParcelas.options[i];
+                const value = parseInt(option.value);
+                option.disabled = value > maxParcelas;
+            }
+
+            // Se a parcela selecionada é maior que o máximo permitido, ajustar
+            const parcelaAtual = parseInt(selectParcelas.value);
+            if (parcelaAtual > maxParcelas) {
+                selectParcelas.value = maxParcelas;
+            }
+        }
+
+        // Atualizar info de taxa (pode ser usado para futuros cálculos)
+        function atualizarInfoTaxa() {
+            // Função placeholder para futuras implementações
+            aplicarRegrasParcelas();
+        }
+
+        // Toggle mostrar/esconder campo de data da venda manual
+        function toggleDataVenda() {
+            const dataAutomatica = document.getElementById('dataVendaAutomatica').checked;
+            const campoManual = document.getElementById('campoDataVendaManual');
+            const infoAutomatica = document.getElementById('infoDataAutomatica');
+
+            if (dataAutomatica) {
+                campoManual.style.display = 'none';
+                infoAutomatica.style.display = 'block';
+                document.getElementById('dataVendaManual').required = false;
+                document.getElementById('horaVendaManual').required = false;
+            } else {
+                campoManual.style.display = 'flex';
+                infoAutomatica.style.display = 'none';
+                document.getElementById('dataVendaManual').required = true;
+                document.getElementById('horaVendaManual').required = true;
+
+                // Preencher com data/hora atual por padrão
+                const agora = new Date();
+                const dataAtual = agora.toISOString().split('T')[0];
+                const horaAtual = agora.toTimeString().slice(0, 5);
+                document.getElementById('dataVendaManual').value = dataAtual;
+                document.getElementById('horaVendaManual').value = horaAtual;
+            }
+        }
+
         // Calcular margem em tempo real
         function calcularMargem() {
             const valorVenda = parseFloat(document.getElementById('valorVenda').value) || 0;
             const valorCusto = parseFloat(document.getElementById('valorCusto').value) || 0;
+
+            // Aplicar regras de parcelamento quando o valor mudar
+            const formaPagamento = document.getElementById('formaPagamento').value;
+            if (formaPagamento === 'credito_parcelado') {
+                aplicarRegrasParcelas();
+            }
 
             const lucro = Utils.calcularLucro(valorVenda, valorCusto);
             const margem = Utils.calcularMargemLucro(valorVenda, valorCusto);
@@ -683,7 +1156,7 @@
 
                 // Preencher campos básicos
                 document.getElementById('vendaId').value = venda.id;
-                document.getElementById('localizador').value = venda.localizador;
+                preencherLocalizadores(venda.localizadores || venda.localizador || []);
                 document.getElementById('clienteId').value = venda.clienteId;
                 document.getElementById('clienteViaja').checked = venda.clienteViaja;
                 document.getElementById('quantidadePassageiros').value = venda.quantidadePassageiros;
@@ -705,6 +1178,10 @@
                 document.getElementById('valorMilhas').value = venda.valorMilhas || 0;
                 document.getElementById('formaPagamento').value = venda.formaPagamento;
                 document.getElementById('observacoes').value = venda.observacoes || '';
+
+                // Link de rastreamento
+                document.getElementById('linkRastreamento').value = venda.linkRastreamento || '';
+                toggleBotaoRastreamento();
 
                 // Parcelas
                 if (venda.formaPagamento === 'credito_parcelado') {
@@ -733,11 +1210,17 @@
                 // Modo NOVA VENDA
                 document.getElementById('tituloModal').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Venda';
                 document.getElementById('formVenda').reset();
+                limparLocalizadores(); // Limpar campos de localizadores dinâmicos
                 document.getElementById('vendaId').value = '';
+                document.getElementById('companhiaDiferenteVolta').checked = false;
+                toggleCompanhiaVolta();
+                removerFornecedor2();
                 document.getElementById('lucroCalculado').textContent = 'R$ 0,00';
                 document.getElementById('margemCalculada').textContent = '0%';
                 document.getElementById('camposPassageiros').innerHTML = '';
                 document.getElementById('campoParcelas').style.display = 'none';
+                document.getElementById('linkRastreamento').value = '';
+                toggleBotaoRastreamento();
             }
 
             modalVenda.show();
@@ -771,6 +1254,7 @@
                 const nome = document.getElementById(`passageiroNome_${i}`).value;
                 const cpf = document.getElementById(`passageiroCpf_${i}`).value;
                 const passageiroId = document.getElementById(`passageiro_${i}`).value;
+                const localizador = document.getElementById(`passageiroLocalizador_${i}`).value.toUpperCase() || '';
 
                 if (!nome) {
                     alert(`Por favor, preencha o nome do Passageiro ${i}`);
@@ -780,12 +1264,29 @@
                 passageiros.push({
                     id: passageiroId,
                     nome: nome,
-                    cpf: cpf
+                    cpf: cpf,
+                    localizador: localizador
                 });
             }
 
+            // Determinar data da venda (automática ou manual)
+            let dataVenda, horaVenda;
+            const dataAutomatica = document.getElementById('dataVendaAutomatica').checked;
+
+            if (dataAutomatica) {
+                // Usar data/hora atual
+                const agora = new Date();
+                dataVenda = agora.toISOString().split('T')[0];
+                horaVenda = agora.toTimeString().slice(0, 5);
+            } else {
+                // Usar data/hora manual
+                dataVenda = document.getElementById('dataVendaManual').value;
+                horaVenda = document.getElementById('horaVendaManual').value;
+            }
+
             const venda = {
-                localizador: document.getElementById('localizador').value.toUpperCase(),
+                localizadores: obterLocalizadores(),
+                numeroCompra: document.getElementById('numeroCompra').value.toUpperCase() || '',
                 clienteId: document.getElementById('clienteId').value,
                 clienteViaja: clienteViaja,
                 quantidadePassageiros: quantidade,
@@ -797,14 +1298,27 @@
                 dataVolta: document.getElementById('dataVolta').value,
                 horaVolta: document.getElementById('horaVolta').value,
                 companhiaAerea: document.getElementById('companhiaAerea').value,
+                companhiaAereaVolta: document.getElementById('companhiaDiferenteVolta').checked
+                    ? document.getElementById('companhiaAereaVolta').value
+                    : '',
+                localizadorVolta: document.getElementById('companhiaDiferenteVolta').checked
+                    ? document.getElementById('localizadorVolta').value.toUpperCase()
+                    : '',
+                linkRastreamentoVolta: document.getElementById('companhiaDiferenteVolta').checked
+                    ? document.getElementById('linkRastreamentoVolta').value
+                    : '',
                 fornecedorId: document.getElementById('fornecedorId').value,
+                fornecedorId2: document.getElementById('fornecedorId2').value,
                 numeroVoo: document.getElementById('numeroVoo').value.toUpperCase(),
                 valorVenda: parseFloat(document.getElementById('valorVenda').value),
                 valorCusto: parseFloat(document.getElementById('valorCusto').value),
                 valorMilhas: parseFloat(document.getElementById('valorMilhas').value) || 0,
                 formaPagamento: document.getElementById('formaPagamento').value,
                 parcelas: parseInt(document.getElementById('parcelas').value) || 1,
-                observacoes: document.getElementById('observacoes').value
+                observacoes: document.getElementById('observacoes').value,
+                linkRastreamento: document.getElementById('linkRastreamento').value,
+                dataVenda: dataVenda,
+                horaVenda: horaVenda
             };
 
             if (vendaEditandoId) {
@@ -836,6 +1350,8 @@
 
             // Preencher formulário com dados da venda
             document.getElementById('vendaId').value = venda.id;
+            preencherLocalizadores(venda.localizadores || venda.localizador || []);
+            document.getElementById('numeroCompra').value = venda.numeroCompra || '';
             document.getElementById('clienteId').value = venda.clienteId;
             document.getElementById('origem').value = venda.origem;
             document.getElementById('destino').value = venda.destino;
@@ -844,7 +1360,29 @@
             document.getElementById('dataVolta').value = venda.dataVolta || '';
             document.getElementById('horaVolta').value = venda.horaVolta || '';
             document.getElementById('companhiaAerea').value = venda.companhiaAerea;
+
+            // Companhia diferente na volta
+            if (venda.companhiaAereaVolta) {
+                document.getElementById('companhiaDiferenteVolta').checked = true;
+                toggleCompanhiaVolta();
+                document.getElementById('companhiaAereaVolta').value = venda.companhiaAereaVolta;
+                document.getElementById('localizadorVolta').value = venda.localizadorVolta || '';
+                document.getElementById('linkRastreamentoVolta').value = venda.linkRastreamentoVolta || '';
+                toggleBotaoRastreamentoVolta();
+            } else {
+                document.getElementById('companhiaDiferenteVolta').checked = false;
+                toggleCompanhiaVolta();
+            }
+
+            document.getElementById('fornecedorId').value = venda.fornecedorId || '';
+            if (venda.fornecedorId2) {
+                toggleFornecedor2();
+                document.getElementById('fornecedorId2').value = venda.fornecedorId2;
+            } else {
+                removerFornecedor2();
+            }
             document.getElementById('numeroVoo').value = venda.numeroVoo || '';
+            document.getElementById('linkRastreamento').value = venda.linkRastreamento || '';
             document.getElementById('valorCusto').value = venda.valorCusto;
             document.getElementById('valorMilhas').value = venda.valorMilhas || '';
             document.getElementById('valorVenda').value = venda.valorVenda;
@@ -853,6 +1391,18 @@
             document.getElementById('observacoes').value = venda.observacoes || '';
             document.getElementById('quantidadePassageiros').value = venda.quantidadePassageiros;
             document.getElementById('clienteViaja').checked = venda.clienteViaja;
+
+            // Preencher data da venda se existir
+            if (venda.dataVenda) {
+                document.getElementById('dataVendaAutomatica').checked = false;
+                document.getElementById('dataVendaManual').value = venda.dataVenda;
+                document.getElementById('horaVendaManual').value = venda.horaVenda || '00:00';
+                toggleDataVenda();
+            } else {
+                // Manter automático se não tiver data da venda
+                document.getElementById('dataVendaAutomatica').checked = true;
+                toggleDataVenda();
+            }
 
             // Gerar campos de passageiros
             gerarCamposPassageiros();
@@ -863,8 +1413,13 @@
                     const num = i + 1;
                     document.getElementById(`passageiroNome_${num}`).value = p.nome;
                     document.getElementById(`passageiroCpf_${num}`).value = p.cpf || '';
-                    document.getElementById(`passageiroDataNascimento_${num}`).value = p.dataNascimento || '';
-                    document.getElementById(`passageiroPassaporte_${num}`).value = p.passaporte || '';
+                    document.getElementById(`passageiroLocalizador_${num}`).value = p.localizador || '';
+                    if (document.getElementById(`passageiroDataNascimento_${num}`)) {
+                        document.getElementById(`passageiroDataNascimento_${num}`).value = p.dataNascimento || '';
+                    }
+                    if (document.getElementById(`passageiroPassaporte_${num}`)) {
+                        document.getElementById(`passageiroPassaporte_${num}`).value = p.passaporte || '';
+                    }
                 });
             }
 
@@ -906,37 +1461,66 @@
                 doc.setTextColor(212, 175, 55); // Dourado
                 doc.setFontSize(24);
                 doc.setFont(undefined, 'bold');
-                doc.text('VOECOMKENNEDY', 105, 22, { align: 'center' });
+                doc.text('MAIS VOO', 105, 20, { align: 'center' });
+
+                // Razão Social e CNPJ
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+                doc.setTextColor(100, 100, 100);
+                doc.text('VOE COM KENNEDY LTDA', 105, 26, { align: 'center' });
+                doc.setFontSize(8);
+                doc.text('CNPJ: 56.913.032/0001-32', 105, 30, { align: 'center' });
 
                 // Tagline
                 doc.setFontSize(10);
-                doc.setFont(undefined, 'normal');
-                doc.setTextColor(100, 100, 100);
-                doc.text('Passagens Aéreas', 105, 28, { align: 'center' });
+                doc.text('Passagens Aéreas', 105, 35, { align: 'center' });
 
                 // Informações de Contato
                 doc.setFontSize(8);
-                doc.text('WhatsApp: (62) 99644-8671 | Email: contato@voecomkennedy.com.br', 105, 33, { align: 'center' });
+                doc.text('WhatsApp: (62) 99644-8671 | Email: contato@voecomkennedy.com.br', 105, 40, { align: 'center' });
 
                 // Linha separadora
                 doc.setDrawColor(220, 220, 220);
                 doc.setLineWidth(0.5);
-                doc.line(10, 36, 200, 36);
+                doc.line(10, 43, 200, 43);
 
                 // ========== TÍTULO DO DOCUMENTO ==========
                 doc.setFontSize(16);
                 doc.setFont(undefined, 'bold');
                 doc.setTextColor(44, 62, 80); // Azul escuro
-                doc.text('COMPROVANTE DE PAGAMENTO', 105, 45, { align: 'center' });
+                doc.text('COMPROVANTE DE PAGAMENTO', 105, 52, { align: 'center' });
 
-                // Localizador em destaque
+                // Localizador(es) em destaque
                 doc.setFillColor(212, 175, 55); // Dourado
-                doc.roundedRect(70, 50, 60, 10, 2, 2, 'F');
+                doc.roundedRect(70, 57, 60, 10, 2, 2, 'F');
                 doc.setTextColor(255, 255, 255);
                 doc.setFontSize(12);
-                doc.text(`Localizador: ${venda.localizador}`, 105, 57, { align: 'center' });
 
-                let y = 68;
+                // Suportar múltiplos localizadores (array) ou único (string - retrocompatibilidade)
+                let localizadoresTexto;
+                if (Array.isArray(venda.localizadores)) {
+                    if (venda.localizadores.length === 1) {
+                        localizadoresTexto = `Localizador: ${venda.localizadores[0]}`;
+                    } else {
+                        localizadoresTexto = `Localizadores: ${venda.localizadores.join(' | ')}`;
+                    }
+                } else if (venda.localizador) {
+                    // Retrocompatibilidade com vendas antigas
+                    localizadoresTexto = `Localizador: ${venda.localizador}`;
+                } else {
+                    localizadoresTexto = 'Localizador: N/A';
+                }
+
+                doc.text(localizadoresTexto, 105, 64, { align: 'center' });
+
+                // Número da Compra (se existir)
+                let y = 75;
+                if (venda.numeroCompra) {
+                    doc.setFontSize(9);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(`Número da Compra: ${venda.numeroCompra}`, 105, 70, { align: 'center' });
+                    y = 78;
+                }
 
                 // ========== CLIENTE RESPONSÁVEL ==========
                 doc.setFillColor(245, 245, 245);
@@ -984,6 +1568,20 @@
                 venda.passageiros.forEach((p) => {
                     doc.text(`${numPass}. ${p.nome}`, 12, y);
                     if (p.cpf) doc.text(`CPF: ${p.cpf}`, 100, y);
+
+                    // Mostrar localizador individual se existir e não estiver nos principais
+                    if (p.localizador) {
+                        const locsPrincipais = Array.isArray(venda.localizadores) ? venda.localizadores : (venda.localizador ? [venda.localizador] : []);
+                        if (!locsPrincipais.includes(p.localizador)) {
+                            y += 5;
+                            doc.setFontSize(8);
+                            doc.setTextColor(150, 150, 150);
+                            doc.text(`   Localizador: ${p.localizador}`, 12, y);
+                            doc.setFontSize(10);
+                            doc.setTextColor(44, 62, 80);
+                        }
+                    }
+
                     y += 5;
                     numPass++;
                 });
@@ -1133,7 +1731,7 @@
                 doc.setFontSize(10);
                 doc.setTextColor(44, 62, 80);
                 doc.setFont(undefined, 'bold');
-                doc.text('Obrigado por escolher VoeComKennedy!', 105, footerY + 6, { align: 'center' });
+                doc.text('Obrigado por escolher Mais Voo!', 105, footerY + 6, { align: 'center' });
 
                 doc.setFont(undefined, 'normal');
                 doc.setFontSize(8);
@@ -1143,8 +1741,9 @@
                 doc.setFontSize(7);
                 doc.text(`Documento gerado em: ${new Date().toLocaleString('pt-BR')}`, 105, footerY + 16, { align: 'center' });
 
-                // Salvar PDF
-                doc.save(`reserva-${venda.localizador}.pdf`);
+                // Salvar PDF - usar primeiro localizador para nome do arquivo
+                const primeiroLoc = Array.isArray(venda.localizadores) ? venda.localizadores[0] : (venda.localizador || 'SEM-LOC');
+                doc.save(`reserva-${primeiroLoc}.pdf`);
                 Utils.showSuccess('PDF gerado com sucesso!');
             } catch (error) {
                 console.error('Erro ao gerar PDF:', error);
@@ -1155,6 +1754,21 @@
         // Carregar e exibir vendas
         function carregarVendas() {
             aplicarFiltros();
+        }
+
+        // Toggle campos de data customizada
+        function toggleDataCustomizada() {
+            const periodo = document.getElementById('filtroPeriodo').value;
+            const dataInicioContainer = document.getElementById('dataInicioContainer');
+            const dataFimContainer = document.getElementById('dataFimContainer');
+
+            if (periodo === 'customizado') {
+                dataInicioContainer.style.display = 'block';
+                dataFimContainer.style.display = 'block';
+            } else {
+                dataInicioContainer.style.display = 'none';
+                dataFimContainer.style.display = 'none';
+            }
         }
 
         // Aplicar filtros
@@ -1169,16 +1783,27 @@
 
             // Filtro de período
             const periodo = document.getElementById('filtroPeriodo').value;
-            vendas = Utils.filtrarPorPeriodo(vendas, periodo);
+            const dataInicio = document.getElementById('dataInicio').value;
+            const dataFim = document.getElementById('dataFim').value;
+            vendas = Utils.filtrarPorPeriodo(vendas, periodo, dataInicio, dataFim);
 
             // Ordenação
             const ordenacao = document.getElementById('ordenacao').value;
             switch(ordenacao) {
                 case 'data_desc':
-                    vendas = Utils.ordenarPorData(vendas, 'dataEmbarque', 'desc');
+                    // Ordenar por dataVenda (ou dataCadastro se não tiver dataVenda)
+                    vendas.sort((a, b) => {
+                        const dataA = Utils.parseLocalDate(a.dataVenda || a.dataCadastro);
+                        const dataB = Utils.parseLocalDate(b.dataVenda || b.dataCadastro);
+                        return dataB - dataA;
+                    });
                     break;
                 case 'data_asc':
-                    vendas = Utils.ordenarPorData(vendas, 'dataEmbarque', 'asc');
+                    vendas.sort((a, b) => {
+                        const dataA = Utils.parseLocalDate(a.dataVenda || a.dataCadastro);
+                        const dataB = Utils.parseLocalDate(b.dataVenda || b.dataCadastro);
+                        return dataA - dataB;
+                    });
                     break;
                 case 'valor_desc':
                     vendas.sort((a, b) => b.valorVenda - a.valorVenda);
@@ -1188,7 +1813,31 @@
                     break;
             }
 
+            // Atualizar mini dashboard se houver filtro ativo
+            atualizarMiniDashboard(vendas, periodo);
+
             exibirVendas(vendas);
+        }
+
+        // Atualizar mini dashboard com estatísticas do período
+        function atualizarMiniDashboard(vendas, periodo) {
+            const miniDashboard = document.getElementById('miniDashboard');
+
+            // Mostrar mini dashboard apenas se houver filtro ativo (não "todos")
+            if (periodo === 'todos') {
+                miniDashboard.style.display = 'none';
+                return;
+            }
+
+            miniDashboard.style.display = 'flex';
+
+            // Calcular estatísticas
+            const stats = StorageManager.calcularStatsPeriodo(vendas);
+
+            document.getElementById('statTotalVendas').textContent = stats.totalVendas;
+            document.getElementById('statFaturamento').textContent = Utils.formatCurrency(stats.valorTotalVendas);
+            document.getElementById('statLucro').textContent = Utils.formatCurrency(stats.lucroTotal);
+            document.getElementById('statMargem').textContent = stats.margemLucroMedia.toFixed(2) + '%';
         }
 
         // Exibir vendas na tabela
@@ -1213,7 +1862,9 @@
                 const lucro = Utils.calcularLucro(venda.valorVenda, venda.valorCusto);
                 const margemClass = Utils.getMargemClass(Utils.calcularMargemLucro(venda.valorVenda, venda.valorCusto));
 
-                const voltaTexto = venda.dataVolta ? Utils.formatDate(venda.dataVolta) : 'Só ida';
+                const voltaTexto = venda.dataVolta
+                    ? Utils.formatDate(venda.dataVolta) + (venda.companhiaAereaVolta ? ` <small class="badge bg-warning text-dark">${venda.companhiaAereaVolta}</small>` : '')
+                    : 'Só ida';
 
                 // Buscar nomes dos aeroportos
                 const aeroportoOrigem = aeroportos.find(a => a.codigo === venda.origem.toUpperCase());
@@ -1222,9 +1873,19 @@
                 const nomeOrigem = aeroportoOrigem ? aeroportoOrigem.nome : venda.origem;
                 const nomeDestino = aeroportoDestino ? aeroportoDestino.nome : venda.destino;
 
+                // Formatar localizadores para exibição
+                let localizadoresDisplay;
+                if (Array.isArray(venda.localizadores)) {
+                    localizadoresDisplay = venda.localizadores.join(' | ');
+                } else if (venda.localizador) {
+                    localizadoresDisplay = venda.localizador;
+                } else {
+                    localizadoresDisplay = 'N/A';
+                }
+
                 html += `
                     <tr>
-                        <td><strong>${venda.localizador}</strong></td>
+                        <td><strong>${localizadoresDisplay}</strong></td>
                         <td>${cliente ? cliente.nome : 'N/A'}</td>
                         <td>${nomeOrigem} → ${nomeDestino}</td>
                         <td>${Utils.formatDate(venda.dataEmbarque)}</td>
@@ -1249,6 +1910,9 @@
             document.getElementById('busca').value = '';
             document.getElementById('filtroPeriodo').value = 'todos';
             document.getElementById('ordenacao').value = 'data_desc';
+            document.getElementById('dataInicio').value = '';
+            document.getElementById('dataFim').value = '';
+            toggleDataCustomizada();
             carregarVendas();
         }
     </script>

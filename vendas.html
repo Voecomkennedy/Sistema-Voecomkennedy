@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css?v=3">
 
     <!-- Autocomplete CSS -->
     <style>
@@ -147,7 +147,9 @@
                                     <option value="30dias">Últimos 30 dias</option>
                                     <option value="60dias">Últimos 60 dias</option>
                                     <option value="90dias">Últimos 90 dias</option>
-                                    <option value="customizado">Período customizado</option>
+                                    <option value="mes">Este mês</option>
+                                    <option value="ano">Este ano</option>
+                                    <option value="customizado">Período específico (de/até)</option>
                                 </select>
                             </div>
                             <div class="col-md-2 mb-2" id="dataInicioContainer" style="display: none;">
@@ -272,9 +274,15 @@
                         <div class="row">
                             <div class="col-md-10 mb-3">
                                 <label class="form-label">Cliente *</label>
-                                <select class="form-select" id="clienteId" required>
-                                    <option value="">Selecione o cliente responsável</option>
-                                </select>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" id="buscaCliente"
+                                           placeholder="Digite o nome do cliente..." autocomplete="off"
+                                           oninput="filtrarClientes(this.value)"
+                                           onfocus="filtrarClientes(this.value)">
+                                    <input type="hidden" id="clienteId" required>
+                                    <div id="listaClientesResultado" class="list-group position-absolute w-100 shadow"
+                                         style="display:none; z-index:1000; max-height:240px; overflow-y:auto;"></div>
+                                </div>
                                 <small class="text-muted">
                                     Não encontrou? <a href="pessoas.html" target="_blank">Cadastrar novo cliente</a>
                                 </small>
@@ -483,15 +491,18 @@
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Valor de Venda (R$) *</label>
-                                <input type="number" class="form-control" id="valorVenda" required step="0.01" min="0" placeholder="0.00" onchange="calcularMargem()">
+                                <input type="text" inputmode="numeric" class="form-control" id="valorVenda" required placeholder="0,00"
+                                       oninput="Utils.aplicarMascaraMoeda(this); calcularMargem();">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Valor de Custo (R$) *</label>
-                                <input type="number" class="form-control" id="valorCusto" required step="0.01" min="0" placeholder="0.00" onchange="calcularMargem()">
+                                <input type="text" inputmode="numeric" class="form-control" id="valorCusto" required placeholder="0,00"
+                                       oninput="Utils.aplicarMascaraMoeda(this); calcularMargem();">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Valor das Milhas (R$)</label>
-                                <input type="number" class="form-control" id="valorMilhas" step="0.01" min="0" placeholder="0.00">
+                                <input type="text" inputmode="numeric" class="form-control" id="valorMilhas" placeholder="0,00"
+                                       oninput="Utils.aplicarMascaraMoeda(this);">
                                 <small class="text-muted">Quanto pagou pelas milhas</small>
                             </div>
                         </div>
@@ -595,9 +606,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Custom JS -->
-    <script src="js/aeroportos-data.js?v=2"></script>
-    <script src="js/storage.js?v=2"></script>
-    <script src="js/utils.js?v=2"></script>
+    <script src="js/aeroportos-data.js?v=3"></script>
+    <script src="js/storage.js?v=3"></script>
+    <script src="js/utils.js?v=3"></script>
 
     <script>
         let modalVenda;
@@ -799,8 +810,8 @@
             }
 
             // Valores - usar o valor calculado da cotação
-            document.getElementById('valorVenda').value = cotacao.valorTotalPix.toFixed(2);
-            document.getElementById('valorCusto').value = '0.00'; // Usuário precisa preencher
+            document.getElementById('valorVenda').value = Utils.numeroParaMoeda(cotacao.valorTotalPix);
+            document.getElementById('valorCusto').value = ''; // Usuário precisa preencher
 
             // Passageiros
             const totalPassageiros = (cotacao.adultos || 0) + (cotacao.criancas || 0) + (cotacao.bebes || 0);
@@ -833,13 +844,86 @@
             }, 1000);
         }
 
-        // Carregar clientes no select (apenas tipo 'cliente')
+        // ===== BUSCA DE CLIENTE (autocomplete) =====
+        // Mantém a lista de clientes ordenada por nome em memória
+        let _clientesCache = [];
+
         function carregarClientes() {
-            const clientes = StorageManager.getClientes();
-            const select = document.getElementById('clienteId');
-            const optionsHTML = clientes.map(c => `<option value="${c.id}">${c.nome} - ${Utils.formatCPF(c.cpf)}</option>`).join('');
-            select.innerHTML = '<option value="">Selecione o cliente responsável</option>' + optionsHTML;
+            _clientesCache = StorageManager.getClientes()
+                .slice()
+                .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
         }
+
+        // Remove acentos e deixa minúsculo (pra busca não diferenciar acento)
+        function _normalizar(txt) {
+            return (txt || '').toString().toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        // Filtra os clientes pelo que foi digitado (em QUALQUER parte do nome ou CPF)
+        function filtrarClientes(termo) {
+            const lista = document.getElementById('listaClientesResultado');
+            const termoNorm = _normalizar(termo).trim();
+
+            let resultados = _clientesCache;
+            if (termoNorm) {
+                resultados = _clientesCache.filter(c =>
+                    _normalizar(c.nome).includes(termoNorm) ||
+                    _normalizar(c.cpf).includes(termoNorm)
+                );
+            }
+
+            // Limita a 50 resultados pra não pesar
+            resultados = resultados.slice(0, 50);
+
+            if (resultados.length === 0) {
+                lista.innerHTML = `<div class="list-group-item text-muted">Nenhum cliente encontrado</div>`;
+                lista.style.display = 'block';
+                return;
+            }
+
+            lista.innerHTML = resultados.map(c =>
+                `<button type="button" class="list-group-item list-group-item-action"
+                         onclick="selecionarCliente('${c.id}')">
+                    <strong>${c.nome}</strong>${c.cpf ? ` <small class="text-muted">- ${Utils.formatCPF(c.cpf)}</small>` : ''}
+                </button>`
+            ).join('');
+            lista.style.display = 'block';
+        }
+
+        // Quando clica num cliente da lista
+        function selecionarCliente(id) {
+            const cliente = _clientesCache.find(c => String(c.id) === String(id));
+            if (!cliente) return;
+            document.getElementById('clienteId').value = cliente.id;
+            document.getElementById('buscaCliente').value = cliente.nome + (cliente.cpf ? ` - ${Utils.formatCPF(cliente.cpf)}` : '');
+            document.getElementById('listaClientesResultado').style.display = 'none';
+        }
+
+        // Define o cliente programaticamente (usado ao editar venda ou carregar cotação)
+        function definirClientePorId(id) {
+            carregarClientes(); // garante cache atualizado
+            const cliente = _clientesCache.find(c => String(c.id) === String(id));
+            const hidden = document.getElementById('clienteId');
+            const busca = document.getElementById('buscaCliente');
+            if (cliente) {
+                hidden.value = cliente.id;
+                busca.value = cliente.nome + (cliente.cpf ? ` - ${Utils.formatCPF(cliente.cpf)}` : '');
+            } else {
+                hidden.value = '';
+                busca.value = '';
+            }
+        }
+
+        // Fecha a lista ao clicar fora
+        document.addEventListener('click', (e) => {
+            const wrapper = document.getElementById('buscaCliente');
+            const lista = document.getElementById('listaClientesResultado');
+            if (!lista) return;
+            if (e.target !== wrapper && !lista.contains(e.target)) {
+                lista.style.display = 'none';
+            }
+        });
 
         // Carregar fornecedores no select (apenas tipo 'fornecedor')
         function carregarFornecedores() {
@@ -1076,7 +1160,7 @@
 
         // Aplicar regras de parcelamento baseadas no valor
         function aplicarRegrasParcelas() {
-            const valorVenda = parseFloat(document.getElementById('valorVenda').value) || 0;
+            const valorVenda = Utils.moedaParaNumero(document.getElementById('valorVenda').value);
             const selectParcelas = document.getElementById('parcelas');
             const maxParcelas = valorVenda < 1500 ? 5 : 10;
 
@@ -1128,8 +1212,8 @@
 
         // Calcular margem em tempo real
         function calcularMargem() {
-            const valorVenda = parseFloat(document.getElementById('valorVenda').value) || 0;
-            const valorCusto = parseFloat(document.getElementById('valorCusto').value) || 0;
+            const valorVenda = Utils.moedaParaNumero(document.getElementById('valorVenda').value);
+            const valorCusto = Utils.moedaParaNumero(document.getElementById('valorCusto').value);
 
             // Aplicar regras de parcelamento quando o valor mudar
             const formaPagamento = document.getElementById('formaPagamento').value;
@@ -1162,7 +1246,7 @@
                 // Preencher campos básicos
                 document.getElementById('vendaId').value = venda.id;
                 preencherLocalizadores(venda.localizadores || venda.localizador || []);
-                document.getElementById('clienteId').value = venda.clienteId;
+                definirClientePorId(venda.clienteId);
                 document.getElementById('clienteViaja').checked = venda.clienteViaja;
                 document.getElementById('quantidadePassageiros').value = venda.quantidadePassageiros;
 
@@ -1178,9 +1262,9 @@
                 document.getElementById('fornecedorId').value = venda.fornecedorId || '';
 
                 // Valores
-                document.getElementById('valorVenda').value = venda.valorVenda;
-                document.getElementById('valorCusto').value = venda.valorCusto;
-                document.getElementById('valorMilhas').value = venda.valorMilhas || 0;
+                document.getElementById('valorVenda').value = Utils.numeroParaMoeda(venda.valorVenda);
+                document.getElementById('valorCusto').value = Utils.numeroParaMoeda(venda.valorCusto);
+                document.getElementById('valorMilhas').value = venda.valorMilhas ? Utils.numeroParaMoeda(venda.valorMilhas) : '';
                 document.getElementById('formaPagamento').value = venda.formaPagamento;
                 document.getElementById('observacoes').value = venda.observacoes || '';
 
@@ -1216,6 +1300,10 @@
                 document.getElementById('tituloModal').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Venda';
                 document.getElementById('formVenda').reset();
                 limparLocalizadores(); // Limpar campos de localizadores dinâmicos
+                // Limpar busca de cliente (campo visível + valor escondido)
+                document.getElementById('clienteId').value = '';
+                document.getElementById('buscaCliente').value = '';
+                document.getElementById('listaClientesResultado').style.display = 'none';
                 document.getElementById('vendaId').value = '';
                 document.getElementById('companhiaDiferenteVolta').checked = false;
                 toggleCompanhiaVolta();
@@ -1315,9 +1403,9 @@
                 fornecedorId: document.getElementById('fornecedorId').value,
                 fornecedorId2: document.getElementById('fornecedorId2').value,
                 numeroVoo: document.getElementById('numeroVoo').value.toUpperCase(),
-                valorVenda: parseFloat(document.getElementById('valorVenda').value),
-                valorCusto: parseFloat(document.getElementById('valorCusto').value),
-                valorMilhas: parseFloat(document.getElementById('valorMilhas').value) || 0,
+                valorVenda: Utils.moedaParaNumero(document.getElementById('valorVenda').value),
+                valorCusto: Utils.moedaParaNumero(document.getElementById('valorCusto').value),
+                valorMilhas: Utils.moedaParaNumero(document.getElementById('valorMilhas').value),
                 formaPagamento: document.getElementById('formaPagamento').value,
                 parcelas: parseInt(document.getElementById('parcelas').value) || 1,
                 observacoes: document.getElementById('observacoes').value,
@@ -1357,7 +1445,7 @@
             document.getElementById('vendaId').value = venda.id;
             preencherLocalizadores(venda.localizadores || venda.localizador || []);
             document.getElementById('numeroCompra').value = venda.numeroCompra || '';
-            document.getElementById('clienteId').value = venda.clienteId;
+            definirClientePorId(venda.clienteId);
             document.getElementById('origem').value = venda.origem;
             document.getElementById('destino').value = venda.destino;
             document.getElementById('dataEmbarque').value = venda.dataEmbarque;
@@ -1388,9 +1476,9 @@
             }
             document.getElementById('numeroVoo').value = venda.numeroVoo || '';
             document.getElementById('linkRastreamento').value = venda.linkRastreamento || '';
-            document.getElementById('valorCusto').value = venda.valorCusto;
-            document.getElementById('valorMilhas').value = venda.valorMilhas || '';
-            document.getElementById('valorVenda').value = venda.valorVenda;
+            document.getElementById('valorCusto').value = Utils.numeroParaMoeda(venda.valorCusto);
+            document.getElementById('valorMilhas').value = venda.valorMilhas ? Utils.numeroParaMoeda(venda.valorMilhas) : '';
+            document.getElementById('valorVenda').value = Utils.numeroParaMoeda(venda.valorVenda);
             document.getElementById('formaPagamento').value = venda.formaPagamento;
             document.getElementById('parcelas').value = venda.parcelas || '';
             document.getElementById('observacoes').value = venda.observacoes || '';
@@ -1923,9 +2011,9 @@
     </script>
     <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js?v=2"></script>
-    <script src="js/auth.js?v=2"></script>
-    <script src="js/cloud-sync.js?v=2"></script>
+    <script src="js/supabase-config.js?v=3"></script>
+    <script src="js/auth.js?v=3"></script>
+    <script src="js/cloud-sync.js?v=3"></script>
     <script>
         // Protege a pagina (exige login) e liga a sincronizacao com a nuvem.
         (async () => {

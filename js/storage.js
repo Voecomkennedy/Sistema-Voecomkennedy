@@ -365,37 +365,59 @@ const StorageManager = {
         const clientes = pessoas.filter(p => p.tipo === 'cliente');
         const fornecedores = pessoas.filter(p => p.tipo === 'fornecedor');
 
-        const totalVendas = vendas.length;
         const totalClientes = clientes.length;
         const totalFornecedores = fornecedores.length;
 
-        // Calcular valores totais
-        const valorTotalVendas = vendas.reduce((sum, v) => sum + (parseFloat(v.valorVenda) || 0), 0);
-        const valorTotalCusto = vendas.reduce((sum, v) => sum + (parseFloat(v.valorCusto) || 0), 0);
-        const valorTotalMilhas = vendas.reduce((sum, v) => sum + (parseFloat(v.valorMilhas) || 0), 0);
-        const lucroTotal = valorTotalVendas - valorTotalCusto;
-        const margemLucroMedia = valorTotalVendas > 0 ? (lucroTotal / valorTotalVendas * 100) : 0;
+        // Totais GERAIS (todas as vendas de todos os tempos)
+        const valorTotalGeral = vendas.reduce((sum, v) => sum + (parseFloat(v.valorVenda) || 0), 0);
+        const custoTotalGeral = vendas.reduce((sum, v) => sum + (parseFloat(v.valorCusto) || 0), 0);
+        const lucroTotalGeral = valorTotalGeral - custoTotalGeral;
 
-        // Vendas do mês atual
+        // ===== VENDAS DO MÊS ATUAL (pela DATA DA VENDA, não do voo) =====
         const now = new Date();
         const mesAtual = now.getMonth();
         const anoAtual = now.getFullYear();
+
+        const parseData = (v) => {
+            const raw = v.dataVenda || v.dataCadastro;
+            if (!raw) return null;
+            // Aceita "YYYY-MM-DD" e ISO; pega só ano-mês de forma segura
+            const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(raw));
+            if (m) return { ano: parseInt(m[1]), mes: parseInt(m[2]) - 1 };
+            const d = new Date(raw);
+            if (isNaN(d.getTime())) return null;
+            return { ano: d.getFullYear(), mes: d.getMonth() };
+        };
+
         const vendasMesAtual = vendas.filter(v => {
-            const dataVenda = new Date(v.dataEmbarque);
-            return dataVenda.getMonth() === mesAtual && dataVenda.getFullYear() === anoAtual;
+            const dv = parseData(v);
+            return dv && dv.mes === mesAtual && dv.ano === anoAtual;
         });
 
+        const valorMes = vendasMesAtual.reduce((sum, v) => sum + (parseFloat(v.valorVenda) || 0), 0);
+        const custoMes = vendasMesAtual.reduce((sum, v) => sum + (parseFloat(v.valorCusto) || 0), 0);
+        const lucroMes = valorMes - custoMes;
+        const margemMes = valorMes > 0 ? (lucroMes / valorMes * 100) : 0;
+
         return {
-            totalVendas,
+            // Os campos abaixo (usados pelos cards do Dashboard) agora são DO MÊS ATUAL:
+            totalVendas: vendasMesAtual.length,
+            valorTotalVendas: valorMes,
+            lucroTotal: lucroMes,
+            margemLucroMedia: margemMes,
+
+            // Cadastros (gerais)
             totalClientes,
             totalFornecedores,
-            valorTotalVendas,
-            valorTotalCusto,
-            valorTotalMilhas,
-            lucroTotal,
-            margemLucroMedia,
+
+            // Totais gerais (caso alguma tela precise)
+            totalVendasGeral: vendas.length,
+            valorTotalGeral,
+            lucroTotalGeral,
+
+            // Compatibilidade com nomes antigos
             vendasMesAtual: vendasMesAtual.length,
-            valorVendasMesAtual: vendasMesAtual.reduce((sum, v) => sum + (parseFloat(v.valorVenda) || 0), 0)
+            valorVendasMesAtual: valorMes
         };
     }
 };

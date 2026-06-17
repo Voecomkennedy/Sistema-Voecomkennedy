@@ -11,6 +11,32 @@ const Utils = {
         });
     },
 
+    // ===== MÁSCARA DE DINHEIRO (REAL BRASILEIRO) =====
+
+    // Converte um texto digitado (ex: "1.000,00" ou "R$ 1.234,56") para número (1000 / 1234.56)
+    moedaParaNumero(texto) {
+        if (texto === null || texto === undefined) return 0;
+        if (typeof texto === 'number') return texto;
+        // Mantém apenas dígitos, vírgula e ponto
+        let limpo = String(texto).replace(/[^\d,.-]/g, '');
+        if (!limpo) return 0;
+        // Remove os pontos (separador de milhar) e troca a vírgula decimal por ponto
+        limpo = limpo.replace(/\./g, '').replace(',', '.');
+        const num = parseFloat(limpo);
+        return isNaN(num) ? 0 : num;
+    },
+
+    // Converte um número (1000) para o texto exibido no campo: "R$ 1.000,00"
+    // (mesmo formato que a máscara aplicarMascaraMoeda usa enquanto digita)
+    numeroParaMoeda(num) {
+        const n = parseFloat(num) || 0;
+        const txt = n.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).replace(/[^\d.,]/g, '');
+        return 'R$ ' + txt;
+    },
+
     formatDate(dateString) {
         if (!dateString) return '-';
         const date = new Date(dateString);
@@ -133,23 +159,78 @@ const Utils = {
         return data >= hoje && data <= trintaDiasDepois;
     },
 
-    filtrarPorPeriodo(vendas, periodo) {
-        const agora = new Date();
+    // Filtra vendas pela DATA DA VENDA (quando foi vendida), não pela data do voo.
+    // Suporta: hoje, 7/30/60/90 dias atrás, mes (mês atual), ano (ano atual),
+    // customizado (dataInicio e dataFim), e todos.
+    filtrarPorPeriodo(vendas, periodo, dataInicio, dataFim) {
+        if (periodo === 'todos' || !periodo) return vendas;
 
-        switch(periodo) {
-            case 'hoje':
-                return vendas.filter(v => this.isHoje(v.dataEmbarque));
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
 
-            case '7dias':
-                return vendas.filter(v => this.isProximos7Dias(v.dataEmbarque));
+        // Retorna a data de referência da venda (data da venda ou cadastro)
+        const dataDaVenda = (v) => {
+            const d = this.parseLocalDate(v.dataVenda || v.dataCadastro);
+            if (!d || isNaN(d.getTime())) return null;
+            d.setHours(0, 0, 0, 0);
+            return d;
+        };
 
-            case '30dias':
-                return vendas.filter(v => this.isProximos30Dias(v.dataEmbarque));
-
-            case 'todos':
-            default:
-                return vendas;
+        // Caso customizado: do dia X até o dia Y (inclusive)
+        if (periodo === 'customizado') {
+            const ini = dataInicio ? this.parseLocalDate(dataInicio) : null;
+            const fim = dataFim ? this.parseLocalDate(dataFim) : null;
+            if (ini) ini.setHours(0, 0, 0, 0);
+            if (fim) fim.setHours(23, 59, 59, 999);
+            return vendas.filter(v => {
+                const d = dataDaVenda(v);
+                if (!d) return false;
+                if (ini && d < ini) return false;
+                if (fim && d > fim) return false;
+                return true;
+            });
         }
+
+        // Mês atual
+        if (periodo === 'mes') {
+            const mes = hoje.getMonth();
+            const ano = hoje.getFullYear();
+            return vendas.filter(v => {
+                const d = dataDaVenda(v);
+                return d && d.getMonth() === mes && d.getFullYear() === ano;
+            });
+        }
+
+        // Ano atual
+        if (periodo === 'ano') {
+            const ano = hoje.getFullYear();
+            return vendas.filter(v => {
+                const d = dataDaVenda(v);
+                return d && d.getFullYear() === ano;
+            });
+        }
+
+        // "Hoje"
+        if (periodo === 'hoje') {
+            return vendas.filter(v => {
+                const d = dataDaVenda(v);
+                return d && d.getTime() === hoje.getTime();
+            });
+        }
+
+        // Últimos N dias (7, 30, 60, 90)
+        const mapaDias = { '7dias': 7, '30dias': 30, '60dias': 60, '90dias': 90 };
+        const dias = mapaDias[periodo];
+        if (dias) {
+            const limite = new Date(hoje);
+            limite.setDate(hoje.getDate() - dias);
+            return vendas.filter(v => {
+                const d = dataDaVenda(v);
+                return d && d >= limite && d <= hoje;
+            });
+        }
+
+        return vendas;
     },
 
     // Filtra por período considerando a data/hora de embarque (a partir de agora)
@@ -302,8 +383,10 @@ const Utils = {
     },
 
     aplicarMascaraMoeda(input) {
-        let valor = input.value.replace(/\D/g, '');
-        valor = (parseFloat(valor) / 100).toFixed(2);
+        let digitos = input.value.replace(/\D/g, '');
+        if (!digitos) { input.value = ''; return; }
+        digitos = digitos.slice(0, 12); // limite de segurança
+        let valor = (parseInt(digitos, 10) / 100).toFixed(2);
         valor = valor.replace('.', ',');
         valor = valor.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         input.value = 'R$ ' + valor;

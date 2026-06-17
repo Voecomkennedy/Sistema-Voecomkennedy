@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnóstico da Nuvem - Voecomkennedy</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, Arial, sans-serif; background:#0f172a; color:#e2e8f0; padding:20px; max-width:800px; margin:0 auto; }
+    h1 { color:#fbbf24; font-size:20px; }
+    .passo { background:#1e293b; border-radius:10px; padding:14px 16px; margin:12px 0; border-left:4px solid #475569; }
+    .passo.ok { border-left-color:#10b981; }
+    .passo.erro { border-left-color:#ef4444; }
+    .passo.rodando { border-left-color:#f59e0b; }
+    .titulo { font-weight:bold; margin-bottom:6px; }
+    .detalhe { font-family:monospace; font-size:13px; background:#0b1120; padding:10px; border-radius:6px; white-space:pre-wrap; word-break:break-word; margin-top:8px; color:#94a3b8; }
+    .ok .titulo { color:#34d399; }
+    .erro .titulo { color:#f87171; }
+    .rodando .titulo { color:#fbbf24; }
+    button { background:#fbbf24; color:#0f172a; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; margin-top:10px; }
+    .voltar { display:inline-block; margin-top:20px; color:#60a5fa; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Diagnóstico da Nuvem</h1>
+  <p>Esta página testa cada etapa do salvamento na nuvem e mostra exatamente onde está o problema.</p>
+  <button onclick="rodar()">▶️ Rodar diagnóstico</button>
+  <div id="resultado"></div>
+  <a class="voltar" href="index.html">← Voltar ao sistema</a>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js?v=4"></script>
+  <script src="js/auth.js?v=4"></script>
+  <script>
+    const div = document.getElementById('resultado');
+    function add(estado, titulo, detalhe) {
+      const el = document.createElement('div');
+      el.className = 'passo ' + estado;
+      el.innerHTML = '<div class="titulo">' + titulo + '</div>' +
+        (detalhe ? '<div class="detalhe">' + (typeof detalhe === 'object' ? JSON.stringify(detalhe, null, 2) : detalhe) + '</div>' : '');
+      div.appendChild(el);
+      return el;
+    }
+
+    async function rodar() {
+      div.innerHTML = '';
+      const client = getSupabaseClient();
+      if (!client) { add('erro', '❌ Biblioteca Supabase não carregou', 'Verifique a conexão com a internet.'); return; }
+      add('ok', '✅ 1. Conexão com Supabase criada');
+
+      // 2) Sessão / login
+      const { data: sess } = await client.auth.getSession();
+      if (!sess || !sess.session) {
+        add('erro', '❌ 2. Você NÃO está logado', 'Entre primeiro pela tela de login e depois abra esta página de novo.');
+        return;
+      }
+      const userId = sess.session.user.id;
+      add('ok', '✅ 2. Você está logado', 'Seu ID de usuário: ' + userId + '\nE-mail: ' + sess.session.user.email);
+
+      // 3) Tentar GRAVAR (upsert) - é aqui que costuma falhar
+      const teste = { teste: 'diagnostico', quando: new Date().toISOString() };
+      const upRes = await client.from('dados_app').upsert({
+        user_id: userId,
+        conteudo: { _diagnostico: teste },
+        atualizado_em: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+      if (upRes.error) {
+        add('erro', '❌ 3. FALHOU ao GRAVAR na nuvem', upRes.error);
+        add('erro', '👉 ESTE é o problema!', 'Copie o texto acima e me mande. Provavelmente é permissão (GRANT) ou regra de segurança (RLS).');
+        return;
+      }
+      add('ok', '✅ 3. Gravou na nuvem com sucesso!');
+
+      // 4) Tentar LER de volta
+      const { data: lido, error: errLer } = await client
+        .from('dados_app').select('conteudo, atualizado_em').eq('user_id', userId).maybeSingle();
+      if (errLer) {
+        add('erro', '❌ 4. FALHOU ao LER da nuvem', errLer);
+        return;
+      }
+      add('ok', '✅ 4. Leu da nuvem com sucesso!', lido);
+
+      add('ok', '🎉 TUDO FUNCIONANDO!', 'O salvamento na nuvem está OK. Se mesmo assim os dados somem, o problema é outro (me avise).');
+    }
+  </script>
+</body>
+</html>

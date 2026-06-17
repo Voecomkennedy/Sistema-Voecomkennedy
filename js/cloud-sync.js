@@ -47,7 +47,8 @@ const CloudSync = {
                 .maybeSingle();
 
             if (error) {
-                console.warn('Erro ao baixar da nuvem:', error.message);
+                console.error('❌ Erro ao BAIXAR da nuvem:', error);
+                this._atualizarIndicador('erro', error.message);
                 return;
             }
 
@@ -90,14 +91,15 @@ const CloudSync = {
                 }, { onConflict: 'user_id' });
 
             if (error) {
-                console.warn('Erro ao enviar para a nuvem:', error.message);
-                this._atualizarIndicador('erro');
+                console.error('❌ Erro ao ENVIAR para a nuvem:', error);
+                this._atualizarIndicador('erro', error.message);
             } else {
+                console.log('✓ Dados salvos na nuvem.');
                 this._atualizarIndicador('sincronizado');
             }
         } catch (e) {
-            console.warn('Falha ao enviar para a nuvem:', e);
-            this._atualizarIndicador('erro');
+            console.error('❌ Falha ao enviar para a nuvem:', e);
+            this._atualizarIndicador('erro', e.message);
         }
     },
 
@@ -127,18 +129,20 @@ const CloudSync = {
     },
 
     // Atualiza um indicador visual de status (se existir o elemento #cloudStatus)
-    _atualizarIndicador(estado) {
+    _atualizarIndicador(estado, detalhe) {
         const el = document.getElementById('cloudStatus');
         if (!el) return;
 
         const mapa = {
             salvando:     { icon: 'bi-cloud-arrow-up', texto: 'Salvando...', cor: '#F59E0B' },
             sincronizado: { icon: 'bi-cloud-check',    texto: 'Salvo na nuvem', cor: '#10B981' },
-            erro:         { icon: 'bi-cloud-slash',    texto: 'Sem conexão (salvo no aparelho)', cor: '#EF4444' }
+            erro:         { icon: 'bi-cloud-slash',    texto: 'ERRO ao salvar na nuvem!', cor: '#EF4444' }
         };
         const info = mapa[estado] || mapa.sincronizado;
         el.innerHTML = `<i class="bi ${info.icon}"></i> ${info.texto}`;
         el.style.color = info.cor;
+        // Mostra o detalhe do erro ao passar o mouse (ajuda no diagnóstico)
+        el.title = detalhe ? ('Detalhe: ' + detalhe) : '';
     }
 };
 

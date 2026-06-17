@@ -1,0 +1,145 @@
+// ============================================
+// Sincronização com a Nuvem (Caminho Híbrido)
+// ============================================
+// Mantém o LocalStorage rápido (como hoje), mas:
+//   1) Ao logar / abrir o app: BAIXA os dados da nuvem para o LocalStorage.
+//   2) A cada alteração: ENVIA (faz backup) dos dados para a nuvem.
+// Cada usuário (agência) só enxerga os próprios dados (protegido por RLS).
+
+const CloudSync = {
+    _salvandoTimeout: null,
+    _userId: null,
+    _online: false,
+
+    // Chaves do LocalStorage que serão sincronizadas
+    CHAVES: ['emissao_vendas', 'emissao_pessoas', 'emissao_pacotes', 'emissao_cotacoes'],
+
+    // Inicializa: baixa os dados da nuvem e começa a monitorar alterações
+    async init() {
+        const client = getSupabaseClient();
+        if (!client) return;
+
+        this._userId = await Auth.getUserId();
+        if (!this._userId) return;
+
+        this._online = true;
+
+        // 1) Baixar dados da nuvem para o LocalStorage
+        await this.baixarDaNuvem();
+
+        // 2) Interceptar gravações no LocalStorage para disparar backup automático
+        this._monitorarLocalStorage();
+
+        // 3) Atualizar indicador visual de status (se existir na página)
+        this._atualizarIndicador('sincronizado');
+    },
+
+    // Baixa o "documento" do usuário na nuvem e popula o LocalStorage
+    async baixarDaNuvem() {
+        const client = getSupabaseClient();
+        if (!client || !this._userId) return;
+
+        try {
+            const { data, error } = await client
+                .from('dados_app')
+                .select('conteudo, atualizado_em')
+                .eq('user_id', this._userId)
+                .maybeSingle();
+
+            if (error) {
+                console.warn('Erro ao baixar da nuvem:', error.message);
+                return;
+            }
+
+            if (data && data.conteudo) {
+                const conteudo = data.conteudo;
+                this.CHAVES.forEach(chave => {
+                    if (conteudo[chave] !== undefined) {
+                        localStorage.setItem(chave, JSON.stringify(conteudo[chave]));
+                    }
+                });
+                console.log('✓ Dados carregados da nuvem.');
+            } else {
+                // Primeira vez: sobe o que houver no LocalStorage
+                console.log('Nenhum dado na nuvem ainda. Enviando dados locais (se houver).');
+                await this.enviarParaNuvem();
+            }
+        } catch (e) {
+            console.warn('Falha ao baixar da nuvem:', e);
+        }
+    },
+
+    // Envia (faz backup) de todos os dados locais para a nuvem
+    async enviarParaNuvem() {
+        const client = getSupabaseClient();
+        if (!client || !this._userId) return;
+
+        try {
+            const conteudo = {};
+            this.CHAVES.forEach(chave => {
+                const raw = localStorage.getItem(chave);
+                conteudo[chave] = raw ? JSON.parse(raw) : [];
+            });
+
+            const { error } = await client
+                .from('dados_app')
+                .upsert({
+                    user_id: this._userId,
+                    conteudo: conteudo,
+                    atualizado_em: new Date().toISOString()
+                }, { onConflict: 'user_id' });
+
+            if (error) {
+                console.warn('Erro ao enviar para a nuvem:', error.message);
+                this._atualizarIndicador('erro');
+            } else {
+                this._atualizarIndicador('sincronizado');
+            }
+        } catch (e) {
+            console.warn('Falha ao enviar para a nuvem:', e);
+            this._atualizarIndicador('erro');
+        }
+    },
+
+    // Agenda um backup (espera 1,5s após a última alteração para não enviar a cada tecla)
+    agendarBackup() {
+        if (!this._online) return;
+        this._atualizarIndicador('salvando');
+        clearTimeout(this._salvandoTimeout);
+        this._salvandoTimeout = setTimeout(() => {
+            this.enviarParaNuvem();
+        }, 1500);
+    },
+
+    // Substitui o setItem padrão para detectar mudanças nas chaves do app
+    _monitorarLocalStorage() {
+        if (localStorage._cloudSyncAtivo) return;
+        const originalSetItem = localStorage.setItem.bind(localStorage);
+        const self = this;
+
+        localStorage.setItem = function (chave, valor) {
+            originalSetItem(chave, valor);
+            if (self.CHAVES.includes(chave)) {
+                self.agendarBackup();
+            }
+        };
+        localStorage._cloudSyncAtivo = true;
+    },
+
+    // Atualiza um indicador visual de status (se existir o elemento #cloudStatus)
+    _atualizarIndicador(estado) {
+        const el = document.getElementById('cloudStatus');
+        if (!el) return;
+
+        const mapa = {
+            salvando:     { icon: 'bi-cloud-arrow-up', texto: 'Salvando...', cor: '#F59E0B' },
+            sincronizado: { icon: 'bi-cloud-check',    texto: 'Salvo na nuvem', cor: '#10B981' },
+            erro:         { icon: 'bi-cloud-slash',    texto: 'Sem conexão (salvo no aparelho)', cor: '#EF4444' }
+        };
+        const info = mapa[estado] || mapa.sincronizado;
+        el.innerHTML = `<i class="bi ${info.icon}"></i> ${info.texto}`;
+        el.style.color = info.cor;
+    }
+};
+
+window.CloudSync = CloudSync;

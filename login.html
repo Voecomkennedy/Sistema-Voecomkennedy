@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar - Voecomkennedy</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #2C3E50 0%, #1a2733 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 16px;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 410px;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%);
+            color: #fff;
+            text-align: center;
+            padding: 34px 24px 28px;
+        }
+        .login-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #D4AF37;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.9rem;
+            color: #2C3E50;
+            margin-bottom: 12px;
+            box-shadow: 0 6px 16px rgba(212,175,55,0.4);
+        }
+        .login-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+        .login-header p {
+            margin: 4px 0 0;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+        .login-body { padding: 30px 28px 32px; }
+        .form-label { font-weight: 600; font-size: 0.85rem; color: #2C3E50; }
+        .form-control {
+            border-radius: 10px;
+            padding: 12px 14px;
+            border: 1.5px solid #e3e6ea;
+        }
+        .form-control:focus {
+            border-color: #D4AF37;
+            box-shadow: 0 0 0 0.2rem rgba(212,175,55,0.18);
+        }
+        .btn-entrar {
+            background: #D4AF37;
+            border: none;
+            color: #2C3E50;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 12px;
+            width: 100%;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        .btn-entrar:hover { background: #c19f2e; }
+        .btn-entrar:disabled { opacity: 0.7; }
+        .input-group .toggle-senha {
+            border: 1.5px solid #e3e6ea;
+            border-left: none;
+            background: #fff;
+            border-radius: 0 10px 10px 0;
+            color: #6c757d;
+            cursor: pointer;
+        }
+        .login-footer {
+            text-align: center;
+            font-size: 0.78rem;
+            color: #9aa3ab;
+            padding-bottom: 22px;
+        }
+        .alerta-erro {
+            display: none;
+            background: #fdecea;
+            color: #c0392b;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <main class="login-card">
+        <header class="login-header">
+            <div class="login-logo"><i class="bi bi-airplane-fill"></i></div>
+            <h1>Voecomkennedy</h1>
+            <p>Sistema de Emissão de Passagens</p>
+        </header>
+
+        <section class="login-body">
+            <div class="alerta-erro" id="alertaErro"></div>
+
+            <form id="formLogin" autocomplete="on">
+                <div class="mb-3">
+                    <label class="form-label" for="email">E-mail</label>
+                    <input type="email" class="form-control" id="email" placeholder="seu@email.com" required autofocus>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label" for="senha">Senha</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="senha" placeholder="Sua senha" required style="border-radius: 10px 0 0 10px;">
+                        <span class="toggle-senha" id="toggleSenha"><i class="bi bi-eye"></i></span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-entrar" id="btnEntrar">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Entrar
+                </button>
+            </form>
+        </section>
+
+        <footer class="login-footer">
+            © Voecomkennedy · Seus dados salvos na nuvem com segurança
+        </footer>
+    </main>
+
+    <!-- Supabase + scripts do sistema -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/auth.js"></script>
+
+    <script>
+        const form = document.getElementById('formLogin');
+        const alertaErro = document.getElementById('alertaErro');
+        const btnEntrar = document.getElementById('btnEntrar');
+        const toggleSenha = document.getElementById('toggleSenha');
+        const inputSenha = document.getElementById('senha');
+
+        // Mostrar/esconder senha
+        toggleSenha.addEventListener('click', () => {
+            const tipo = inputSenha.type === 'password' ? 'text' : 'password';
+            inputSenha.type = tipo;
+            toggleSenha.innerHTML = tipo === 'password'
+                ? '<i class="bi bi-eye"></i>'
+                : '<i class="bi bi-eye-slash"></i>';
+        });
+
+        function mostrarErro(msg) {
+            alertaErro.textContent = msg;
+            alertaErro.style.display = 'block';
+        }
+
+        // Se já estiver logado, vai direto pro Dashboard
+        (async () => {
+            const session = await Auth.getSession();
+            if (session) window.location.href = 'index.html';
+        })();
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            alertaErro.style.display = 'none';
+
+            const email = document.getElementById('email').value;
+            const senha = inputSenha.value;
+
+            btnEntrar.disabled = true;
+            btnEntrar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Entrando...';
+
+            const resultado = await Auth.login(email, senha);
+
+            if (resultado.ok) {
+                window.location.href = 'index.html';
+            } else {
+                mostrarErro(resultado.erro);
+                btnEntrar.disabled = false;
+                btnEntrar.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Entrar';
+            }
+        });
+    </script>
+</body>
+</html>

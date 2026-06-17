@@ -62,6 +62,10 @@
                         </a>
                     </li>
                 </ul>
+                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
+                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
+                    <i class="bi bi-box-arrow-right"></i> Sair
+                </button>
             </div>
         </div>
     </nav>
@@ -365,6 +369,19 @@
         } else {
             atualizarDashboard();
         }
+    </script>
+    <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js?v=2"></script>
+    <script src="js/auth.js?v=2"></script>
+    <script src="js/cloud-sync.js?v=2"></script>
+    <script>
+        // Protege a pagina (exige login) e liga a sincronizacao com a nuvem.
+        (async () => {
+            const ok = await Auth.proteger();
+            if (!ok) return; // ja redirecionou pro login
+            await CloudSync.init();
+        })();
     </script>
 </body>
 </html>

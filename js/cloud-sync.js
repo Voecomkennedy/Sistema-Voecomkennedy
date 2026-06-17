@@ -10,6 +10,8 @@ const CloudSync = {
     _salvandoTimeout: null,
     _userId: null,
     _online: false,
+    _monitorando: false,
+    _backupPendente: false,
 
     // Chaves do LocalStorage que serão sincronizadas
     CHAVES: ['emissao_vendas', 'emissao_pessoas', 'emissao_pacotes', 'emissao_cotacoes'],
@@ -32,6 +34,26 @@ const CloudSync = {
 
         // 3) Atualizar indicador visual de status (se existir na página)
         this._atualizarIndicador('sincronizado');
+
+        // 4) Salvamento de emergência ao fechar/trocar de página:
+        //    se ainda havia um backup pendente (debounce não disparou), envia agora.
+        const self = this;
+        window.addEventListener('beforeunload', () => {
+            if (self._backupPendente) {
+                clearTimeout(self._salvandoTimeout);
+                self._backupPendente = false;
+                // envio síncrono (não usa await pois a página vai fechar)
+                self.enviarParaNuvem();
+            }
+        });
+        // Também salva quando a aba fica oculta (celular: trocar de app)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && self._backupPendente) {
+                clearTimeout(self._salvandoTimeout);
+                self._backupPendente = false;
+                self.enviarParaNuvem();
+            }
+        });
     },
 
     // Baixa o "documento" do usuário na nuvem e popula o LocalStorage
@@ -106,16 +128,19 @@ const CloudSync = {
     // Agenda um backup (espera 1,5s após a última alteração para não enviar a cada tecla)
     agendarBackup() {
         if (!this._online) return;
+        this._backupPendente = true;
         this._atualizarIndicador('salvando');
         clearTimeout(this._salvandoTimeout);
         this._salvandoTimeout = setTimeout(() => {
+            this._backupPendente = false;
             this.enviarParaNuvem();
         }, 1500);
     },
 
     // Substitui o setItem padrão para detectar mudanças nas chaves do app
     _monitorarLocalStorage() {
-        if (localStorage._cloudSyncAtivo) return;
+        // Usa variável de MEMÓRIA (não localStorage) — evita travar na 2ª visita
+        if (this._monitorando) return;
         const originalSetItem = localStorage.setItem.bind(localStorage);
         const self = this;
 
@@ -125,7 +150,10 @@ const CloudSync = {
                 self.agendarBackup();
             }
         };
-        localStorage._cloudSyncAtivo = true;
+        this._monitorando = true;
+
+        // Limpa resíduo antigo da versão bugada (se existir)
+        try { localStorage.removeItem('_cloudSyncAtivo'); } catch (e) {}
     },
 
     // Atualiza um indicador visual de status (se existir o elemento #cloudStatus)

@@ -28,8 +28,9 @@
   <a class="voltar" href="index.html">← Voltar ao sistema</a>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js?v=4"></script>
-  <script src="js/auth.js?v=4"></script>
+  <script src="js/supabase-config.js?v=5"></script>
+  <script src="js/auth.js?v=5"></script>
+  <script src="js/cloud-sync.js?v=5"></script>
   <script>
     const div = document.getElementById('resultado');
     function add(estado, titulo, detalhe) {
@@ -80,7 +81,24 @@
       }
       add('ok', '✅ 4. Leu da nuvem com sucesso!', lido);
 
-      add('ok', '🎉 TUDO FUNCIONANDO!', 'O salvamento na nuvem está OK. Se mesmo assim os dados somem, o problema é outro (me avise).');
+      add('ok', '✅ 5. Gravação e leitura na nuvem: OK');
+
+      // 6) TESTE DO INTERCEPTADOR: simula salvar uma venda e vê se dispara o backup
+      add('rodando', '⏳ 6. Testando se SALVAR UMA VENDA dispara o backup...');
+      await CloudSync.init(); // ativa o monitoramento
+      CloudSync._backupPendente = false;
+      // simula o que o sistema faz ao cadastrar uma venda
+      localStorage.setItem('emissao_vendas', JSON.stringify([{ id: 'teste-diag', cliente: 'TESTE' }]));
+      // espera um instante e verifica se ficou marcado como pendente
+      await new Promise(r => setTimeout(r, 300));
+      if (CloudSync._backupPendente || CloudSync._salvandoTimeout) {
+        add('ok', '✅ 6. PERFEITO! Salvar uma venda DISPARA o backup automático.');
+        // espera o debounce terminar e confirma o envio
+        await new Promise(r => setTimeout(r, 2000));
+        add('ok', '🎉 TUDO FUNCIONANDO DE VERDADE!', 'Agora pode cadastrar vendas normalmente que elas vão pra nuvem. Pode apagar esta página de teste depois.');
+      } else {
+        add('erro', '❌ 6. O interceptador NÃO está pegando o salvamento das vendas!', 'Este é o problema real. Me avise que eu ajusto o código.');
+      }
     }
   </script>
 </body>

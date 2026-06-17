@@ -152,6 +152,88 @@ const Utils = {
         }
     },
 
+    // Filtra por período considerando a data/hora de embarque (a partir de agora)
+    filtrarPorPeriodoEmbarque(vendas, periodo) {
+        const agora = new Date();
+
+        const calcLimite = (dias) => {
+            const limite = new Date(agora);
+            limite.setDate(agora.getDate() + dias);
+            return limite;
+        };
+
+        const montarDataHora = (venda) => {
+            const dataBase = this.parseLocalDate(venda.dataEmbarque);
+            if (!dataBase || isNaN(dataBase.getTime())) return null;
+            if (venda.horaEmbarque) {
+                const [h, m] = venda.horaEmbarque.split(':');
+                dataBase.setHours(parseInt(h) || 0, parseInt(m) || 0, 0, 0);
+            }
+            return dataBase;
+        };
+
+        const dentroDoPeriodo = (venda, limite) => {
+            const dataHora = montarDataHora(venda);
+            if (!dataHora) return false;
+            return dataHora >= agora && dataHora <= limite;
+        };
+
+        switch (periodo) {
+            case 'hoje': {
+                return vendas.filter(v => {
+                    const dataHora = montarDataHora(v);
+                    return dataHora && this.isHoje(dataHora) && dataHora >= agora;
+                });
+            }
+            case '7dias':
+                return vendas.filter(v => dentroDoPeriodo(v, calcLimite(7)));
+            case '30dias':
+                return vendas.filter(v => dentroDoPeriodo(v, calcLimite(30)));
+            case 'todos':
+            default:
+                return vendas;
+        }
+    },
+
+    // Converte string de data para Date local (evita problema de fuso horário com "YYYY-MM-DD")
+    parseLocalDate(dateString) {
+        if (!dateString) return null;
+        if (dateString instanceof Date) return dateString;
+
+        // Formato somente data: "YYYY-MM-DD" -> interpreta como data local
+        const matchData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+        if (matchData) {
+            return new Date(
+                parseInt(matchData[1]),
+                parseInt(matchData[2]) - 1,
+                parseInt(matchData[3])
+            );
+        }
+
+        // Formato data e hora local: "YYYY-MM-DDTHH:MM"
+        const matchDataHora = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(dateString);
+        if (matchDataHora) {
+            return new Date(
+                parseInt(matchDataHora[1]),
+                parseInt(matchDataHora[2]) - 1,
+                parseInt(matchDataHora[3]),
+                parseInt(matchDataHora[4]),
+                parseInt(matchDataHora[5])
+            );
+        }
+
+        // Demais formatos (inclui ISO com timezone)
+        return new Date(dateString);
+    },
+
+    // Formata data no padrão brasileiro usando parseLocalDate
+    formatarData(dateString) {
+        if (!dateString) return '-';
+        const date = this.parseLocalDate(dateString);
+        if (!date || isNaN(date.getTime())) return '-';
+        return date.toLocaleDateString('pt-BR');
+    },
+
     // ========== VALIDAÇÕES ==========
 
     validarCPF(cpf) {

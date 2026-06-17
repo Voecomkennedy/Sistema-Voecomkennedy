@@ -1,3 +1,6 @@
+// Base de dados de aeroportos + utilitário de busca (AeroportosDB)
+// Reune os dados IATA e expõe métodos de busca usados pelo autocomplete.
+
 // Base de dados de aeroportos IATA - 247 aeroportos
 const AEROPORTOS_IATA = [
     {"codigo": "GRU", "nome": "São Paulo", "aeroporto": "Guarulhos", "pais": "Brasil"},
@@ -247,3 +250,43 @@ const AEROPORTOS_IATA = [
     {"codigo": "YOW", "nome": "Ottawa", "aeroporto": "Macdonald-Cartier", "pais": "Canadá"},
     {"codigo": "YHZ", "nome": "Halifax", "aeroporto": "Halifax Stanfield", "pais": "Canadá"}
 ];
+
+// Objeto utilitário usado pelas páginas (autocomplete de aeroportos)
+const AeroportosDB = {
+    todos() {
+        return (typeof AEROPORTOS_IATA !== 'undefined') ? AEROPORTOS_IATA : [];
+    },
+
+    // Busca por código IATA, cidade, nome do aeroporto ou país
+    buscar(query) {
+        const q = (query || '').toString().trim().toUpperCase();
+        if (!q) return [];
+
+        return this.todos()
+            .filter(a => {
+                return (
+                    (a.codigo && a.codigo.toUpperCase().includes(q)) ||
+                    (a.nome && a.nome.toUpperCase().includes(q)) ||
+                    (a.aeroporto && a.aeroporto.toUpperCase().includes(q)) ||
+                    (a.pais && a.pais.toUpperCase().includes(q))
+                );
+            })
+            .slice(0, 10)
+            .map(a => ({
+                codigo: a.codigo,
+                cidade: a.nome,
+                aeroporto: a.aeroporto,
+                pais: a.pais
+            }));
+    },
+
+    getByCodigo(codigo) {
+        const c = (codigo || '').toString().trim().toUpperCase();
+        return this.todos().find(a => a.codigo && a.codigo.toUpperCase() === c) || null;
+    }
+};
+
+if (typeof window !== 'undefined') {
+    window.AEROPORTOS_IATA = (typeof AEROPORTOS_IATA !== 'undefined') ? AEROPORTOS_IATA : [];
+    window.AeroportosDB = AeroportosDB;
+}

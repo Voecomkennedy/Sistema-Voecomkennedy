@@ -3,7 +3,9 @@ const StorageManager = {
     // Chaves do LocalStorage
     KEYS: {
         VENDAS: 'emissao_vendas',
-        PESSOAS: 'emissao_pessoas' // Unificado: clientes, passageiros e fornecedores
+        PESSOAS: 'emissao_pessoas', // Unificado: clientes, passageiros e fornecedores
+        PACOTES: 'emissao_pacotes',
+        COTACOES: 'emissao_cotacoes'
     },
 
     // ========== COMPANHIAS AÉREAS (FIXO) ==========
@@ -139,6 +141,111 @@ const StorageManager = {
         return this.getPessoaById(id);
     },
 
+    // CRUD de clientes (clientes são pessoas com tipo 'cliente')
+    addCliente(cliente) {
+        cliente.tipo = 'cliente';
+        return this.addPessoa(cliente);
+    },
+
+    updateCliente(id, clienteAtualizado) {
+        return this.updatePessoa(id, clienteAtualizado);
+    },
+
+    deleteCliente(id) {
+        return this.deletePessoa(id);
+    },
+
+    // ========== PACOTES TURÍSTICOS ==========
+    getPacotes() {
+        const data = localStorage.getItem(this.KEYS.PACOTES);
+        return data ? JSON.parse(data) : [];
+    },
+
+    savePacotes(pacotes) {
+        localStorage.setItem(this.KEYS.PACOTES, JSON.stringify(pacotes));
+    },
+
+    addPacote(pacote) {
+        const pacotes = this.getPacotes();
+        pacote.id = this.generateId();
+        pacote.dataCadastro = new Date().toISOString();
+        pacotes.push(pacote);
+        this.savePacotes(pacotes);
+        return pacote;
+    },
+
+    updatePacote(id, pacoteAtualizado) {
+        const pacotes = this.getPacotes();
+        const index = pacotes.findIndex(p => p.id === id);
+        if (index !== -1) {
+            pacotes[index] = { ...pacotes[index], ...pacoteAtualizado };
+            this.savePacotes(pacotes);
+            return pacotes[index];
+        }
+        return null;
+    },
+
+    deletePacote(id) {
+        const pacotes = this.getPacotes();
+        const filtered = pacotes.filter(p => p.id !== id);
+        this.savePacotes(filtered);
+        return filtered.length < pacotes.length;
+    },
+
+    getPacoteById(id) {
+        return this.getPacotes().find(p => p.id === id);
+    },
+
+    // ========== COTAÇÕES ==========
+    getCotacoes() {
+        const data = localStorage.getItem(this.KEYS.COTACOES);
+        return data ? JSON.parse(data) : [];
+    },
+
+    saveCotacoes(cotacoes) {
+        localStorage.setItem(this.KEYS.COTACOES, JSON.stringify(cotacoes));
+    },
+
+    addCotacao(cotacao) {
+        const cotacoes = this.getCotacoes();
+        cotacao.id = this.generateId();
+        cotacao.dataCadastro = new Date().toISOString();
+        if (!cotacao.status) cotacao.status = 'pendente';
+        cotacoes.push(cotacao);
+        this.saveCotacoes(cotacoes);
+        return cotacao;
+    },
+
+    updateCotacao(id, cotacaoAtualizada) {
+        const cotacoes = this.getCotacoes();
+        const index = cotacoes.findIndex(c => c.id === id);
+        if (index !== -1) {
+            cotacoes[index] = { ...cotacoes[index], ...cotacaoAtualizada };
+            this.saveCotacoes(cotacoes);
+            return cotacoes[index];
+        }
+        return null;
+    },
+
+    deleteCotacao(id) {
+        const cotacoes = this.getCotacoes();
+        const filtered = cotacoes.filter(c => c.id !== id);
+        this.saveCotacoes(filtered);
+        return filtered.length < cotacoes.length;
+    },
+
+    getCotacaoById(id) {
+        return this.getCotacoes().find(c => c.id === id);
+    },
+
+    // Marca a cotação como convertida e retorna seus dados (para pré-preencher a venda)
+    converterCotacaoParaVenda(id) {
+        const cotacao = this.getCotacaoById(id);
+        if (!cotacao) return null;
+        this.updateCotacao(id, { status: 'convertida', dataConversao: new Date().toISOString() });
+        return cotacao;
+    },
+
     // ========== UTILIDADES ==========
     generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -148,6 +255,8 @@ const StorageManager = {
         if (confirm('Tem certeza que deseja limpar TODOS os dados? Esta ação não pode ser desfeita!')) {
             localStorage.removeItem(this.KEYS.VENDAS);
             localStorage.removeItem(this.KEYS.PESSOAS);
+            localStorage.removeItem(this.KEYS.PACOTES);
+            localStorage.removeItem(this.KEYS.COTACOES);
             // Manter compatibilidade com dados antigos
             localStorage.removeItem('emissao_clientes');
             localStorage.removeItem('emissao_fornecedores');
@@ -160,6 +269,8 @@ const StorageManager = {
         const data = {
             vendas: this.getVendas(),
             pessoas: this.getPessoas(),
+            pacotes: this.getPacotes(),
+            cotacoes: this.getCotacoes(),
             exportDate: new Date().toISOString()
         };
         return JSON.stringify(data, null, 2);
@@ -170,6 +281,8 @@ const StorageManager = {
             const data = JSON.parse(jsonString);
             if (data.vendas) this.saveVendas(data.vendas);
             if (data.pessoas) this.savePessoas(data.pessoas);
+            if (data.pacotes) this.savePacotes(data.pacotes);
+            if (data.cotacoes) this.saveCotacoes(data.cotacoes);
             // Compatibilidade com exports antigos
             if (data.clientes || data.fornecedores) {
                 const pessoas = this.getPessoas();
@@ -228,6 +341,24 @@ const StorageManager = {
     },
 
     // ========== ESTATÍSTICAS ==========
+    // Calcula estatísticas para um conjunto arbitrário de vendas (ex.: vendas filtradas)
+    calcularStatsPeriodo(vendas) {
+        const lista = vendas || [];
+        const totalVendas = lista.length;
+        const valorTotalVendas = lista.reduce((sum, v) => sum + (parseFloat(v.valorVenda) || 0), 0);
+        const valorTotalCusto = lista.reduce((sum, v) => sum + (parseFloat(v.valorCusto) || 0), 0);
+        const lucroTotal = valorTotalVendas - valorTotalCusto;
+        const margemLucroMedia = valorTotalVendas > 0 ? (lucroTotal / valorTotalVendas * 100) : 0;
+
+        return {
+            totalVendas,
+            valorTotalVendas,
+            valorTotalCusto,
+            lucroTotal,
+            margemLucroMedia
+        };
+    },
+
     getStats() {
         const vendas = this.getVendas();
         const pessoas = this.getPessoas();

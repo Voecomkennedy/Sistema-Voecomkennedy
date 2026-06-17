@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
     <!-- Navbar -->
@@ -18,7 +18,7 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="index.html">
                 <i class="bi bi-airplane-fill me-2"></i>
-                Mais Voo
+                Voecomkennedy
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -208,8 +208,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Custom JS -->
-    <script src="js/storage.js"></script>
-    <script src="js/utils.js"></script>
+    <script src="js/storage.js?v=2"></script>
+    <script src="js/utils.js?v=2"></script>
 
     <script>
         // Atualizar estatísticas
@@ -333,17 +333,37 @@
             Utils.showSuccess('Dados exportados com sucesso!');
         }
 
-        // Atualizar countdown em tempo real
+        // Função central que atualiza todo o dashboard (com proteção contra erros)
+        function atualizarDashboard() {
+            try { atualizarEstatisticas(); } catch (e) { console.error('Erro em estatísticas:', e); }
+            try { atualizarAlertasCheckin(); } catch (e) { console.error('Erro em alertas:', e); }
+            try { atualizarVendasRecentes(); } catch (e) { console.error('Erro em vendas recentes:', e); }
+        }
+
+        // Atualizar countdown em tempo real (apenas os alertas, a cada 1s)
         setInterval(() => {
-            atualizarAlertasCheckin();
+            try { atualizarAlertasCheckin(); } catch (e) { console.error(e); }
         }, 1000);
 
-        // Carregar dados ao iniciar
-        document.addEventListener('DOMContentLoaded', () => {
-            atualizarEstatisticas();
-            atualizarAlertasCheckin();
-            atualizarVendasRecentes();
+        // Reatualizar estatísticas e vendas recentes periodicamente (cobre alterações feitas em outras telas/abas)
+        setInterval(() => {
+            try { atualizarEstatisticas(); } catch (e) { console.error(e); }
+            try { atualizarVendasRecentes(); } catch (e) { console.error(e); }
+        }, 5000);
+
+        // Recarregar quando a aba voltar a ficar visível ou ganhar foco
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) atualizarDashboard();
         });
+        window.addEventListener('focus', atualizarDashboard);
+        window.addEventListener('pageshow', atualizarDashboard);
+
+        // Carregar dados ao iniciar (cobre o caso de o DOM já estar pronto)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', atualizarDashboard);
+        } else {
+            atualizarDashboard();
+        }
     </script>
 </body>
 </html>

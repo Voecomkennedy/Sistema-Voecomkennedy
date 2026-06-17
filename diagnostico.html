@@ -24,6 +24,7 @@
   <h1>🔍 Diagnóstico da Nuvem</h1>
   <p>Esta página testa cada etapa do salvamento na nuvem e mostra exatamente onde está o problema.</p>
   <button onclick="rodar()">▶️ Rodar diagnóstico</button>
+  <button onclick="limparTeste()" style="background:#ef4444;color:#fff;">🧹 Limpar venda de TESTE</button>
   <div id="resultado"></div>
   <a class="voltar" href="index.html">← Voltar ao sistema</a>
 
@@ -40,6 +41,33 @@
         (detalhe ? '<div class="detalhe">' + (typeof detalhe === 'object' ? JSON.stringify(detalhe, null, 2) : detalhe) + '</div>' : '');
       div.appendChild(el);
       return el;
+    }
+
+    // Remove a venda de teste "TESTE" do aparelho e da nuvem
+    async function limparTeste() {
+      div.innerHTML = '';
+      const client = getSupabaseClient();
+      const { data: sess } = await client.auth.getSession();
+      if (!sess || !sess.session) { add('erro', '❌ Você precisa estar logado.'); return; }
+      const userId = sess.session.user.id;
+
+      // 1) Limpa as vendas de teste do aparelho
+      let vendas = [];
+      try { vendas = JSON.parse(localStorage.getItem('emissao_vendas') || '[]'); } catch (e) {}
+      const limpas = vendas.filter(v => v && v.id !== 'teste-diag' && v.id !== 'teste' && v.cliente !== 'TESTE');
+      localStorage.setItem('emissao_vendas', JSON.stringify(limpas));
+      add('ok', '✅ Vendas de teste removidas do aparelho', 'Restaram ' + limpas.length + ' venda(s).');
+
+      // 2) Sobe pra nuvem o conteúdo limpo
+      const CHAVES = ['emissao_vendas', 'emissao_pessoas', 'emissao_pacotes', 'emissao_cotacoes'];
+      const conteudo = {};
+      CHAVES.forEach(c => { const raw = localStorage.getItem(c); conteudo[c] = raw ? JSON.parse(raw) : []; });
+      // remove o resíduo _diagnostico, se houver
+      const up = await client.from('dados_app').upsert({
+        user_id: userId, conteudo: conteudo, atualizado_em: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+      if (up.error) { add('erro', '❌ Erro ao limpar a nuvem', up.error); return; }
+      add('ok', '🎉 Nuvem limpa!', 'Pronto. Pode voltar ao sistema e usar normalmente.');
     }
 
     async function rodar() {

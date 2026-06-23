@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=8">
 
     <!-- Bibliotecas para gerar PDF e QR Code -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -353,8 +353,9 @@
                         <div class="row g-2">
                             <div class="col-6"><label class="form-label small">Valor total (opcional)</label>
                                 <input type="text" class="form-control" id="f_valor" value="" placeholder="Ex: R$ 1.250,00"></div>
-                            <div class="col-6"><label class="form-label small">Link da reserva (QR Code)</label>
-                                <input type="text" class="form-control" id="f_link" value="https://voecomkennedy.tur.br"></div>
+                            <div class="col-6"><label class="form-label small">Link do QR Code (só p/ "Outra" cia)</label>
+                                <input type="text" class="form-control" id="f_link" value="https://voecomkennedy.tur.br">
+                                <small class="text-muted">GOL, Azul e LATAM geram o link sozinhos.</small></div>
                         </div>
                     </div></div>
 
@@ -493,15 +494,15 @@
         </div>
     </div>
 
-    <script src="js/storage.js?v=7"></script>
-    <script src="js/utils.js?v=7"></script>
-    <script src="js/cartao-embarque.js?v=7"></script>
+    <script src="js/storage.js?v=8"></script>
+    <script src="js/utils.js?v=8"></script>
+    <script src="js/cartao-embarque.js?v=8"></script>
 
     <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js?v=7"></script>
-    <script src="js/auth.js?v=7"></script>
-    <script src="js/cloud-sync.js?v=7"></script>
+    <script src="js/supabase-config.js?v=8"></script>
+    <script src="js/auth.js?v=8"></script>
+    <script src="js/cloud-sync.js?v=8"></script>
     <script>
         (async () => {
             const ok = await Auth.proteger();

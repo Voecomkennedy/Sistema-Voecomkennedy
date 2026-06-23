@@ -200,7 +200,7 @@ function montarLinkAtual() {
         idaOrigemSigla: (val('f_idaOrigemSigla') || '').toUpperCase(),
         passNome: val('f_passNome'),
         latamLink: val('f_latamLink'),
-        link: val('f_linkOutra')
+        link: val('f_link')
     };
     try { return cia.montarLink(dados); } catch (e) { return ''; }
 }

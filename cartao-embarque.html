@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartão de Embarque - Sistema de Emissão de Passagens</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=6">
+
+    <!-- Bibliotecas para gerar PDF e QR Code -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+    <style>
+        /* ===== ESTILO DO CARTÃO DE EMBARQUE (igual ao modelo GOL) ===== */
+        :root {
+            --ticket-azul: #002071;
+            --ticket-cinza-fundo: #F4F5F7;
+            --ticket-texto: #1f2937;
+            --ticket-claro: #9aa0aa;
+        }
+
+        .ticket-wrap {
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        .ticket {
+            width: 480px;
+            background: var(--ticket-azul);
+            border-radius: 22px;
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: var(--ticket-texto);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.18);
+        }
+
+        /* Header azul */
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 22px;
+            color: #fff;
+        }
+        .ticket-logo { display: flex; align-items: center; gap: 12px; }
+        .ticket-logo-circle {
+            width: 44px; height: 44px; border-radius: 12px;
+            background: var(--logo-cor, #ff6a00);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 16px; color: #fff;
+            letter-spacing: 0.5px;
+        }
+        .ticket-cia-nome { font-size: 19px; font-weight: 800; line-height: 1.1; }
+        .ticket-cia-sub { font-size: 10px; letter-spacing: 1px; opacity: 0.85; }
+        .ticket-loc-label { font-size: 9px; letter-spacing: 1.5px; opacity: 0.75; text-align: right; }
+        .ticket-loc-codigo { font-size: 26px; font-weight: 800; text-align: right; line-height: 1; }
+
+        /* Corpo branco */
+        .ticket-body {
+            background: var(--ticket-cinza-fundo);
+            padding: 16px 18px 6px;
+        }
+
+        .secao-titulo {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; font-weight: 700; margin: 10px 2px 8px;
+        }
+        .secao-titulo .label::before { content: "• "; color: var(--ticket-azul); }
+        .secao-titulo .sub { font-size: 10px; color: var(--ticket-claro); font-weight: 600; }
+
+        .card-branco {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+        }
+
+        .passageiro-linha { display: flex; align-items: center; gap: 12px; }
+        .passageiro-num { font-size: 11px; color: var(--ticket-claro); font-weight: 700; }
+        .passageiro-nome { font-size: 14px; font-weight: 700; }
+        .passageiro-doc { font-size: 11px; color: var(--ticket-claro); }
+
+        /* Divisória tracejada estilo ticket */
+        .divisoria {
+            position: relative;
+            border-top: 2px dashed #d0d4da;
+            margin: 6px 0 10px;
+        }
+
+        /* Voo */
+        .voo-tipo { font-size: 11px; color: var(--ticket-claro); font-weight: 700; margin: 4px 2px; }
+        .voo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            align-items: center;
+            gap: 6px;
+        }
+        .voo-data { font-size: 10px; color: var(--ticket-claro); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+        .voo-hora { font-size: 26px; font-weight: 800; line-height: 1; }
+        .voo-aeroporto { font-size: 11px; color: #555; margin-top: 3px; }
+        .voo-aeroporto strong { font-size: 13px; color: var(--ticket-texto); }
+        .voo-meio { text-align: center; }
+        .voo-numero { font-size: 10px; color: var(--ticket-claro); font-weight: 600; }
+        .voo-linha {
+            position: relative; height: 18px; display:flex; align-items:center; justify-content:center;
+        }
+        .voo-linha::before {
+            content:""; position:absolute; left:0; right:0; top:50%;
+            border-top: 1px solid #c8ccd3;
+        }
+        .voo-aviao {
+            position: relative; background: var(--ticket-cinza-fundo);
+            padding: 0 6px; color: var(--ticket-azul); font-size: 14px;
+        }
+        .voo-duracao { font-size: 10px; color: var(--ticket-claro); }
+        .voo-direita { text-align: right; }
+        .voo-direita .voo-aeroporto { text-align: right; }
+
+        /* Bagagens */
+        .bag-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .bag-item {
+            background: #fff; border-radius: 10px; padding: 8px 6px;
+            text-align: center; font-size: 10px;
+        }
+        .bag-item i { font-size: 16px; color: var(--ticket-azul); }
+        .bag-nome { font-weight: 700; margin-top: 3px; font-size: 10px; }
+        .bag-peso { color: var(--ticket-claro); font-size: 9px; }
+        .bag-qtd { font-weight: 800; font-size: 13px; margin-top: 3px; }
+
+        /* Rodapé interno com QR */
+        .ticket-resumo {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 4px; gap: 12px;
+        }
+        .ticket-resumo-texto { font-size: 10px; color: #555; }
+        .ticket-resumo-texto strong { font-size: 11px; }
+        #qrcode { width: 60px; height: 60px; }
+        #qrcode img, #qrcode canvas { width: 60px !important; height: 60px !important; }
+        .qr-label { font-size: 7px; color: var(--ticket-claro); text-align: center; margin-top: 2px; letter-spacing: 0.5px; }
+
+        /* Footer azul */
+        .ticket-footer {
+            background: var(--ticket-azul);
+            color: #fff;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            padding: 16px 22px;
+        }
+        .footer-msg-label { font-size: 8px; letter-spacing: 1px; opacity: 0.7; }
+        .footer-msg { font-size: 11px; font-weight: 600; max-width: 290px; }
+        .footer-valor-label { font-size: 8px; letter-spacing: 1px; opacity: 0.7; text-align: right; }
+        .footer-valor { font-size: 18px; font-weight: 800; text-align: right; }
+
+        @media (max-width: 520px) {
+            .ticket { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">
+                <i class="bi bi-airplane-fill me-2"></i>
+                Voecomkennedy
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill"></i> Vendas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pacotes.html"><i class="bi bi-box-fill"></i> Pacotes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill"></i> Cotações</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill"></i> Pessoas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill"></i> Check-in</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill"></i> Cartão</a></li>
+                    <li class="nav-item"><a class="nav-link" href="backup.html"><i class="bi bi-cloud-arrow-down-fill"></i> Backup</a></li>
+                </ul>
+                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
+                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
+                    <i class="bi bi-box-arrow-right"></i> Sair
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- COLUNA ESQUERDA: FORMULÁRIO -->
+            <div class="col-lg-5 mb-4">
+                <h4 class="mb-3"><i class="bi bi-ticket-perforated-fill text-primary"></i> Gerar Cartão de Embarque</h4>
+                <p class="text-muted small">Preencha os dados do voo. A pré-visualização atualiza automaticamente. Depois clique em "Baixar PDF".</p>
+
+                <form id="formCartao" oninput="atualizarPreview()">
+                    <!-- Companhia / Localizador -->
+                    <div class="card mb-3"><div class="card-body">
+                        <h6 class="text-primary"><i class="bi bi-building"></i> Companhia & Reserva</h6>
+                        <div class="row g-2">
+                            <div class="col-7">
+                                <label class="form-label small">Companhia Aérea</label>
+                                <input type="text" class="form-control" id="f_cia" value="GOL" placeholder="GOL, LATAM, AZUL...">
+                            </div>
+                            <div class="col-5">
+                                <label class="form-label small">Sigla no logo</label>
+                                <input type="text" class="form-control" id="f_sigla" value="GOL" maxlength="6">
+                            </div>
+                            <div class="col-7">
+                                <label class="form-label small">Localizador</label>
+                                <input type="text" class="form-control text-uppercase" id="f_localizador" value="GSYUPK" placeholder="Ex: GSYUPK">
+                            </div>
+                            <div class="col-5">
+                                <label class="form-label small">Cor do logo</label>
+                                <input type="color" class="form-control form-control-color w-100" id="f_cor" value="#ff6a00">
+                            </div>
+                        </div>
+                    </div></div>
+
+                    <!-- Passageiro -->
+                    <div class="card mb-3"><div class="card-body">
+                        <h6 class="text-primary"><i class="bi bi-person"></i> Passageiro</h6>
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 position-relative">
+                                <label class="form-label small">Buscar passageiro cadastrado (opcional)</label>
+                                <input type="text" class="form-control" id="f_buscaPassageiro" autocomplete="off"
+                                       placeholder="Digite o nome..." oninput="buscarPassageiroCartao(this.value)" onfocus="buscarPassageiroCartao(this.value)">
+                                <div id="resultadoPassageiroCartao" class="list-group position-absolute w-100 shadow"
+                                     style="display:none; z-index:1056; max-height:220px; overflow-y:auto;"></div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small">Nome do Passageiro</label>
+                                <input type="text" class="form-control" id="f_passNome" value="Ana Lucia Izidro dos Santos">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small">Documento (CPF/RG/Passaporte)</label>
+                                <input type="text" class="form-control" id="f_passDoc" value="127230642705-2">
+                            </div>
+                        </div>
+                    </div></div>
+
+                    <!-- Voo de Ida -->
+                    <div class="card mb-3"><div class="card-body">
+                        <h6 class="text-primary"><i class="bi bi-airplane"></i> Voo de Ida</h6>
+                        <div class="row g-2">
+                            <div class="col-12"><label class="form-label small">Data</label>
+                                <input type="date" class="form-control" id="f_idaData" value="2026-09-22"></div>
+                            <div class="col-4"><label class="form-label small">Hora saída</label>
+                                <input type="time" class="form-control" id="f_idaHoraSaida" value="11:30"></div>
+                            <div class="col-4"><label class="form-label small">Origem (cidade)</label>
+                                <input type="text" class="form-control" id="f_idaOrigemCidade" value="Porto Alegre"></div>
+                            <div class="col-4"><label class="form-label small">Sigla origem</label>
+                                <input type="text" class="form-control text-uppercase" id="f_idaOrigemSigla" value="POA" maxlength="4"></div>
+                            <div class="col-4"><label class="form-label small">Hora chegada</label>
+                                <input type="time" class="form-control" id="f_idaHoraChegada" value="13:15"></div>
+                            <div class="col-4"><label class="form-label small">Destino (cidade)</label>
+                                <input type="text" class="form-control" id="f_idaDestinoCidade" value="São Paulo"></div>
+                            <div class="col-4"><label class="form-label small">Sigla destino</label>
+                                <input type="text" class="form-control text-uppercase" id="f_idaDestinoSigla" value="GRU" maxlength="4"></div>
+                            <div class="col-6"><label class="form-label small">Nº do voo</label>
+                                <input type="text" class="form-control text-uppercase" id="f_idaVoo" value="G31235"></div>
+                            <div class="col-6"><label class="form-label small">Duração</label>
+                                <input type="text" class="form-control" id="f_idaDuracao" value="1h 45min"></div>
+                        </div>
+                    </div></div>
+
+                    <!-- Voo de Volta -->
+                    <div class="card mb-3"><div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="text-primary mb-0"><i class="bi bi-airplane"></i> Voo de Volta</h6>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="f_temVolta" checked onchange="atualizarPreview()">
+                                <label class="form-check-label small" for="f_temVolta">Tem volta</label>
+                            </div>
+                        </div>
+                        <div id="grupoVolta" class="row g-2 mt-1">
+                            <div class="col-12"><label class="form-label small">Data</label>
+                                <input type="date" class="form-control" id="f_voltaData" value="2026-09-30"></div>
+                            <div class="col-4"><label class="form-label small">Hora saída</label>
+                                <input type="time" class="form-control" id="f_voltaHoraSaida" value="17:05"></div>
+                            <div class="col-4"><label class="form-label small">Origem (cidade)</label>
+                                <input type="text" class="form-control" id="f_voltaOrigemCidade" value="São Paulo"></div>
+                            <div class="col-4"><label class="form-label small">Sigla origem</label>
+                                <input type="text" class="form-control text-uppercase" id="f_voltaOrigemSigla" value="GRU" maxlength="4"></div>
+                            <div class="col-4"><label class="form-label small">Hora chegada</label>
+                                <input type="time" class="form-control" id="f_voltaHoraChegada" value="18:50"></div>
+                            <div class="col-4"><label class="form-label small">Destino (cidade)</label>
+                                <input type="text" class="form-control" id="f_voltaDestinoCidade" value="Porto Alegre"></div>
+                            <div class="col-4"><label class="form-label small">Sigla destino</label>
+                                <input type="text" class="form-control text-uppercase" id="f_voltaDestinoSigla" value="POA" maxlength="4"></div>
+                            <div class="col-6"><label class="form-label small">Nº do voo</label>
+                                <input type="text" class="form-control text-uppercase" id="f_voltaVoo" value="G31238"></div>
+                            <div class="col-6"><label class="form-label small">Duração</label>
+                                <input type="text" class="form-control" id="f_voltaDuracao" value="1h 45min"></div>
+                        </div>
+                    </div></div>
+
+                    <!-- Bagagem -->
+                    <div class="card mb-3"><div class="card-body">
+                        <h6 class="text-primary"><i class="bi bi-bag"></i> Bagagens (por trecho)</h6>
+                        <div class="row g-2">
+                            <div class="col-3"><label class="form-label small">Item pessoal</label>
+                                <input type="number" class="form-control" id="f_bagPessoal" value="1" min="0"></div>
+                            <div class="col-3"><label class="form-label small">Mão (10kg)</label>
+                                <input type="number" class="form-control" id="f_bagMao" value="1" min="0"></div>
+                            <div class="col-3"><label class="form-label small">Despachada (23kg)</label>
+                                <input type="number" class="form-control" id="f_bagDesp" value="0" min="0"></div>
+                            <div class="col-3"><label class="form-label small">Especial</label>
+                                <input type="number" class="form-control" id="f_bagEsp" value="0" min="0"></div>
+                        </div>
+                    </div></div>
+
+                    <!-- Rodapé -->
+                    <div class="card mb-3"><div class="card-body">
+                        <h6 class="text-primary"><i class="bi bi-chat-left-text"></i> Mensagem & Valor</h6>
+                        <div class="mb-2">
+                            <label class="form-label small">Mensagem ao cliente</label>
+                            <textarea class="form-control" id="f_mensagem" rows="2">Boa viagem! Recomendamos chegar com antecedência e levar documento com foto.</textarea>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6"><label class="form-label small">Valor total (opcional)</label>
+                                <input type="text" class="form-control" id="f_valor" value="" placeholder="Ex: R$ 1.250,00"></div>
+                            <div class="col-6"><label class="form-label small">Link da reserva (QR Code)</label>
+                                <input type="text" class="form-control" id="f_link" value="https://voecomkennedy.tur.br"></div>
+                        </div>
+                    </div></div>
+
+                    <button type="button" class="btn btn-primary btn-lg w-100" onclick="gerarPDF()">
+                        <i class="bi bi-download"></i> Baixar PDF do Cartão
+                    </button>
+                </form>
+            </div>
+
+            <!-- COLUNA DIREITA: PRÉ-VISUALIZAÇÃO -->
+            <div class="col-lg-7">
+                <div class="sticky-top" style="top: 16px;">
+                    <p class="text-muted small mb-2"><i class="bi bi-eye"></i> Pré-visualização (é exatamente isso que vai sair no PDF):</p>
+                    <div class="ticket-wrap">
+                        <div class="ticket" id="ticketCartao">
+                            <!-- Header -->
+                            <div class="ticket-header">
+                                <div class="ticket-logo">
+                                    <div class="ticket-logo-circle" id="pv_logo">GOL</div>
+                                    <div>
+                                        <div class="ticket-cia-nome" id="pv_cia">GOL</div>
+                                        <div class="ticket-cia-sub">RESERVA CONFIRMADA</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="ticket-loc-label">LOCALIZADOR</div>
+                                    <div class="ticket-loc-codigo" id="pv_loc">GSYUPK</div>
+                                </div>
+                            </div>
+
+                            <!-- Corpo -->
+                            <div class="ticket-body">
+                                <!-- Passageiros -->
+                                <div class="secao-titulo">
+                                    <span class="label">PASSAGEIROS</span>
+                                    <span class="sub">1 passageiro</span>
+                                </div>
+                                <div class="card-branco">
+                                    <div class="passageiro-linha">
+                                        <span class="passageiro-num">01</span>
+                                        <div>
+                                            <div class="passageiro-nome" id="pv_passNome">Ana Lucia Izidro dos Santos</div>
+                                            <div class="passageiro-doc" id="pv_passDoc">127230642705-2</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="divisoria"></div>
+
+                                <!-- Itinerário -->
+                                <div class="secao-titulo">
+                                    <span class="label">ITINERÁRIO</span>
+                                    <span class="sub" id="pv_trechos">Ida e volta · 2 trechos</span>
+                                </div>
+
+                                <!-- Ida -->
+                                <div class="voo-tipo">VOO DE IDA</div>
+                                <div class="voo-grid">
+                                    <div>
+                                        <div class="voo-data" id="pv_idaData">TERÇA, 22 SET. 2026</div>
+                                        <div class="voo-hora" id="pv_idaHoraSaida">11:30</div>
+                                        <div class="voo-aeroporto"><strong id="pv_idaOrigemSigla">POA</strong> · <span id="pv_idaOrigemCidade">Porto Alegre</span></div>
+                                    </div>
+                                    <div class="voo-meio">
+                                        <div class="voo-numero" id="pv_idaVoo">G31235</div>
+                                        <div class="voo-linha"><span class="voo-aviao"><i class="bi bi-airplane-fill"></i></span></div>
+                                        <div class="voo-duracao" id="pv_idaDuracao">1h 45min</div>
+                                    </div>
+                                    <div class="voo-direita">
+                                        <div class="voo-hora" id="pv_idaHoraChegada">13:15</div>
+                                        <div class="voo-aeroporto"><span id="pv_idaDestinoCidade">São Paulo</span> · <strong id="pv_idaDestinoSigla">GRU</strong></div>
+                                    </div>
+                                </div>
+
+                                <!-- Volta -->
+                                <div id="pv_blocoVolta">
+                                    <div class="voo-tipo mt-3">VOO DE VOLTA</div>
+                                    <div class="voo-grid">
+                                        <div>
+                                            <div class="voo-data" id="pv_voltaData">QUARTA, 30 SET. 2026</div>
+                                            <div class="voo-hora" id="pv_voltaHoraSaida">17:05</div>
+                                            <div class="voo-aeroporto"><strong id="pv_voltaOrigemSigla">GRU</strong> · <span id="pv_voltaOrigemCidade">São Paulo</span></div>
+                                        </div>
+                                        <div class="voo-meio">
+                                            <div class="voo-numero" id="pv_voltaVoo">G31238</div>
+                                            <div class="voo-linha"><span class="voo-aviao"><i class="bi bi-airplane-fill"></i></span></div>
+                                            <div class="voo-duracao" id="pv_voltaDuracao">1h 45min</div>
+                                        </div>
+                                        <div class="voo-direita">
+                                            <div class="voo-hora" id="pv_voltaHoraChegada">18:50</div>
+                                            <div class="voo-aeroporto"><span id="pv_voltaDestinoCidade">Porto Alegre</span> · <strong id="pv_voltaDestinoSigla">POA</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="divisoria"></div>
+
+                                <!-- Bagagens -->
+                                <div class="secao-titulo">
+                                    <span class="label">BAGAGENS</span>
+                                    <span class="sub" id="pv_bagTotal">4 itens</span>
+                                </div>
+                                <div class="bag-grid" id="pv_bagGrid"></div>
+
+                                <div class="divisoria"></div>
+
+                                <!-- Resumo + QR -->
+                                <div class="ticket-resumo">
+                                    <div class="ticket-resumo-texto">
+                                        <strong>Resumo da sua reserva</strong><br>
+                                        Acesse a área do cliente da companhia aérea para realizar check-in, alterar assentos e mais.
+                                    </div>
+                                    <div class="text-center">
+                                        <div id="qrcode"></div>
+                                        <div class="qr-label">DETALHES ONLINE</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="ticket-footer">
+                                <div>
+                                    <div class="footer-msg-label">MENSAGEM AO CLIENTE (OPCIONAL)</div>
+                                    <div class="footer-msg" id="pv_mensagem">Boa viagem! Recomendamos chegar com antecedência e levar documento com foto.</div>
+                                </div>
+                                <div>
+                                    <div class="footer-valor-label">(OPCIONAL) VALOR TOTAL</div>
+                                    <div class="footer-valor" id="pv_valor">R$ 0,00</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/storage.js?v=6"></script>
+    <script src="js/utils.js?v=6"></script>
+    <script src="js/cartao-embarque.js?v=6"></script>
+
+    <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js?v=6"></script>
+    <script src="js/auth.js?v=6"></script>
+    <script src="js/cloud-sync.js?v=6"></script>
+    <script>
+        (async () => {
+            const ok = await Auth.proteger();
+            if (!ok) return;
+            await CloudSync.init();
+            inicializarCartao();
+        })();
+    </script>
+</body>
+</html>

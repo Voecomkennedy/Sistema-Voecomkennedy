@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/style.css?v=7">
 
     <!-- Bibliotecas para gerar PDF e QR Code -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -52,15 +52,15 @@
             color: #fff;
         }
         .ticket-logo { display: flex; align-items: center; gap: 12px; }
-        .ticket-logo-circle {
-            width: 44px; height: 44px; border-radius: 12px;
-            background: var(--logo-cor, #ff6a00);
+        .ticket-logo-box {
+            background: #fff;
+            border-radius: 10px;
+            padding: 8px 12px;
             display: flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 16px; color: #fff;
-            letter-spacing: 0.5px;
+            min-width: 70px; height: 44px;
         }
-        .ticket-cia-nome { font-size: 19px; font-weight: 800; line-height: 1.1; }
-        .ticket-cia-sub { font-size: 10px; letter-spacing: 1px; opacity: 0.85; }
+        .ticket-logo-box img { height: 26px; width: auto; display: block; }
+        .ticket-cia-sub { font-size: 10px; letter-spacing: 1px; opacity: 0.85; color:#fff; margin-top: 4px; }
         .ticket-loc-label { font-size: 9px; letter-spacing: 1.5px; opacity: 0.75; text-align: right; }
         .ticket-loc-codigo { font-size: 26px; font-weight: 800; text-align: right; line-height: 1; }
 
@@ -201,6 +201,19 @@
                 <h4 class="mb-3"><i class="bi bi-ticket-perforated-fill text-primary"></i> Gerar Cartão de Embarque</h4>
                 <p class="text-muted small">Preencha os dados do voo. A pré-visualização atualiza automaticamente. Depois clique em "Baixar PDF".</p>
 
+                <!-- PUXAR DE UMA VENDA JÁ CADASTRADA -->
+                <div class="card mb-3 border-success"><div class="card-body">
+                    <h6 class="text-success"><i class="bi bi-magic"></i> Preencher a partir de uma venda</h6>
+                    <p class="small text-muted mb-2">Escolha uma venda já cadastrada e o cartão preenche sozinho. (Você ainda pode ajustar os campos depois.)</p>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" id="f_buscaVenda" autocomplete="off"
+                               placeholder="Digite localizador, cliente ou destino..."
+                               oninput="buscarVenda(this.value)" onfocus="buscarVenda(this.value)">
+                        <div id="resultadoVenda" class="list-group position-absolute w-100 shadow"
+                             style="display:none; z-index:1057; max-height:260px; overflow-y:auto;"></div>
+                    </div>
+                </div></div>
+
                 <form id="formCartao" oninput="atualizarPreview()">
                     <!-- Companhia / Localizador -->
                     <div class="card mb-3"><div class="card-body">
@@ -208,19 +221,31 @@
                         <div class="row g-2">
                             <div class="col-7">
                                 <label class="form-label small">Companhia Aérea</label>
-                                <input type="text" class="form-control" id="f_cia" value="GOL" placeholder="GOL, LATAM, AZUL...">
+                                <select class="form-select" id="f_cia" onchange="aoMudarCompanhia()">
+                                    <option value="GOL">GOL</option>
+                                    <option value="LATAM">LATAM</option>
+                                    <option value="AZUL">AZUL</option>
+                                    <option value="OUTRA">Outra</option>
+                                </select>
                             </div>
                             <div class="col-5">
-                                <label class="form-label small">Sigla no logo</label>
-                                <input type="text" class="form-control" id="f_sigla" value="GOL" maxlength="6">
-                            </div>
-                            <div class="col-7">
                                 <label class="form-label small">Localizador</label>
                                 <input type="text" class="form-control text-uppercase" id="f_localizador" value="GSYUPK" placeholder="Ex: GSYUPK">
                             </div>
-                            <div class="col-5">
+                            <!-- Campos extras só aparecem quando "Outra" -->
+                            <div class="col-7" id="grupoCiaOutra" style="display:none;">
+                                <label class="form-label small">Nome da companhia</label>
+                                <input type="text" class="form-control" id="f_ciaOutraNome" placeholder="Ex: Voepass">
+                            </div>
+                            <div class="col-5" id="grupoCiaCor" style="display:none;">
                                 <label class="form-label small">Cor do logo</label>
-                                <input type="color" class="form-control form-control-color w-100" id="f_cor" value="#ff6a00">
+                                <input type="color" class="form-control form-control-color w-100" id="f_cor" value="#002071">
+                            </div>
+                            <!-- LATAM precisa de link manual (orderId não vem no bilhete) -->
+                            <div class="col-12" id="grupoLatamLink" style="display:none;">
+                                <label class="form-label small text-warning"><i class="bi bi-exclamation-triangle"></i> Link da LATAM (cole o link de gerenciar reserva)</label>
+                                <input type="text" class="form-control" id="f_latamLink" placeholder="https://www.latamairlines.com/br/pt/minhas-viagens/...">
+                                <small class="text-muted">A LATAM não traz o código no bilhete, então cole aqui o link que você recebe.</small>
                             </div>
                         </div>
                     </div></div>
@@ -348,9 +373,10 @@
                             <!-- Header -->
                             <div class="ticket-header">
                                 <div class="ticket-logo">
-                                    <div class="ticket-logo-circle" id="pv_logo">GOL</div>
+                                    <div class="ticket-logo-box" id="pv_logoBox">
+                                        <img id="pv_logoImg" src="logos/gol.svg" alt="logo" />
+                                    </div>
                                     <div>
-                                        <div class="ticket-cia-nome" id="pv_cia">GOL</div>
                                         <div class="ticket-cia-sub">RESERVA CONFIRMADA</div>
                                     </div>
                                 </div>
@@ -467,15 +493,15 @@
         </div>
     </div>
 
-    <script src="js/storage.js?v=6"></script>
-    <script src="js/utils.js?v=6"></script>
-    <script src="js/cartao-embarque.js?v=6"></script>
+    <script src="js/storage.js?v=7"></script>
+    <script src="js/utils.js?v=7"></script>
+    <script src="js/cartao-embarque.js?v=7"></script>
 
     <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js?v=6"></script>
-    <script src="js/auth.js?v=6"></script>
-    <script src="js/cloud-sync.js?v=6"></script>
+    <script src="js/supabase-config.js?v=7"></script>
+    <script src="js/auth.js?v=7"></script>
+    <script src="js/cloud-sync.js?v=7"></script>
     <script>
         (async () => {
             const ok = await Auth.proteger();

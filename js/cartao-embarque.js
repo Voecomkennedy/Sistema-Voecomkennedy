@@ -4,6 +4,65 @@
 
 let _qrcodeObj = null;
 
+// Configuração de cada companhia: logo, cor e como montar o link de check-in
+const COMPANHIAS = {
+    GOL: {
+        nome: 'GOL',
+        logo: 'logos/gol.svg',
+        cor: '#FF7A00',
+        // GOL: automático — usa localizador + origem da ida + sobrenome
+        montarLink(d) {
+            const sobrenome = ultimoSobrenome(d.passNome);
+            return `https://b2c.voegol.com.br/minhas-viagens/encontrar-viagem?codigoReserva=${encodeURIComponent(d.localizador)}&origem=${encodeURIComponent(d.idaOrigemSigla)}&sobrenome=${encodeURIComponent(sobrenome)}`;
+        }
+    },
+    LATAM: {
+        nome: 'LATAM',
+        logo: 'logos/latam.svg',
+        cor: '#1B0088',
+        // LATAM: manual — o link é colado pelo usuário (orderId não vem no bilhete)
+        montarLink(d) {
+            return (d.latamLink || '').trim();
+        }
+    },
+    AZUL: {
+        nome: 'AZUL',
+        logo: 'logos/azul.svg',
+        cor: '#003DA5',
+        // Azul: automático — usa pnr (localizador) + origem da ida
+        montarLink(d) {
+            return `https://www.voeazul.com.br/br/pt/home/minhas-viagens?pnr=${encodeURIComponent(d.localizador)}&origin=${encodeURIComponent(d.idaOrigemSigla)}`;
+        }
+    },
+    OUTRA: {
+        nome: '',
+        logo: '',
+        cor: '#002071',
+        montarLink(d) { return (d.link || '').trim(); }
+    }
+};
+
+// Pega só o último sobrenome em MAIÚSCULO (ex: "Ana Lucia Izidro dos Santos" -> "SANTOS")
+function ultimoSobrenome(nomeCompleto) {
+    if (!nomeCompleto) return '';
+    const partes = nomeCompleto.trim().split(/\s+/);
+    return (partes[partes.length - 1] || '').toUpperCase();
+}
+
+function companhiaAtual() {
+    const cia = val('f_cia') || 'GOL';
+    return COMPANHIAS[cia] || COMPANHIAS.OUTRA;
+}
+
+// Quando muda a companhia no dropdown: troca logo/cor e mostra/esconde campos
+function aoMudarCompanhia() {
+    const cia = val('f_cia');
+    document.getElementById('grupoCiaOutra').style.display = (cia === 'OUTRA') ? '' : 'none';
+    document.getElementById('grupoCiaCor').style.display = (cia === 'OUTRA') ? '' : 'none';
+    document.getElementById('grupoLatamLink').style.display = (cia === 'LATAM') ? '' : 'none';
+    atualizarPreview();
+}
+
 // Converte "2026-09-22" em "TERÇA, 22 SET. 2026"
 function formatarDataExtenso(dateStr) {
     if (!dateStr) return '';
@@ -27,12 +86,20 @@ function setText(id, texto) {
 
 // Atualiza toda a pré-visualização do cartão
 function atualizarPreview() {
-    // Header
-    const sigla = val('f_sigla') || 'GOL';
-    setText('pv_logo', sigla.toUpperCase());
-    setText('pv_cia', (val('f_cia') || 'GOL').toUpperCase());
+    // Header — logo da companhia
+    const cia = companhiaAtual();
+    const ciaKey = val('f_cia');
+    const logoImg = document.getElementById('pv_logoImg');
+    const logoBox = document.getElementById('pv_logoBox');
+    if (ciaKey === 'OUTRA' || !cia.logo) {
+        // "Outra": mostra o nome escrito em vez de logo
+        const nomeOutra = (val('f_ciaOutraNome') || 'COMPANHIA').toUpperCase();
+        logoImg.style.display = 'none';
+        logoBox.innerHTML = `<span style="font-weight:800;font-size:18px;color:${val('f_cor') || '#002071'}">${nomeOutra}</span>`;
+    } else {
+        logoBox.innerHTML = `<img id="pv_logoImg" src="${cia.logo}" alt="${cia.nome}" style="height:26px;width:auto;display:block;" />`;
+    }
     setText('pv_loc', (val('f_localizador') || '').toUpperCase());
-    document.getElementById('pv_logo').style.background = val('f_cor') || '#ff6a00';
 
     // Passageiro
     setText('pv_passNome', val('f_passNome') || '');
@@ -103,9 +170,14 @@ function atualizarBagagens(temVolta) {
 }
 
 function gerarQRCode() {
-    const link = val('f_link') || 'https://voecomkennedy.tur.br';
+    const link = montarLinkAtual();
     const container = document.getElementById('qrcode');
     container.innerHTML = '';
+    if (!link) {
+        // Sem link (ex: LATAM sem link colado): mostra aviso no lugar do QR
+        container.innerHTML = '<div style="font-size:8px;color:#c00;text-align:center;width:60px;">Sem link</div>';
+        return;
+    }
     try {
         _qrcodeObj = new QRCode(container, {
             text: link,
@@ -119,6 +191,162 @@ function gerarQRCode() {
         console.warn('Erro ao gerar QR Code:', e);
     }
 }
+
+// Monta o link de check-in conforme a companhia escolhida
+function montarLinkAtual() {
+    const cia = companhiaAtual();
+    const dados = {
+        localizador: (val('f_localizador') || '').toUpperCase(),
+        idaOrigemSigla: (val('f_idaOrigemSigla') || '').toUpperCase(),
+        passNome: val('f_passNome'),
+        latamLink: val('f_latamLink'),
+        link: val('f_linkOutra')
+    };
+    try { return cia.montarLink(dados); } catch (e) { return ''; }
+}
+
+// ===== PUXAR DE UMA VENDA JÁ CADASTRADA =====
+let _vendasCache = [];
+
+function carregarVendasCache() {
+    try {
+        _vendasCache = StorageManager.getVendas().slice().sort((a, b) => {
+            const ta = a.dataCadastro ? new Date(a.dataCadastro).getTime() : 0;
+            const tb = b.dataCadastro ? new Date(b.dataCadastro).getTime() : 0;
+            return tb - ta; // mais recentes primeiro
+        });
+    } catch (e) { _vendasCache = []; }
+}
+
+function _nomeClienteDaVenda(venda) {
+    try {
+        const c = StorageManager.getClienteById(venda.clienteId);
+        return c ? c.nome : '';
+    } catch (e) { return ''; }
+}
+
+function _localizadorDaVenda(venda) {
+    if (Array.isArray(venda.localizadores) && venda.localizadores.length) return venda.localizadores[0];
+    return venda.localizador || '';
+}
+
+function buscarVenda(termo) {
+    if (!_vendasCache.length) carregarVendasCache();
+    const lista = document.getElementById('resultadoVenda');
+    const termoNorm = _normalizarCartao(termo).trim();
+
+    let resultados = _vendasCache;
+    if (termoNorm) {
+        resultados = _vendasCache.filter(v => {
+            const cliente = _nomeClienteDaVenda(v);
+            const loc = _localizadorDaVenda(v);
+            return _normalizarCartao(loc).includes(termoNorm) ||
+                   _normalizarCartao(cliente).includes(termoNorm) ||
+                   _normalizarCartao(v.origem).includes(termoNorm) ||
+                   _normalizarCartao(v.destino).includes(termoNorm);
+        });
+    }
+    resultados = resultados.slice(0, 30);
+
+    if (resultados.length === 0) {
+        lista.innerHTML = '<div class="list-group-item text-muted">Nenhuma venda encontrada</div>';
+        lista.style.display = 'block';
+        return;
+    }
+    lista.innerHTML = resultados.map(v => {
+        const cliente = _nomeClienteDaVenda(v) || 'Cliente';
+        const loc = _localizadorDaVenda(v) || 'S/Loc';
+        const rota = `${v.origem || '?'} → ${v.destino || '?'}`;
+        const data = v.dataEmbarque ? Utils.formatDate(v.dataEmbarque) : '';
+        return `<button type="button" class="list-group-item list-group-item-action"
+                        onclick="preencherDeVenda('${v.id}')">
+            <strong>${loc}</strong> · ${cliente}<br>
+            <small class="text-muted">${rota} ${data ? '· ' + data : ''}</small>
+        </button>`;
+    }).join('');
+    lista.style.display = 'block';
+}
+
+// Preenche o formulário do cartão com os dados de uma venda
+function preencherDeVenda(vendaId) {
+    const venda = _vendasCache.find(v => String(v.id) === String(vendaId));
+    if (!venda) return;
+
+    const cliente = StorageManager.getClienteById(venda.clienteId);
+    const loc = _localizadorDaVenda(venda);
+
+    // Localizador
+    document.getElementById('f_localizador').value = (loc || '').toUpperCase();
+
+    // Companhia: tenta detectar pelo nome salvo na venda
+    const ciaTxt = _normalizarCartao(venda.companhiaAerea || '');
+    let ciaKey = 'OUTRA';
+    if (ciaTxt.includes('gol')) ciaKey = 'GOL';
+    else if (ciaTxt.includes('latam') || ciaTxt.includes('tam')) ciaKey = 'LATAM';
+    else if (ciaTxt.includes('azul')) ciaKey = 'AZUL';
+    document.getElementById('f_cia').value = ciaKey;
+    if (ciaKey === 'OUTRA' && venda.companhiaAerea) {
+        document.getElementById('f_ciaOutraNome').value = venda.companhiaAerea;
+    }
+
+    // Passageiro principal (cliente ou primeiro passageiro)
+    let passNome = cliente ? cliente.nome : '';
+    let passDoc = cliente && cliente.cpf ? Utils.formatCPF(cliente.cpf) : '';
+    if (!venda.clienteViaja && Array.isArray(venda.passageiros) && venda.passageiros.length) {
+        passNome = venda.passageiros[0].nome || passNome;
+        passDoc = venda.passageiros[0].cpf ? Utils.formatCPF(venda.passageiros[0].cpf) : passDoc;
+    }
+    document.getElementById('f_passNome').value = passNome;
+    document.getElementById('f_passDoc').value = passDoc;
+    document.getElementById('f_buscaPassageiro').value = passNome;
+
+    // Voo de ida (origem/destino podem ser cidade ou sigla)
+    document.getElementById('f_idaData').value = venda.dataEmbarque || '';
+    document.getElementById('f_idaHoraSaida').value = venda.horaEmbarque || '';
+    document.getElementById('f_idaOrigemCidade').value = venda.origem || '';
+    document.getElementById('f_idaOrigemSigla').value = (venda.origem || '').toUpperCase().slice(0, 3);
+    document.getElementById('f_idaDestinoCidade').value = venda.destino || '';
+    document.getElementById('f_idaDestinoSigla').value = (venda.destino || '').toUpperCase().slice(0, 3);
+    document.getElementById('f_idaVoo').value = (venda.numeroVoo || '').toUpperCase();
+    document.getElementById('f_idaHoraChegada').value = '';
+    document.getElementById('f_idaDuracao').value = '';
+
+    // Volta (se houver)
+    const temVolta = !!(venda.dataVolta);
+    document.getElementById('f_temVolta').checked = temVolta;
+    if (temVolta) {
+        document.getElementById('f_voltaData').value = venda.dataVolta || '';
+        document.getElementById('f_voltaHoraSaida').value = venda.horaVolta || '';
+        // volta = inverso da ida
+        document.getElementById('f_voltaOrigemCidade').value = venda.destino || '';
+        document.getElementById('f_voltaOrigemSigla').value = (venda.destino || '').toUpperCase().slice(0, 3);
+        document.getElementById('f_voltaDestinoCidade').value = venda.origem || '';
+        document.getElementById('f_voltaDestinoSigla').value = (venda.origem || '').toUpperCase().slice(0, 3);
+        document.getElementById('f_voltaVoo').value = (venda.localizadorVolta || '').toUpperCase();
+        document.getElementById('f_voltaHoraChegada').value = '';
+        document.getElementById('f_voltaDuracao').value = '';
+    }
+
+    // Valor
+    if (venda.valorVenda) {
+        document.getElementById('f_valor').value = Utils.formatCurrency(venda.valorVenda);
+    }
+
+    document.getElementById('resultadoVenda').style.display = 'none';
+    document.getElementById('f_buscaVenda').value = `${loc} - ${passNome}`;
+
+    aoMudarCompanhia();
+    Utils.showSuccess('Dados da venda carregados! Confira e ajuste o que precisar (horas de chegada, duração).');
+}
+
+// Fecha a lista de vendas ao clicar fora
+document.addEventListener('click', (e) => {
+    const lista = document.getElementById('resultadoVenda');
+    const input = document.getElementById('f_buscaVenda');
+    if (lista && e.target !== input && !lista.contains(e.target)) {
+        lista.style.display = 'none';
+    }
+});
 
 // ===== Busca de passageiro cadastrado (autocomplete) =====
 let _passCacheCartao = [];
@@ -201,16 +429,29 @@ async function gerarPDF() {
         });
         const imgData = canvas.toDataURL('image/png');
 
-        // Cria o PDF no tamanho do cartão (proporção mantida)
+        // Cria o PDF em A4 retrato e centraliza o cartão na página, ajustando
+        // a escala para caber inteiro (sem cortar) com uma margem.
         const { jsPDF } = window.jspdf;
-        const larguraMM = 100; // largura fixa em mm
-        const alturaMM = (canvas.height / canvas.width) * larguraMM;
-        const pdf = new jsPDF({
-            orientation: alturaMM > larguraMM ? 'portrait' : 'landscape',
-            unit: 'mm',
-            format: [larguraMM, alturaMM]
-        });
-        pdf.addImage(imgData, 'PNG', 0, 0, larguraMM, alturaMM);
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const a4Largura = 210;
+        const a4Altura = 297;
+        const margem = 12;
+
+        const maxLargura = a4Largura - margem * 2;
+        const maxAltura = a4Altura - margem * 2;
+
+        // proporção da imagem do cartão
+        const ratio = canvas.width / canvas.height;
+        let larguraMM = maxLargura;
+        let alturaMM = larguraMM / ratio;
+        if (alturaMM > maxAltura) {
+            alturaMM = maxAltura;
+            larguraMM = alturaMM * ratio;
+        }
+        // centraliza
+        const x = (a4Largura - larguraMM) / 2;
+        const y = (a4Altura - alturaMM) / 2;
+        pdf.addImage(imgData, 'PNG', x, y, larguraMM, alturaMM);
 
         const nome = (val('f_passNome') || 'passageiro').replace(/[^a-zA-Z0-9]/g, '_');
         const loc = (val('f_localizador') || 'cartao').toUpperCase();
@@ -228,5 +469,7 @@ async function gerarPDF() {
 // Inicialização
 function inicializarCartao() {
     carregarPassageirosCartao();
+    carregarVendasCache();
+    aoMudarCompanhia();
     atualizarPreview();
 }

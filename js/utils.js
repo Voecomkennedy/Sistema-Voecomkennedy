@@ -39,13 +39,16 @@ const Utils = {
 
     formatDate(dateString) {
         if (!dateString) return '-';
-        const date = new Date(dateString);
+        // Usa parseLocalDate para NÃO roubar um dia por causa do fuso horário
+        const date = this.parseLocalDate(dateString);
+        if (!date || isNaN(date.getTime())) return '-';
         return date.toLocaleDateString('pt-BR');
     },
 
     formatDateTime(dateString) {
         if (!dateString) return '-';
-        const date = new Date(dateString);
+        const date = this.parseLocalDate(dateString);
+        if (!date || isNaN(date.getTime())) return '-';
         return date.toLocaleString('pt-BR');
     },
 

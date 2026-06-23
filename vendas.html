@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=5">
+    <link rel="stylesheet" href="css/style.css?v=6">
 
     <!-- Autocomplete CSS -->
     <style>
@@ -606,9 +606,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Custom JS -->
-    <script src="js/aeroportos-data.js?v=5"></script>
-    <script src="js/storage.js?v=5"></script>
-    <script src="js/utils.js?v=5"></script>
+    <script src="js/aeroportos-data.js?v=6"></script>
+    <script src="js/storage.js?v=6"></script>
+    <script src="js/utils.js?v=6"></script>
 
     <script>
         let modalVenda;
@@ -1077,14 +1077,17 @@
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-12 mb-3">
-                                    <label class="form-label">Selecionar Passageiro Cadastrado</label>
-                                    <select class="form-select passageiro-select" id="passageiro_${i}" onchange="preencherDadosPassageiro(${i})">
-                                        <option value="">Selecione ou cadastre novo</option>
-                                        ${getPassageirosOptions()}
-                                    </select>
+                                <div class="col-md-12 mb-3 position-relative">
+                                    <label class="form-label">Buscar Passageiro Cadastrado</label>
+                                    <input type="text" class="form-control" id="passageiroBusca_${i}"
+                                           placeholder="Digite o nome para pesquisar..." autocomplete="off"
+                                           oninput="filtrarPassageiros(${i}, this.value)"
+                                           onfocus="filtrarPassageiros(${i}, this.value)">
+                                    <input type="hidden" id="passageiro_${i}">
+                                    <div id="passageiroResultado_${i}" class="list-group position-absolute w-100 shadow"
+                                         style="display:none; z-index:1056; max-height:240px; overflow-y:auto;"></div>
                                     <small class="text-muted">
-                                        Ou <a href="pessoas.html" target="_blank">cadastrar novo passageiro</a>
+                                        Digite parte do nome. Ou <a href="pessoas.html" target="_blank">cadastrar novo passageiro</a>
                                     </small>
                                 </div>
                             </div>
@@ -1118,24 +1121,71 @@
             }
         }
 
-        // Obter opções de passageiros cadastrados
-        function getPassageirosOptions() {
+        // ===== BUSCA DE PASSAGEIRO (autocomplete, igual ao cliente) =====
+        let _passageirosCache = [];
+
+        function carregarPassageirosCache() {
             const pessoas = StorageManager.getPessoas();
-            const passageiros = pessoas.filter(p => p.tipo === 'passageiro' || p.tipo === 'cliente');
-            return passageiros.map(p => `<option value="${p.id}">${p.nome}${p.cpf ? ' - ' + Utils.formatCPF(p.cpf) : ''}</option>`).join('');
+            _passageirosCache = pessoas
+                .filter(p => p.tipo === 'passageiro' || p.tipo === 'cliente')
+                .slice()
+                .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
         }
 
-        // Preencher dados do passageiro selecionado
-        function preencherDadosPassageiro(index) {
-            const passageiroId = document.getElementById(`passageiro_${index}`).value;
-            if (!passageiroId) return;
+        // Filtra passageiros pelo que foi digitado (qualquer parte do nome ou CPF)
+        function filtrarPassageiros(index, termo) {
+            if (!_passageirosCache.length) carregarPassageirosCache();
+            const lista = document.getElementById(`passageiroResultado_${index}`);
+            if (!lista) return;
+            const termoNorm = _normalizar(termo).trim();
 
-            const passageiro = StorageManager.getPessoaById(passageiroId);
-            if (passageiro) {
-                document.getElementById(`passageiroNome_${index}`).value = passageiro.nome;
-                document.getElementById(`passageiroCpf_${index}`).value = passageiro.cpf || '';
+            let resultados = _passageirosCache;
+            if (termoNorm) {
+                resultados = _passageirosCache.filter(p =>
+                    _normalizar(p.nome).includes(termoNorm) ||
+                    _normalizar(p.cpf).includes(termoNorm)
+                );
             }
+            resultados = resultados.slice(0, 50);
+
+            if (resultados.length === 0) {
+                lista.innerHTML = `<div class="list-group-item text-muted">Nenhum passageiro encontrado</div>`;
+                lista.style.display = 'block';
+                return;
+            }
+
+            lista.innerHTML = resultados.map(p =>
+                `<button type="button" class="list-group-item list-group-item-action"
+                         onclick="selecionarPassageiro(${index}, '${p.id}')">
+                    <strong>${p.nome}</strong>${p.cpf ? ` <small class="text-muted">- ${Utils.formatCPF(p.cpf)}</small>` : ''}
+                </button>`
+            ).join('');
+            lista.style.display = 'block';
         }
+
+        // Quando clica num passageiro da lista
+        function selecionarPassageiro(index, id) {
+            const passageiro = _passageirosCache.find(p => String(p.id) === String(id));
+            if (!passageiro) return;
+            document.getElementById(`passageiro_${index}`).value = passageiro.id;
+            document.getElementById(`passageiroBusca_${index}`).value =
+                passageiro.nome + (passageiro.cpf ? ` - ${Utils.formatCPF(passageiro.cpf)}` : '');
+            document.getElementById(`passageiroResultado_${index}`).style.display = 'none';
+            // preenche os campos de nome e CPF automaticamente
+            document.getElementById(`passageiroNome_${index}`).value = passageiro.nome;
+            document.getElementById(`passageiroCpf_${index}`).value = passageiro.cpf || '';
+        }
+
+        // Fecha as listas de passageiro ao clicar fora
+        document.addEventListener('click', (e) => {
+            document.querySelectorAll('[id^="passageiroResultado_"]').forEach(lista => {
+                const index = lista.id.replace('passageiroResultado_', '');
+                const input = document.getElementById(`passageiroBusca_${index}`);
+                if (e.target !== input && !lista.contains(e.target)) {
+                    lista.style.display = 'none';
+                }
+            });
+        });
 
         // Atualizar quando marcar/desmarcar "cliente viaja"
         function atualizarPassageiros() {
@@ -1507,6 +1557,9 @@
                     document.getElementById(`passageiroNome_${num}`).value = p.nome;
                     document.getElementById(`passageiroCpf_${num}`).value = p.cpf || '';
                     document.getElementById(`passageiroLocalizador_${num}`).value = p.localizador || '';
+                    // Preenche o campo de busca visual também
+                    const buscaP = document.getElementById(`passageiroBusca_${num}`);
+                    if (buscaP) buscaP.value = p.nome + (p.cpf ? ` - ${Utils.formatCPF(p.cpf)}` : '');
                     if (document.getElementById(`passageiroDataNascimento_${num}`)) {
                         document.getElementById(`passageiroDataNascimento_${num}`).value = p.dataNascimento || '';
                     }
@@ -2011,9 +2064,9 @@
     </script>
     <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js?v=5"></script>
-    <script src="js/auth.js?v=5"></script>
-    <script src="js/cloud-sync.js?v=5"></script>
+    <script src="js/supabase-config.js?v=6"></script>
+    <script src="js/auth.js?v=6"></script>
+    <script src="js/cloud-sync.js?v=6"></script>
     <script>
         // Protege a pagina (exige login) e liga a sincronizacao com a nuvem.
         (async () => {

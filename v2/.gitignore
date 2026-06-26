@@ -26,6 +26,8 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 
 # Logs
 npm-debug.log*

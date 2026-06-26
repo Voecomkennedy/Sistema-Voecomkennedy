@@ -39,6 +39,24 @@ A V2 é uma reconstrução limpa. O sistema atual valida operacionalmente o que 
 - **Design SaaS/travel-tech.** Visual premium, não genérico. Referências: Notion, Linear, Kiwi.com, Navan.
 - **Preparado para crescer.** Estrutura que suporta múltiplos usuários por agência, futura cobrança por assinatura e expansão de funcionalidades sem refatoração.
 
+### Escopo: MVP interno vs SaaS futuro
+
+O banco de dados e o RLS são projetados para multi-tenant desde o início — isso é correto e não tem custo extra. Mas as **funcionalidades de produto** têm escopo separado:
+
+| Funcionalidade | MVP interno | SaaS futuro |
+|---|---|---|
+| Uma organização (Voecomkennedy) | ✅ | ✅ |
+| Múltiplas organizações independentes | ❌ | ✅ |
+| Login + logout + roles | ✅ | ✅ |
+| Onboarding self-service (signup público) | ❌ | ✅ |
+| Criação de org via painel do Supabase | ✅ (manual) | ❌ |
+| Cobrança por assinatura (Stripe) | ❌ | ✅ |
+| Limites de uso por plano | ❌ | ✅ |
+| Subdomain por agência | ❌ | ✅ |
+| Painel de administração entre orgs | ❌ | ✅ |
+
+> **Decisão de escopo antes de iniciar**: confirmar se o lançamento é MVP interno (uma organização, setup manual) ou se já precisa suportar múltiplas agências desde o primeiro deploy. Isso afeta a Fase 2 e o prazo total em ~1 semana.
+
 ### Stack técnica
 
 | Camada | Tecnologia | Justificativa |
@@ -227,9 +245,11 @@ Módulo central. Substitui Vendas, Pacotes e Cotações.
 ### 5.6 Documentos
 
 - Upload de arquivos por reserva (bilhetes, vouchers, apólices de seguro, passaportes)
-- Armazenamento via Supabase Storage
-- Tipos: PDF, imagem, doc
-- Visualização inline
+- Armazenamento via Supabase Storage em **bucket privado** (`documentos-privados`)
+- Acesso aos arquivos somente via **signed URLs** com expiração de 1 hora — nunca URLs públicas diretas
+- Tipos aceitos: PDF, imagem (JPG/PNG), DOC/DOCX
+- Visualização inline (PDF e imagens) via signed URL temporária
+- Política de Storage: usuário só acessa arquivos do path `{organization_id}/{reserva_id}/...`
 
 ### 5.7 Configurações (admin)
 
@@ -241,6 +261,8 @@ Módulo central. Substitui Vendas, Pacotes e Cotações.
 
 ## 6. MODELO DE BANCO DE DADOS
 
+O modelo é composto por **11 tabelas**: 10 com `organization_id` e RLS ativo, e 1 global de seed sem RLS (`aeroportos`).
+
 ### Diagrama de entidades
 
 ```
@@ -249,16 +271,22 @@ organizations
     ├── profiles (users com role)
     │
     ├── clientes
-    │       └── reservas
-    │               ├── reserva_trechos
-    │               ├── reserva_passageiros
-    │               ├── reserva_acomodacoes
-    │               ├── financeiro_lancamentos
-    │               └── documentos
+    │     └── reservas
+    │           ├── reserva_trechos          (aéreo / pacote)
+    │           ├── reserva_passageiros      (todos os tipos)
+    │           ├── reserva_acomodacoes      (pacote / hotel)
+    │           ├── reserva_extras           (serviço / milhas — metadados livres)
+    │           ├── financeiro_lancamentos   (vinculados à reserva)
+    │           └── documentos
     │
-    ├── financeiro_lancamentos (avulsos)
-    └── fornecedores
+    ├── financeiro_lancamentos               (lançamentos avulsos, sem reserva_id)
+    ├── fornecedores
+    └── [seed global] aeroportos             (sem organization_id, sem RLS)
 ```
+
+> `financeiro_lancamentos` aparece duas vezes no diagrama porque é a mesma tabela:
+> quando `reserva_id IS NOT NULL` está vinculado a uma reserva; quando `reserva_id IS NULL`
+> é um lançamento avulso (despesas operacionais, receitas não ligadas a reservas).
 
 ---
 
@@ -338,18 +366,25 @@ CREATE TABLE reservas (
   data_retorno      date,
   valor_venda       numeric(12,2) DEFAULT 0,
   valor_custo       numeric(12,2) DEFAULT 0,
-  margem_lucro      numeric(5,2) GENERATED ALWAYS AS (
-                      CASE WHEN valor_venda > 0
-                      THEN ROUND(((valor_venda - valor_custo) / valor_venda * 100), 2)
-                      ELSE 0 END
-                    ) STORED,
+  -- margem_lucro NÃO usa GENERATED ALWAYS AS: PostgreSQL impede override manual,
+  -- o que quebra casos de milhas (custo zero), descontos externos e ajustes.
+  -- Calculado pela aplicação antes de cada insert/update e armazenado aqui.
+  margem_lucro      numeric(7,4),
+  desconto          numeric(12,2) DEFAULT 0,
   observacoes       text,
+  -- Dados específicos por tipo_reserva que não cabem em tabelas relacionais:
+  -- tipo 'milhas'  → { programa, pontos_usados, custo_por_ponto, programa_fidelidade }
+  -- tipo 'servico' → { descricao_servico, fornecedor_nome, data_servico }
+  -- tipo 'aereo'/'pacote'/'hotel' → usar tabelas dedicadas (reserva_trechos, reserva_acomodacoes)
+  metadados         jsonb DEFAULT '{}',
   cancelado_em      timestamptz,
   motivo_cancelamento text,
   criado_em         timestamptz DEFAULT now(),
   atualizado_em     timestamptz DEFAULT now()
 );
 ```
+
+> **Sobre `numero`**: O campo `serial` gera um número global crescente. Para MVP (uma organização) isso é suficiente. Para SaaS futuro com múltiplas organizações, substituir por uma sequência por organização (via trigger ou Supabase Edge Function) para gerar numerações independentes como `VCK-2026-0042`.
 
 ---
 
@@ -384,15 +419,24 @@ CREATE TABLE reserva_passageiros (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   reserva_id      uuid NOT NULL REFERENCES reservas(id) ON DELETE CASCADE,
   organization_id uuid NOT NULL REFERENCES organizations(id),
-  cliente_id      uuid REFERENCES clientes(id), -- se já cadastrado
+  -- Quando cliente_id está preenchido, os campos abaixo são opcionais:
+  -- a aplicação lê os dados do cadastro de clientes e os exibe.
+  -- Quando cliente_id é NULL (passageiro avulso), nome é obrigatório.
+  -- Nunca duplicar CPF/passaporte entre clientes e passageiros:
+  -- se o passageiro é um cliente cadastrado, usar cliente_id e omitir os campos inline.
+  cliente_id      uuid REFERENCES clientes(id),
   nome            text NOT NULL,
   cpf             text,
   passaporte      text,
   passaporte_venc date,
   nascimento      date,
-  criado_em       timestamptz DEFAULT now()
+  criado_em       timestamptz DEFAULT now(),
+  -- Garante que um mesmo cliente não seja adicionado duas vezes à mesma reserva
+  CONSTRAINT unico_cliente_por_reserva UNIQUE (reserva_id, cliente_id)
 );
 ```
+
+> **Convenção cliente-viajante**: quando o cliente pagador também viaja, criar um registro em `reserva_passageiros` com `cliente_id` apontando para ele. Isso substitui o campo `clienteViaja: boolean` do sistema atual.
 
 ---
 
@@ -424,21 +468,34 @@ CREATE TABLE financeiro_lancamentos (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organizations(id),
   reserva_id      uuid REFERENCES reservas(id), -- null = lançamento avulso
-  tipo            text NOT NULL CHECK (tipo IN ('receita', 'despesa')),
-  categoria       text,        -- passagem, hotel, taxa, seguro, comissão, etc.
+  -- 'receita'   → entrada de dinheiro (venda confirmada, sinal recebido)
+  -- 'despesa'   → saída de dinheiro (custo de passagem, hotel, taxa)
+  -- 'reembolso' → devolução ao cliente (cancela ou reduz uma receita anterior)
+  -- 'ajuste'    → correção manual de valor sem movimento financeiro real
+  tipo            text NOT NULL CHECK (tipo IN ('receita', 'despesa', 'reembolso', 'ajuste')),
+  -- Categorias sugeridas: passagem, hotel, seguro, taxa, servico, comissao, milhas, outro
+  categoria       text,
   descricao       text NOT NULL,
-  valor           numeric(12,2) NOT NULL,
+  -- valor é SEMPRE positivo. O tipo determina a direção:
+  -- receita/despesa = valor positivo entra ou sai.
+  -- reembolso = reduz o saldo (saída da agência).
+  -- ajuste = pode ser positivo ou negativo conforme descricao.
+  valor           numeric(12,2) NOT NULL CHECK (valor >= 0),
   status          text NOT NULL DEFAULT 'pendente' CHECK (status IN (
                     'pendente', 'recebido', 'pago', 'em_atraso', 'cancelado'
                   )),
   vencimento      date,
   liquidado_em    date,
-  forma_pagamento text,        -- pix, cartão, boleto, transferência
+  forma_pagamento text,        -- pix, cartao, boleto, transferencia, dinheiro
   criado_por      uuid REFERENCES profiles(id),
   criado_em       timestamptz DEFAULT now(),
   atualizado_em   timestamptz DEFAULT now()
 );
 ```
+
+> **Reembolso parcial**: quando uma reserva é cancelada com reembolso parcial, criar um lançamento `tipo = 'reembolso'` com o valor devolvido ao cliente. O lançamento de `receita` original permanece para histórico. O fluxo de caixa soma receitas e subtrai despesas + reembolsos.
+>
+> **Ajuste**: usado para corrigir divergências contábeis sem movimento real de caixa. Deve sempre ter uma descrição explicativa. A aplicação pode exibir ajustes com destaque visual diferente dos demais tipos.
 
 ---
 
@@ -452,7 +509,10 @@ CREATE TABLE documentos (
   cliente_id      uuid REFERENCES clientes(id),
   nome            text NOT NULL,
   tipo            text,        -- bilhete, voucher, apolice, passaporte, outro
-  storage_path    text NOT NULL,  -- caminho no Supabase Storage
+  -- Bucket privado: 'documentos-privados'. Path: {organization_id}/{reserva_id}/{nome_arquivo}
+  -- Acesso via signed URL: supabase.storage.from('documentos-privados').createSignedUrl(path, 3600)
+  -- NUNCA expor URLs públicas diretas para este bucket.
+  storage_path    text NOT NULL,
   tamanho_bytes   bigint,
   mime_type       text,
   enviado_por     uuid REFERENCES profiles(id),
@@ -545,6 +605,63 @@ CREATE POLICY "org_insert" ON <tabela>
 ```
 
 Restrições por role serão aplicadas via `auth.jwt() ->> 'role'` ou via checagem de `profiles.role` dentro das políticas de UPDATE/DELETE específicas.
+
+### Caso especial: tabela `profiles`
+
+A tabela `profiles` **não pode usar a policy padrão acima** sem adaptação — o subquery `SELECT organization_id FROM profiles WHERE id = auth.uid()` é auto-referencial e falha quando o perfil ainda não existe (criação do primeiro usuário de uma org).
+
+A política correta para `profiles` é:
+
+```sql
+-- Usuário lê o próprio perfil sempre
+CREATE POLICY "own_profile_select" ON profiles
+  FOR SELECT USING (id = auth.uid());
+
+-- Usuário lê outros perfis da mesma organização
+CREATE POLICY "org_profiles_select" ON profiles
+  FOR SELECT USING (
+    organization_id = (SELECT organization_id FROM profiles WHERE id = auth.uid())
+  );
+
+-- Inserção: apenas o próprio usuário cria seu perfil (bootstrap)
+CREATE POLICY "own_profile_insert" ON profiles
+  FOR INSERT WITH CHECK (id = auth.uid());
+
+-- Atualização: admin atualiza qualquer perfil da org; usuário atualiza o próprio
+CREATE POLICY "org_profile_update" ON profiles
+  FOR UPDATE USING (
+    id = auth.uid()
+    OR (
+      organization_id = (SELECT organization_id FROM profiles WHERE id = auth.uid())
+      AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'admin'
+    )
+  );
+```
+
+> **Fluxo de criação de perfil**: ao fazer signup, a Supabase Edge Function (ou trigger) cria o registro em `profiles` com `id = auth.uid()`. Só após esse insert o subquery padrão passa a funcionar para esse usuário.
+
+### RLS no Supabase Storage (bucket `documentos-privados`)
+
+```sql
+-- Bucket criado como PRIVADO (não público)
+-- Política de leitura: usuário acessa apenas arquivos da própria organização
+CREATE POLICY "org_storage_select" ON storage.objects
+  FOR SELECT USING (
+    bucket_id = 'documentos-privados'
+    AND (storage.foldername(name))[1] = (
+      SELECT organization_id::text FROM profiles WHERE id = auth.uid()
+    )
+  );
+
+-- Política de upload: idem
+CREATE POLICY "org_storage_insert" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'documentos-privados'
+    AND (storage.foldername(name))[1] = (
+      SELECT organization_id::text FROM profiles WHERE id = auth.uid()
+    )
+  );
+```
 
 ---
 
@@ -726,12 +843,14 @@ Para cada venda/pacote migrado, criar automaticamente:
 ### Fase 2 — Auth e multi-tenant `~3 dias`
 
 - [ ] Tela de login (email + senha)
-- [ ] Tela de cadastro de nova organização (onboarding)
+- [ ] Tela de recuperação de senha
 - [ ] Tabelas `organizations` e `profiles` no Supabase
-- [ ] RLS base em todas as tabelas
+- [ ] Criação da organização Voecomkennedy e perfis de usuário via painel Supabase (MVP: sem onboarding público)
+- [ ] RLS base em todas as tabelas (incluindo política especial para `profiles`)
 - [ ] Hook `useAuth()` com role e organization
 - [ ] Middleware de rota por role (admin, operacional, financeiro)
 - [ ] Layout base: Sidebar + Header + área de conteúdo
+- [ ] _(SaaS futuro)_ Tela de cadastro de nova organização (onboarding self-service)
 
 ### Fase 3 — Banco de dados `~2 dias`
 
@@ -823,6 +942,9 @@ Para cada venda/pacote migrado, criar automaticamente:
 | Conflito de sessão em múltiplas abas | Baixa | Baixo | React Query com invalidação por evento de foco |
 | Custo do Supabase crescendo com Storage | Baixa | Baixo | Definir limite de upload e compressão de imagens no upload |
 | Usuário não se adapta ao novo fluxo | Média | Médio | Período de transição de 30 dias com ambos sistemas ativos |
+| RLS de `profiles` falha no bootstrap (primeiro insert) | Média | Alto | Usar policy especial para `profiles` (documentada na seção 7); criar perfil via trigger ou Edge Function ao signup |
+| Bucket de Storage configurado como público por engano | Baixa | Crítico | Criar bucket como PRIVATE no painel do Supabase antes de qualquer upload; verificar configuração antes do go-live |
+| Dados de `metadados` jsonb em `reservas` sem validação | Média | Médio | Validar estrutura do jsonb no frontend com Zod antes do insert; documentar schema esperado por tipo_reserva |
 
 ---
 

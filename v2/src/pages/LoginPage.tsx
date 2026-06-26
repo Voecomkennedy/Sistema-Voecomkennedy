@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { PlaneTakeoff, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/authStore'
 
 const loginSchema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -14,6 +15,7 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>
 
 export function LoginPage() {
+  const { session } = useAuthStore()
   const navigate = useNavigate()
   const [authError, setAuthError] = useState<string | null>(null)
 
@@ -24,6 +26,8 @@ export function LoginPage() {
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   })
+
+  if (session) return <Navigate to="/" replace />
 
   async function onSubmit(data: LoginForm) {
     setAuthError(null)

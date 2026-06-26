@@ -58,6 +58,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
     formState: { errors },
   } = useForm<ClienteFormValues>({
     resolver: zodResolver(clienteSchema),
+    shouldUnregister: true,
     defaultValues: cliente
       ? {
           nome: cliente.nome,

@@ -9,7 +9,7 @@ import type { Passageiro } from '@/types/database'
 
 const passageiroSchema = z.object({
   nome: z.string().min(2, 'Nome obrigatório'),
-  nacionalidade: z.string().optional(),
+  nacionalidade: z.string().min(1, 'Nacionalidade obrigatória'),
   cpf: z.string().optional().nullable(),
   data_nascimento: z.string().optional().nullable(),
   passaporte: z.string().optional().nullable(),

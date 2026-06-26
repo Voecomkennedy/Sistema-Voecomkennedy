@@ -30,6 +30,30 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
+    /* Dourado — acento premium Voecomkennedy */
+    --gold: 38 77% 48%;
+    --gold-foreground: 30 30% 15%;
+    --gold-subtle: 38 80% 96%;
+    --gold-subtle-foreground: 32 60% 28%;
+
+    /* Sucesso */
+    --success: 142 68% 38%;
+    --success-foreground: 0 0% 100%;
+    --success-subtle: 142 60% 95%;
+    --success-subtle-foreground: 142 50% 22%;
+
+    /* Info / azul-claro */
+    --info: 213 90% 60%;
+    --info-foreground: 222 47% 10%;
+    --info-subtle: 213 80% 95%;
+    --info-subtle-foreground: 213 60% 30%;
+
+    /* Warning */
+    --warning: 38 77% 48%;
+    --warning-foreground: 30 30% 15%;
+    --warning-subtle: 38 80% 96%;
+    --warning-subtle-foreground: 32 60% 28%;
+
     /* Sidebar — sempre escura independente do tema */
     --sidebar: 222 47% 9%;
     --sidebar-foreground: 210 40% 95%;
@@ -69,6 +93,26 @@
     --destructive: 0 62% 50%;
     --destructive-foreground: 210 40% 98%;
 
+    --gold: 38 77% 52%;
+    --gold-foreground: 30 30% 12%;
+    --gold-subtle: 38 50% 18%;
+    --gold-subtle-foreground: 38 80% 80%;
+
+    --success: 142 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --success-subtle: 142 40% 14%;
+    --success-subtle-foreground: 142 60% 75%;
+
+    --info: 213 80% 62%;
+    --info-foreground: 222 47% 10%;
+    --info-subtle: 213 40% 16%;
+    --info-subtle-foreground: 213 70% 75%;
+
+    --warning: 38 77% 52%;
+    --warning-foreground: 30 30% 12%;
+    --warning-subtle: 38 50% 18%;
+    --warning-subtle-foreground: 38 80% 80%;
+
     --sidebar: 222 47% 6%;
     --sidebar-foreground: 210 40% 95%;
     --sidebar-border: 217 33% 13%;
@@ -78,6 +122,19 @@
     --sidebar-muted-foreground: 215 20% 55%;
 
     --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-border;
   }
 }
 

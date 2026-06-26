@@ -1,5 +1,6 @@
 import { Bell, Search, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/authStore'
 
 interface HeaderProps {
   title?: string
@@ -7,6 +8,14 @@ interface HeaderProps {
 }
 
 export function Header({ title, breadcrumb }: HeaderProps) {
+  const { profile } = useAuthStore()
+
+  const iniciais = profile?.nome
+    ? profile.nome.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+    : '?'
+
+  const primeiroNome = profile?.nome?.split(' ')[0] ?? '—'
+
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-5">
       {/* Breadcrumb / título da página */}
@@ -57,9 +66,9 @@ export function Header({ title, breadcrumb }: HeaderProps) {
           className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-            K
+            {iniciais}
           </div>
-          <span className="hidden text-xs font-medium sm:block">Kennedy</span>
+          <span className="hidden text-xs font-medium sm:block">{primeiroNome}</span>
           <ChevronDown className="h-3 w-3 opacity-50" />
         </button>
       </div>

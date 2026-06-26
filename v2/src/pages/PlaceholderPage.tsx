@@ -13,7 +13,7 @@ export function PlaceholderPage({ titulo, fase }: PlaceholderPageProps) {
       </div>
       <h1 className="text-xl font-semibold text-foreground">{titulo}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Módulo planejado para o {fase} do roadmap V2.
+        Módulo planejado para a {fase} do roadmap V2.
       </p>
       <span className="mt-4 inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
         Em desenvolvimento

@@ -173,7 +173,7 @@ export function DashboardPage() {
                   </TableCell>
                   <TableCell className="text-right font-medium">{formatarMoeda(r.valor)}</TableCell>
                   <TableCell>
-                    <Badge variant={r.status}>{r.status === 'em_operacao' ? 'Em Op.' : undefined}</Badge>
+                    <Badge variant={r.status} />
                   </TableCell>
                 </TableRow>
               ))}

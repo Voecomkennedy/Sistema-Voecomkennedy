@@ -20,6 +20,12 @@ type BadgeVariant =
   | 'urgente'
   | 'atencao'
   | 'normal'
+  // Status de lançamento financeiro
+  | 'fin_pendente'
+  | 'fin_recebido'
+  | 'fin_pago'
+  | 'fin_em_atraso'
+  | 'fin_cancelado'
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant
@@ -45,6 +51,12 @@ const variantClasses: Record<BadgeVariant, string> = {
   urgente: 'bg-warning-subtle text-warning-subtle-foreground',
   atencao: 'bg-gold-subtle text-gold-subtle-foreground',
   normal: 'bg-muted text-muted-foreground',
+  // Lançamento financeiro
+  fin_pendente:  'bg-muted text-muted-foreground',
+  fin_recebido:  'bg-success-subtle text-success-subtle-foreground',
+  fin_pago:      'bg-success-subtle text-success-subtle-foreground',
+  fin_em_atraso: 'bg-destructive/10 text-destructive',
+  fin_cancelado: 'border border-border text-muted-foreground bg-transparent',
 }
 
 const statusLabels: Partial<Record<BadgeVariant, string>> = {

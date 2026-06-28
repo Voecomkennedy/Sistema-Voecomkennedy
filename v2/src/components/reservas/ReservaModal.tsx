@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { FileText, Plane, Users } from 'lucide-react'
+import { FileText, Plane, Users, ClipboardList } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { ReservaForm } from '@/components/reservas/ReservaForm'
 import { TrechoForm } from '@/components/reservas/TrechoForm'
 import { PassageirosReserva } from '@/components/reservas/PassageirosReserva'
+import { OperacionalTab } from '@/components/reservas/OperacionalTab'
 import type { Reserva } from '@/types/database'
 
-type Aba = 'dados' | 'trechos' | 'passageiros'
+type Aba = 'dados' | 'trechos' | 'passageiros' | 'operacional'
 
 interface AbaConfig {
   key: Aba
@@ -15,27 +16,29 @@ interface AbaConfig {
 }
 
 const abas: AbaConfig[] = [
-  { key: 'dados',       label: 'Dados',       icon: <FileText className="h-3.5 w-3.5" /> },
-  { key: 'trechos',     label: 'Trechos',     icon: <Plane className="h-3.5 w-3.5" /> },
-  { key: 'passageiros', label: 'Passageiros', icon: <Users className="h-3.5 w-3.5" /> },
+  { key: 'dados',        label: 'Dados',        icon: <FileText className="h-3.5 w-3.5" /> },
+  { key: 'trechos',      label: 'Trechos',      icon: <Plane className="h-3.5 w-3.5" /> },
+  { key: 'passageiros',  label: 'Passageiros',  icon: <Users className="h-3.5 w-3.5" /> },
+  { key: 'operacional',  label: 'Operacional',  icon: <ClipboardList className="h-3.5 w-3.5" /> },
 ]
 
 interface ReservaModalProps {
   open: boolean
   onClose: () => void
   reservaInicial: Reserva | null
+  abaInicial?: Aba
 }
 
-export function ReservaModal({ open, onClose, reservaInicial }: ReservaModalProps) {
+export function ReservaModal({ open, onClose, reservaInicial, abaInicial }: ReservaModalProps) {
   const [reservaAtiva, setReservaAtiva] = useState<Reserva | null>(reservaInicial)
   const [aba, setAba] = useState<Aba>('dados')
 
   useEffect(() => {
     if (open) {
       setReservaAtiva(reservaInicial)
-      setAba('dados')
+      setAba(reservaInicial && abaInicial ? abaInicial : 'dados')
     }
-  }, [open, reservaInicial])
+  }, [open, reservaInicial, abaInicial])
 
   const modoEdicao = Boolean(reservaAtiva)
   const titulo = reservaAtiva ? `Reserva #${reservaAtiva.numero}` : 'Nova Reserva'
@@ -80,6 +83,11 @@ export function ReservaModal({ open, onClose, reservaInicial }: ReservaModalProp
       {/* Aba Passageiros — apenas em modo edição */}
       {modoEdicao && aba === 'passageiros' && (
         <PassageirosReserva reservaId={reservaAtiva!.id} />
+      )}
+
+      {/* Aba Operacional — apenas em modo edição */}
+      {modoEdicao && aba === 'operacional' && (
+        <OperacionalTab reserva={reservaAtiva!} />
       )}
     </Modal>
   )

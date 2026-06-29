@@ -1,0 +1,47 @@
+name: Deploy V2 → Netlify Staging
+
+on:
+  push:
+    branches:
+      - feat/v2-design-system
+    paths:
+      - 'v2/**'
+      - 'netlify.toml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy V2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: v2/package-lock.json
+
+      - name: Install dependencies
+        working-directory: v2
+        run: npm ci
+
+      - name: Build
+        working-directory: v2
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Deploy to Netlify
+        run: >
+          npx --yes netlify-cli@latest deploy
+          --prod
+          --dir=v2/dist
+          --site=${{ secrets.NETLIFY_SITE_ID }}
+          --message="SHA ${{ github.sha }}"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
-import { FileText, Plane, Users, ClipboardList } from 'lucide-react'
+import { FileText, Plane, Users, ClipboardList, FileOutput } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { ReservaForm } from '@/components/reservas/ReservaForm'
 import { TrechoForm } from '@/components/reservas/TrechoForm'
 import { PassageirosReserva } from '@/components/reservas/PassageirosReserva'
 import { OperacionalTab } from '@/components/reservas/OperacionalTab'
+import { DocumentoReservaView } from '@/components/reservas/DocumentoReservaView'
 import type { Reserva } from '@/types/database'
 
-type Aba = 'dados' | 'trechos' | 'passageiros' | 'operacional'
+type Aba = 'dados' | 'trechos' | 'passageiros' | 'operacional' | 'documento'
 
 interface AbaConfig {
   key: Aba
@@ -20,6 +21,7 @@ const abas: AbaConfig[] = [
   { key: 'trechos',      label: 'Trechos',      icon: <Plane className="h-3.5 w-3.5" /> },
   { key: 'passageiros',  label: 'Passageiros',  icon: <Users className="h-3.5 w-3.5" /> },
   { key: 'operacional',  label: 'Operacional',  icon: <ClipboardList className="h-3.5 w-3.5" /> },
+  { key: 'documento',    label: 'Documento',    icon: <FileOutput className="h-3.5 w-3.5" /> },
 ]
 
 interface ReservaModalProps {
@@ -88,6 +90,11 @@ export function ReservaModal({ open, onClose, reservaInicial, abaInicial }: Rese
       {/* Aba Operacional — apenas em modo edição */}
       {modoEdicao && aba === 'operacional' && (
         <OperacionalTab reserva={reservaAtiva!} />
+      )}
+
+      {/* Aba Documento — apenas em modo edição */}
+      {modoEdicao && aba === 'documento' && (
+        <DocumentoReservaView reservaId={reservaAtiva!.id} />
       )}
     </Modal>
   )

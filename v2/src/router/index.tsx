@@ -5,9 +5,11 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { ReservasPage } from '@/pages/ReservasPage'
 import { ClientesPage } from '@/pages/ClientesPage'
 import { FinanceiroPage } from '@/pages/FinanceiroPage'
+import { OperacionalPage } from '@/pages/OperacionalPage'
+import { DocumentosPage } from '@/pages/DocumentosPage'
+import { ConfiguracoesPage } from '@/pages/ConfiguracoesPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
-import { PlaceholderPage } from '@/pages/PlaceholderPage'
 
 export const router = createBrowserRouter([
   {
@@ -23,11 +25,11 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <DashboardPage /> },
           { path: 'reservas', element: <ReservasPage /> },
-          { path: 'operacional', element: <PlaceholderPage titulo="Operacional" fase="Fase 6" /> },
+          { path: 'operacional', element: <OperacionalPage /> },
           { path: 'clientes', element: <ClientesPage /> },
           { path: 'financeiro', element: <FinanceiroPage /> },
-          { path: 'documentos', element: <PlaceholderPage titulo="Documentos" fase="Fase 9" /> },
-          { path: 'configuracoes', element: <PlaceholderPage titulo="Configurações" fase="Fase 10" /> },
+          { path: 'documentos', element: <DocumentosPage /> },
+          { path: 'configuracoes', element: <ConfiguracoesPage /> },
         ],
       },
     ],

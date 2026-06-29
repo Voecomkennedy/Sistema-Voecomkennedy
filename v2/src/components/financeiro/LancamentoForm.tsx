@@ -78,8 +78,8 @@ function aplicarRegraPagamento(
     return dataAtual || hojeLocalISO()
   }
   if (status === 'pendente') return null
-  // cancelado: manter como estava
-  return dataAtual ?? null
+  // cancelado: manter como estava (string vazia vira null)
+  return dataAtual || null
 }
 
 // ── Props ──────────────────────────────────────────────────────

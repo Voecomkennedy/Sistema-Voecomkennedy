@@ -45,7 +45,7 @@ function mensagemErroTrecho(error: unknown): string {
   const e = error as { code?: string; message?: string }
   switch (e?.code) {
     case '23503':
-      return 'Código IATA não encontrado. Use apenas códigos cadastrados (ex: GRU, MIA).'
+      return 'Aeroporto não encontrado na base de dados. O sistema está sendo expandido — enquanto isso, use códigos cadastrados (GRU, MIA). Novos aeroportos serão adicionados em breve.'
     case '42501':
       return 'Sem permissão para realizar esta operação.'
     case 'PGRST116':

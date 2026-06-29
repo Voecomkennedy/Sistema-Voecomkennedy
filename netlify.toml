@@ -1,0 +1,16 @@
+# Deploy da V2 (React/Vite) no Netlify — staging
+# A V1 (arquivos HTML na raiz) permanece no GitHub Pages, não é afetada.
+
+[build]
+  base    = "v2"
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# SPA redirect — React Router exige isso para URLs diretas não retornarem 404
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

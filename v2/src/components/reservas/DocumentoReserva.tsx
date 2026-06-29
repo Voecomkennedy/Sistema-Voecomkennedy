@@ -17,10 +17,11 @@ const TIPO_RESERVA_LABELS: Record<string, string> = {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  ativa:     'Ativa',
-  cancelada: 'Cancelada',
-  concluida: 'Concluída',
-  pendente:  'Pendente',
+  cotacao:     'Cotação',
+  confirmada:  'Confirmada',
+  em_operacao: 'Em Operação',
+  concluida:   'Concluída',
+  cancelada:   'Cancelada',
 }
 
 const SENTIDO_LABELS: Record<string, string> = {

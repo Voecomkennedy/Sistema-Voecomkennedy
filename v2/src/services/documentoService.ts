@@ -159,7 +159,9 @@ export async function buscarDocumentoReserva(
       .single(),
   ])
 
-  if (resResult.error) throw resResult.error
+  if (resResult.error)     throw resResult.error
+  if (trechosResult.error) throw trechosResult.error
+  if (passResult.error)    throw passResult.error
 
   // Mapear join passageiros → shape plana
   const passageiros: PassageiroDocumento[] = (

@@ -70,6 +70,11 @@
       add('ok', '🎉 Nuvem limpa!', 'Pronto. Pode voltar ao sistema e usar normalmente.');
     }
 
+    (async () => {
+        const ok = await Auth.proteger();
+        if (!ok) return; // já redirecionou pro login
+    })();
+
     async function rodar() {
       div.innerHTML = '';
       const client = getSupabaseClient();

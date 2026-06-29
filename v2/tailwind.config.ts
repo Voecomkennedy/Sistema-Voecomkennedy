@@ -49,11 +49,56 @@ const config: Config = {
           muted: 'hsl(var(--sidebar-muted))',
           'muted-foreground': 'hsl(var(--sidebar-muted-foreground))',
         },
+        gold: {
+          DEFAULT: 'hsl(var(--gold))',
+          foreground: 'hsl(var(--gold-foreground))',
+          subtle: 'hsl(var(--gold-subtle))',
+          'subtle-foreground': 'hsl(var(--gold-subtle-foreground))',
+        },
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+          subtle: 'hsl(var(--success-subtle))',
+          'subtle-foreground': 'hsl(var(--success-subtle-foreground))',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))',
+          subtle: 'hsl(var(--info-subtle))',
+          'subtle-foreground': 'hsl(var(--info-subtle-foreground))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
+          subtle: 'hsl(var(--warning-subtle))',
+          'subtle-foreground': 'hsl(var(--warning-subtle-foreground))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        xl: 'calc(var(--radius) + 4px)',
+        '2xl': 'calc(var(--radius) + 8px)',
+      },
+      boxShadow: {
+        card: '0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
+        'card-hover': '0 4px 12px 0 rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.06)',
+        modal: '0 20px 60px -12px rgb(0 0 0 / 0.25)',
+      },
+      keyframes: {
+        'skeleton-pulse': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.4' },
+        },
+        'fade-in': {
+          from: { opacity: '0', transform: 'translateY(4px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'skeleton-pulse': 'skeleton-pulse 1.8s ease-in-out infinite',
+        'fade-in': 'fade-in 0.2s ease-out',
       },
     },
   },

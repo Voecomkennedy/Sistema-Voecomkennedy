@@ -19,7 +19,7 @@ const PRINT_CSS = `
     visibility: visible !important;
   }
   .documento-print-area {
-    position: absolute !important;
+    position: fixed !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;

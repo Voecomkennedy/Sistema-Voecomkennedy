@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users, UserCheck, Plus, Search, Pencil } from 'lucide-react'
+import { Users, UserCheck, Plus, Search, Pencil, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,8 +19,8 @@ import { Modal } from '@/components/ui/modal'
 import { LoadingState } from '@/components/ui/skeleton'
 import { ClienteForm } from '@/components/clientes/ClienteForm'
 import { PassageiroForm } from '@/components/passageiros/PassageiroForm'
-import { useClientes } from '@/hooks/useClientes'
-import { usePassageiros } from '@/hooks/usePassageiros'
+import { useClientes, useDeleteCliente } from '@/hooks/useClientes'
+import { usePassageiros, useDeletePassageiro } from '@/hooks/usePassageiros'
 import { formatarData } from '@/lib/utils'
 import type { Cliente, Passageiro } from '@/types/database'
 
@@ -57,6 +57,14 @@ export function ClientesPage() {
 
   const clientesQuery = useClientes()
   const passageirosQuery = usePassageiros()
+  const deleteClienteMutation = useDeleteCliente()
+  const deletePassageiroMutation = useDeletePassageiro()
+
+  function mensagemErroExclusao(error: unknown): string {
+    const e = error as { code?: string; message?: string }
+    if (e?.code === '23503') return 'Não é possível excluir: existem reservas vinculadas a este registro.'
+    return e?.message ?? 'Erro ao excluir. Tente novamente.'
+  }
 
   const clientesFiltrados = (clientesQuery.data ?? []).filter((c) => {
     const s = searchCliente.toLowerCase()
@@ -217,7 +225,7 @@ export function ClientesPage() {
                     <TableHead className="hidden lg:table-cell">CPF / CNPJ</TableHead>
                     <TableHead className="hidden lg:table-cell">Telefone</TableHead>
                     <TableHead className="hidden xl:table-cell">E-mail</TableHead>
-                    <TableHead className="w-10" />
+                    <TableHead className="w-20" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -241,17 +249,36 @@ export function ClientesPage() {
                         {c.email ?? '—'}
                       </TableCell>
                       <TableCell>
-                        <button
-                          type="button"
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            abrirEditarCliente(c)
-                          }}
-                          aria-label={`Editar ${c.nome}`}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              abrirEditarCliente(c)
+                            }}
+                            aria-label={`Editar ${c.nome}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            disabled={deleteClienteMutation.isPending}
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              if (!window.confirm(`Excluir cliente "${c.nome}"?\n\nSó é possível excluir clientes sem reservas vinculadas.`)) return
+                              try {
+                                await deleteClienteMutation.mutateAsync(c.id)
+                              } catch (err) {
+                                alert(mensagemErroExclusao(err))
+                              }
+                            }}
+                            aria-label={`Excluir ${c.nome}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -327,7 +354,7 @@ export function ClientesPage() {
                     <TableHead className="hidden lg:table-cell">CPF</TableHead>
                     <TableHead className="hidden lg:table-cell">Passaporte</TableHead>
                     <TableHead className="hidden xl:table-cell">Venc. Passaporte</TableHead>
-                    <TableHead className="w-10" />
+                    <TableHead className="w-20" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -351,17 +378,36 @@ export function ClientesPage() {
                         {p.passaporte_venc ? formatarData(p.passaporte_venc) : '—'}
                       </TableCell>
                       <TableCell>
-                        <button
-                          type="button"
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            abrirEditarPassageiro(p)
-                          }}
-                          aria-label={`Editar ${p.nome}`}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              abrirEditarPassageiro(p)
+                            }}
+                            aria-label={`Editar ${p.nome}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            disabled={deletePassageiroMutation.isPending}
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              if (!window.confirm(`Excluir passageiro "${p.nome}"?\n\nSó é possível excluir passageiros sem reservas vinculadas.`)) return
+                              try {
+                                await deletePassageiroMutation.mutateAsync(p.id)
+                              } catch (err) {
+                                alert(mensagemErroExclusao(err))
+                              }
+                            }}
+                            aria-label={`Excluir ${p.nome}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

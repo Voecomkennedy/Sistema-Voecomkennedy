@@ -25,11 +25,13 @@ const PRINT_CSS = `
     width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
-    padding: 20mm !important;
+    padding: 18mm !important;
     background: white !important;
     color: black !important;
     box-shadow: none !important;
     border: none !important;
+    font-size: 11pt !important;
+    line-height: 1.55 !important;
   }
   .documento-screen-controls {
     display: none !important;

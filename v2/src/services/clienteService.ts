@@ -30,6 +30,15 @@ export async function criarCliente(payload: TablesInsert<'clientes'>) {
   return data
 }
 
+export async function excluirCliente(id: string, organizationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('clientes')
+    .delete()
+    .eq('id', id)
+    .eq('organization_id', organizationId)
+  if (error) throw error
+}
+
 export async function atualizarCliente(
   id: string,
   organizationId: string,

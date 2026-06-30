@@ -37,3 +37,15 @@ export function useUpdateCliente() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clientes'] }),
   })
 }
+
+export function useDeleteCliente() {
+  const orgId = useAuthStore((s) => s.profile?.organization_id ?? '')
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => {
+      if (!orgId) throw new Error('Organização não encontrada. Faça login novamente.')
+      return svc.excluirCliente(id, orgId)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clientes'] }),
+  })
+}

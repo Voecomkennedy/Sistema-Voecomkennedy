@@ -143,7 +143,7 @@ export async function criarLancamento(
       moeda:           'BRL',
       criado_por:      userId,
       reserva_id:      dados.reserva_id ?? null,
-      data_pagamento:  dados.data_pagamento ?? null,
+      data_pagamento:  dados.data_pagamento || null,
       // Não inclui atualizado_em — trigger trg_fin_updated_at cuida disso
     })
     .select()

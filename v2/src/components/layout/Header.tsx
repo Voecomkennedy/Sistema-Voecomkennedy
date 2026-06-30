@@ -55,9 +55,9 @@ export function Header({ title, breadcrumb }: HeaderProps) {
           type="button"
           className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           aria-label="Notificações"
+          title="Notificações — em breve"
         >
           <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-destructive" />
         </button>
 
         {/* Usuário */}

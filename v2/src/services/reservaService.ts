@@ -51,6 +51,18 @@ export async function atualizarReserva(
   return data
 }
 
+export async function cancelarReserva(
+  id: string,
+  organizationId: string,
+  motivo?: string | null,
+): Promise<Reserva> {
+  return atualizarReserva(id, organizationId, {
+    status: 'cancelada',
+    cancelado_em: new Date().toISOString(),
+    motivo_cancelamento: motivo || null,
+  })
+}
+
 // ── Trechos ────────────────────────────────────────────────────
 export async function listarTrechos(
   reservaId: string,

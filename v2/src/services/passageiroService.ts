@@ -21,6 +21,15 @@ export async function criarPassageiro(payload: TablesInsert<'passageiros'>) {
   return data
 }
 
+export async function excluirPassageiro(id: string, organizationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('passageiros')
+    .delete()
+    .eq('id', id)
+    .eq('organization_id', organizationId)
+  if (error) throw error
+}
+
 export async function atualizarPassageiro(
   id: string,
   organizationId: string,

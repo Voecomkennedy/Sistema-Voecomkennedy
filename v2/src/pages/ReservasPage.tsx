@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PlaneTakeoff, Plus, Search, Pencil, ChevronDown, ChevronUp, Clock } from 'lucide-react'
+import { PlaneTakeoff, Plus, Search, Pencil, ChevronDown, ChevronUp, Clock, Ban } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import { Alert } from '@/components/ui/alert'
 import { LoadingState } from '@/components/ui/skeleton'
 import { ReservaModal } from '@/components/reservas/ReservaModal'
 import { CheckinBadge } from '@/components/reservas/CheckinBadge'
-import { useReservas } from '@/hooks/useReservas'
+import { useReservas, useCancelarReserva } from '@/hooks/useReservas'
 import { useAgendaCheckins } from '@/hooks/useOperacional'
 import { formatarMoeda, formatarData } from '@/lib/utils'
 import { formatarDataHoraLocal, calcularCheckin } from '@/lib/operacionalUtils'
@@ -66,8 +66,10 @@ export function ReservasPage() {
   })
   const [showAgenda, setShowAgenda] = useState(true)
   const [agendaExpandida, setAgendaExpandida] = useState(false)
+  const [erroCancelamento, setErroCancelamento] = useState<string | null>(null)
 
   const reservasQuery = useReservas()
+  const cancelarReserva = useCancelarReserva()
   const reservas = (reservasQuery.data ?? []) as ReservaComCliente[]
   const agendaQuery = useAgendaCheckins(30)
 
@@ -107,6 +109,12 @@ export function ReservasPage() {
           Nova Reserva
         </Button>
       </div>
+
+      {erroCancelamento && (
+        <Alert variant="destructive" title="Erro ao cancelar reserva">
+          {erroCancelamento}
+        </Alert>
+      )}
 
       {/* Seção: Próximos check-ins */}
       {showAgenda && (
@@ -352,17 +360,38 @@ export function ReservasPage() {
                       <Badge variant={r.status as StatusVariant} />
                     </TableCell>
                     <TableCell>
-                      <button
-                        type="button"
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          abrirEditar(r)
-                        }}
-                        aria-label={`Editar reserva ${r.numero}`}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            abrirEditar(r)
+                          }}
+                          aria-label={`Editar reserva ${r.numero}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        {r.status !== 'cancelada' && (
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setErroCancelamento(null)
+                              if (!window.confirm(`Cancelar a reserva #${r.numero}?\n\nEsta ação marca a reserva como cancelada. Os lançamentos financeiros vinculados são mantidos.`)) return
+                              cancelarReserva.mutate(
+                                { id: r.id },
+                                { onError: (err) => setErroCancelamento((err as Error).message) },
+                              )
+                            }}
+                            aria-label={`Cancelar reserva ${r.numero}`}
+                            title="Cancelar reserva"
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

@@ -51,6 +51,18 @@ export function useUpdateReserva() {
   })
 }
 
+export function useCancelarReserva() {
+  const orgId = useAuthStore((s) => s.profile?.organization_id ?? '')
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo?: string | null }) => {
+      if (!orgId) throw new Error('Organização não encontrada. Faça login novamente.')
+      return svc.cancelarReserva(id, orgId, motivo)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reservas'] }),
+  })
+}
+
 // ── Trechos ────────────────────────────────────────────────────
 export function useTrechos(reservaId: string | null) {
   const orgId = useAuthStore((s) => s.profile?.organization_id ?? '')

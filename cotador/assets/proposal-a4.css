@@ -1,0 +1,201 @@
+@font-face{font-family:"Inter";font-weight:400;font-style:normal;src:url("fonts/inter-400.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Inter";font-weight:500;font-style:normal;src:url("fonts/inter-500.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Inter";font-weight:600;font-style:normal;src:url("fonts/inter-600.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Inter";font-weight:700;font-style:normal;src:url("fonts/inter-700.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Montserrat";font-weight:400;font-style:normal;src:url("fonts/montserrat-400.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Montserrat";font-weight:600;font-style:normal;src:url("fonts/montserrat-600.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Montserrat";font-weight:700;font-style:normal;src:url("fonts/montserrat-700.woff2") format("woff2");font-display:swap}
+
+@page { size: A4; margin: 0; }
+:root {
+  --n9:#0A1931; --n7:#1A3D63; --st:#4A7FA7; --sk:#B3CFE5; --mi:#F6FAFD;
+  --tx:#0A1931; --mu:rgba(10,25,49,.58); --ln:rgba(26,61,99,.14);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { width:210mm; height:297mm; }
+body { font-family:'Inter',sans-serif; color:var(--tx); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.page { width:210mm; height:297mm; display:flex; flex-direction:column; overflow:hidden; background:#fff; }
+.h { font-family:'Montserrat',sans-serif; }
+
+/* topo */
+.top { background:var(--n9); color:#fff; padding:11mm 14mm 9mm; position:relative; }
+.top::after { content:''; position:absolute; left:0; right:0; bottom:0; height:1.2mm; background:linear-gradient(90deg,var(--st),var(--sk)); }
+.bar { display:flex; justify-content:space-between; align-items:flex-start; }
+.brand { font-family:'Montserrat'; font-weight:700; font-size:12.5pt; letter-spacing:.3em; }
+.brand small { display:block; font-family:'Inter'; font-weight:500; font-size:6.8pt; letter-spacing:.32em; color:var(--sk); margin-top:1.6mm; }
+.meta { text-align:right; font-size:7pt; letter-spacing:.18em; color:var(--sk); text-transform:uppercase; line-height:1.7; }
+.meta b { display:block; color:#fff; font-weight:600; letter-spacing:.04em; text-transform:none; font-size:9pt; }
+.hero { display:flex; justify-content:space-between; align-items:flex-end; margin-top:10mm; }
+.eyebrow { font-size:7pt; letter-spacing:.26em; color:var(--sk); text-transform:uppercase; font-weight:600; }
+.route { font-family:'Montserrat'; font-weight:700; font-size:25pt; letter-spacing:-.01em; margin-top:2.5mm; line-height:1.05; }
+.route span { color:var(--sk); font-weight:400; margin:0 3mm; }
+.codes { font-size:8pt; letter-spacing:.24em; color:var(--sk); margin-top:2mm; font-weight:500; }
+.client { text-align:right; }
+.client .eyebrow { display:block; }
+.client .name { font-family:'Montserrat'; font-weight:600; font-size:12.5pt; margin-top:2mm; }
+.chips { display:flex; gap:2mm; margin-top:7mm; flex-wrap:wrap; }
+.chip { border:1px solid rgba(179,207,229,.35); color:#fff; border-radius:10mm; padding:1.4mm 3.4mm; font-size:7.4pt; font-weight:500; letter-spacing:.02em; }
+
+/* corpo */
+main { flex:1; padding:8mm 14mm 0; display:flex; flex-direction:column; }
+.sec { display:flex; align-items:center; gap:3mm; margin-bottom:3.5mm; }
+.sec h2 { font-family:'Montserrat'; font-weight:700; font-size:7.6pt; letter-spacing:.24em; text-transform:uppercase; color:var(--n7); white-space:nowrap; }
+.sec i { flex:1; height:1px; background:var(--ln); }
+.sec em { font-style:normal; font-size:7pt; color:var(--mu); white-space:nowrap; }
+
+.leg { display:grid; grid-template-columns:23mm 1fr 45mm; border:1px solid var(--ln); border-radius:3mm; overflow:hidden; margin-bottom:3mm; }
+.date { background:var(--mi); border-right:1px solid var(--ln); padding:4mm 0; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.tag { font-size:6.4pt; font-weight:700; letter-spacing:.2em; color:#fff; background:var(--n7); border-radius:10mm; padding:.8mm 2.6mm; }
+.tag.v { background:var(--st); }
+.date .d { font-family:'Montserrat'; font-weight:700; font-size:20pt; line-height:1; margin-top:2.4mm; }
+.date .m { font-size:7pt; font-weight:600; letter-spacing:.14em; color:var(--n7); margin-top:1mm; }
+.date .w { font-size:6.8pt; color:var(--mu); margin-top:.8mm; }
+.fl { padding:4.5mm 5mm; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:4mm; }
+.pt .t { font-family:'Montserrat'; font-weight:700; font-size:17pt; line-height:1; }
+.pt .t sup { font-family:'Inter'; font-size:6.2pt; font-weight:700; color:var(--st); margin-left:.8mm; vertical-align:top; position:relative; top:.4mm; }
+.pt .c { font-weight:700; font-size:8pt; letter-spacing:.12em; color:var(--n7); margin-top:1.6mm; }
+.pt .n { font-size:7pt; color:var(--mu); margin-top:.5mm; }
+.pt.r { text-align:right; }
+.path { text-align:center; }
+.path .dur { font-size:7.4pt; font-weight:600; color:var(--n7); }
+.path .line { position:relative; height:0; border-top:1.2px solid var(--sk); margin:2mm 0; }
+.path .line::before, .path .line::after { content:''; position:absolute; top:-1.6mm; width:2.6mm; height:2.6mm; border-radius:50%; background:#fff; border:1.2px solid var(--st); }
+.path .line::before { left:-1mm; } .path .line::after { right:-1mm; background:var(--st); }
+.path .line b { position:absolute; left:50%; top:-1.3mm; transform:translateX(-50%); width:2mm; height:2mm; background:var(--sk); border-radius:50%; }
+.path .stop { font-size:6.9pt; color:var(--mu); }
+.det { border-left:1px solid var(--ln); padding:4.5mm 4.5mm; font-size:7.4pt; line-height:1.55; display:flex; flex-direction:column; justify-content:center; gap:.6mm; }
+.det .al { font-weight:700; font-size:8.2pt; }
+.det span { color:var(--mu); }
+.det .bag { margin-top:1mm; font-weight:600; color:var(--n7); }
+.arr { font-size:6.6pt; color:var(--st); font-weight:600; margin-top:.8mm; }
+
+/* valores */
+.opts { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-bottom:5mm; }
+.opt { border:1px solid var(--sk); border-radius:3mm; background:var(--mi); padding:4.5mm 5mm; }
+.opt .ot { font-size:6.8pt; font-weight:700; letter-spacing:.2em; color:var(--st); text-transform:uppercase; }
+.opt .on { font-family:'Montserrat'; font-weight:700; font-size:10.5pt; margin-top:1mm; }
+.opt .os { font-size:7pt; color:var(--mu); margin-top:.6mm; min-height:3.6mm; }
+.opt .big { font-family:'Montserrat'; font-weight:700; font-size:21pt; margin-top:3.5mm; letter-spacing:-.01em; }
+.opt .big small { font-family:'Inter'; font-size:7.2pt; font-weight:500; color:var(--mu); margin-left:1.2mm; letter-spacing:0; }
+.rows { margin-top:3mm; border-top:1px solid var(--ln); }
+.row { display:flex; justify-content:space-between; align-items:baseline; padding:2mm 0; border-bottom:1px solid var(--ln); font-size:7.8pt; }
+.row:last-child { border-bottom:0; }
+.row span { color:var(--mu); }
+.row b { font-weight:700; }
+.row b small { display:block; text-align:right; font-weight:500; color:var(--mu); font-size:6.6pt; margin-top:.4mm; }
+
+.one { display:grid; grid-template-columns:1.2fr .9fr 1.15fr; border:1px solid var(--sk); border-radius:3mm; background:var(--mi); margin-bottom:5mm; }
+.one > div { padding:5mm 5.5mm; }
+.one > div + div { border-left:1px solid var(--ln); }
+.one .ot { font-size:6.8pt; font-weight:700; letter-spacing:.2em; color:var(--st); text-transform:uppercase; }
+.one .v { white-space:nowrap; font-family:'Montserrat'; font-weight:700; font-size:15pt; margin-top:2.4mm; }
+.one .v.xl { font-size:22pt; }
+.one .s { font-size:7pt; color:var(--mu); margin-top:1mm; }
+
+.steps { display:grid; grid-template-columns:repeat(3,1fr); gap:4mm; margin-bottom:5mm; }
+.step { display:flex; gap:2.6mm; }
+.step .k { flex:none; width:6mm; height:6mm; border-radius:50%; background:var(--n9); color:#fff; font-family:'Montserrat'; font-weight:700; font-size:7.4pt; display:flex; align-items:center; justify-content:center; }
+.step b { display:block; font-size:7.8pt; font-weight:700; }
+.step p { font-size:7pt; color:var(--mu); line-height:1.45; margin-top:.6mm; }
+
+.notes { margin-top:auto; padding:3.5mm 0 6mm; border-top:1px solid var(--ln); font-size:6.8pt; color:var(--mu); line-height:1.6; }
+.notes b { color:var(--n7); font-weight:600; }
+
+/* rodapé fixo */
+footer { background:var(--n9); color:#fff; padding:6mm 14mm; display:flex; justify-content:space-between; align-items:center; }
+footer .fb { font-family:'Montserrat'; font-weight:700; font-size:8.6pt; letter-spacing:.28em; }
+footer .fb small { display:block; font-family:'Inter'; font-weight:400; letter-spacing:.04em; font-size:6.8pt; color:var(--sk); margin-top:1.2mm; }
+footer .fc { text-align:right; font-size:7.4pt; line-height:1.6; }
+footer .fc span { color:var(--sk); font-size:6.6pt; letter-spacing:.18em; text-transform:uppercase; display:block; }
+
+/* Preserve the reference composition, including the fixed A4 footer. */
+html,body{height:auto;min-height:297mm}
+body{background:#e9eff4;margin:auto}
+.page{position:relative;margin:8mm auto;flex-shrink:0;overflow:visible;box-shadow:0 2mm 8mm #0A193122;break-after:page}
+.page:last-child{break-after:auto}
+.top,footer{flex-shrink:0}
+.hero{gap:6mm;align-items:flex-end}
+.hero>div{min-width:0}
+.route{font-size:23pt;overflow-wrap:anywhere}
+.client{max-width:67mm;flex-shrink:0}
+.client .name{overflow-wrap:anywhere}
+.brand{font-size:11.8pt;letter-spacing:.24em}
+main{min-height:0;overflow:visible;padding-bottom:0}
+.page-content{flex:1;min-height:0;display:flex;flex-direction:column}
+.block{flex:0 0 auto;break-inside:avoid}
+.leg{grid-template-columns:21mm minmax(0,1fr) 40mm}
+.fl{padding:4mm;gap:3mm;grid-template-columns:minmax(17mm,auto) minmax(0,1fr) minmax(17mm,auto)}
+.pt .t{font-size:16pt;white-space:nowrap}
+.path .stop{line-height:1.5}
+.det{padding:3mm;min-width:0}
+.airline-logo{display:block;width:25mm;height:6mm;object-fit:contain;object-position:left center;margin-bottom:1mm}
+.det .al{font-size:7.4pt;line-height:1.4;overflow-wrap:anywhere}
+.bag{font-size:6.8pt}
+.operated{font-size:6.7pt}
+.price-section{margin-top:2mm}
+.opts{align-items:stretch}
+.opt{min-width:0}
+.opt .big{font-size:19pt}
+.opt .big small{display:block;margin:1mm 0 0;font-size:7pt}
+.opt .os{line-height:1.5;min-height:7mm}
+.opt .on{font-size:10pt}
+.opt.selected{border-color:var(--n7);border-width:.4mm}
+.row{gap:3mm;align-items:flex-start;line-height:1.4}
+.row b{text-align:right;flex-shrink:0}
+.one{grid-template-columns:repeat(3,minmax(0,1fr))}
+.one>div{padding:4.5mm}
+.one .v{font-size:13pt;white-space:normal;overflow-wrap:anywhere}
+.one .v.xl{font-size:20pt}
+.one .s{line-height:1.5}
+.hotel{padding:4mm 5mm;border:1px solid var(--ln);border-radius:3mm;background:var(--mi);margin-bottom:4mm;font-size:8pt;line-height:1.6}
+.hotel h3{font-size:10pt;margin-bottom:1mm}
+.hotel a{color:var(--n7)}
+.notes{margin-top:auto;white-space:pre-wrap;overflow-wrap:anywhere;flex-shrink:0}
+.notes p{margin:0 0 1mm}
+.notes .user-note{color:var(--n7)}
+.continuation .top{padding:6mm 14mm}
+.continuation .hero,.continuation .chips{display:none}
+footer{margin-top:auto;min-height:19mm;gap:5mm}
+.page-number{font-size:6.5pt;color:var(--sk);margin-top:1mm}
+.print-tools{width:210mm;margin:5mm auto;display:flex;align-items:center;gap:12px;font:14px Inter,sans-serif;color:var(--n9)}
+.print-tools button{background:var(--n7);color:white;border:0;padding:12px 18px;border-radius:8px;cursor:pointer;font:inherit}
+.print-tools button:disabled{opacity:.5;cursor:wait}
+.print-tools span{font-size:12px;line-height:1.5}
+@media print{html,body{width:210mm;margin:0;background:white}.page{margin:0;box-shadow:none}.print-tools{display:none!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+
+/* Explicit print dimensions also keep nested grids stable in PDF engines. */
+.hero>div:first-child{flex:1;width:120mm}
+.hero .client{flex:0 0 auto;width:auto;max-width:55mm}
+.route{font-size:21pt}
+.leg{grid-template-columns:21mm 120mm 40mm;width:182mm}
+.fl{width:120mm;grid-template-columns:24mm 58mm 24mm;gap:3mm;padding:4mm}
+.opts{grid-template-columns:89mm 89mm}
+.opt{width:89mm}
+.one{grid-template-columns:60.5mm 60.5mm 60.5mm}
+.one>div{width:60.5mm}
+.steps{grid-template-columns:58mm 58mm 58mm}
+.step{width:58mm}
+.top{padding:8mm 14mm 6mm}
+.hero{margin-top:6mm}
+.chips{margin-top:5mm}
+.det{padding:2.5mm 3mm;line-height:1.4;font-size:6.8pt;gap:.4mm}
+.airline-logo{height:5mm;margin-bottom:.5mm}
+.bag{font-size:6.4pt}
+.opt{padding:3.5mm 5mm}
+.opt .big{margin-top:2mm}
+.opt .os{min-height:6mm;font-size:6.6pt}
+.row{padding:1.5mm 0;font-size:7.3pt}
+.rows{margin-top:2mm}
+footer{padding:4.5mm 14mm}
+.det{display:block}
+.det>span{display:block;margin-top:.5mm}
+.det .bag{margin-top:1mm}
+.det .operated{margin-top:.5mm}
+.row{min-height:7mm}
+.row:last-child{min-height:10mm}
+.opt{padding-bottom:4mm}
+.leg{min-height:40mm}
+.airline-logo{height:7mm}
+.opts,.opt{min-height:58mm}
+.one{min-height:31mm}
+.one>div{min-height:31mm}

@@ -1210,6 +1210,7 @@
         // Preencher formulário de venda com dados da cotação
         function preencherFormularioComCotacao(cotacao) {
             document.getElementById('tituloModal').innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Nova Venda (de Cotação)';
+            if (cotacao.clienteId) definirClientePorId(cotacao.clienteId);
 
             // Dados do voo
             document.getElementById('origem').value = cotacao.origem || '';

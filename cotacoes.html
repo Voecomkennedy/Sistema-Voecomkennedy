@@ -82,16 +82,41 @@
                     <div class="card-body">
                         <div class="row g-2 align-items-end mb-3">
                             <div class="col-md-7">
-                                <label class="form-label" for="clienteProposta">Cliente cadastrado</label>
+                                <label class="form-label" for="clienteProposta">Cliente da proposta</label>
                                 <select id="clienteProposta" class="form-select" onchange="selecionarClienteProposta()">
                                     <option value="">Selecione um cliente</option>
                                 </select>
                             </div>
-                            <div class="col-md-5 d-flex gap-2">
-                                <a class="btn btn-outline-secondary" href="pessoas.html">Cadastrar cliente</a>
+                            <div class="col-md-5 d-flex flex-wrap gap-2">
+                                <button class="btn btn-outline-secondary" type="button" onclick="abrirCadastroContatoProposta()" aria-controls="cadastroContatoProposta" aria-expanded="false" id="abrirContatoProposta">Cadastrar contato</button>
                                 <button class="btn btn-primary" type="button" onclick="salvarPropostaCompleta()">Salvar cotação</button>
                             </div>
                         </div>
+                        <form id="cadastroContatoProposta" class="border rounded bg-light p-3 mb-3" hidden>
+                            <h6>Contato para a cotação</h6>
+                            <p class="text-muted small">Informe os dados básicos. Dados de documentos e emissão podem ser completados em Pessoas quando necessários.</p>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="contatoPropostaNome" class="form-label">Nome *</label>
+                                    <input id="contatoPropostaNome" class="form-control" autocomplete="given-name" maxlength="80" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="contatoPropostaSobrenome" class="form-label">Sobrenome *</label>
+                                    <input id="contatoPropostaSobrenome" class="form-control" autocomplete="family-name" maxlength="120" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="contatoPropostaWhatsapp" class="form-label">WhatsApp *</label>
+                                    <input id="contatoPropostaWhatsapp" class="form-control" type="tel" autocomplete="tel" maxlength="32" aria-describedby="contatoPropostaTelefoneAjuda" required>
+                                    <div id="contatoPropostaTelefoneAjuda" class="form-text">Com DDD, como (61) 99999-1234. Para outro país, use + e o código do país, como +351 912 345 678.</div>
+                                </div>
+                            </div>
+                            <p id="contatoPropostaEstado" class="small mt-3 mb-2" role="status" aria-live="polite"></p>
+                            <div id="contatosPropostaEncontrados" class="mb-3" hidden></div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button id="salvarContatoProposta" class="btn btn-primary" type="submit">Salvar e selecionar contato</button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="fecharCadastroContatoProposta()">Cancelar</button>
+                            </div>
+                        </form>
                         <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente, preencha a proposta e salve. O PDF também salva a mesma cotação.</p>
                         <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1" style="width:100%;height:1350px;border:1px solid #d7e3ee;border-radius:12px"></iframe>
                     </div>
@@ -1871,7 +1896,8 @@
     <script src="js/auth.js?v=10"></script>
     <script src="js/cloud-sync.js?v=10"></script>
     <script src="js/app-bootstrap.js?v=10"></script>
-    <script src="js/proposal-integration.js?v=1"></script>
+    <script src="js/proposal-integration.js?v=2"></script>
+    <script src="js/proposal-contact.js?v=1"></script>
     <script>AppBootstrap.iniciar();</script>
 </body>
 </html>

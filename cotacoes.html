@@ -93,7 +93,7 @@
                             </div>
                         </div>
                         <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente, preencha a proposta e salve. O PDF também salva a mesma cotação.</p>
-                        <iframe id="quadroProposta" title="Editor da proposta completa" src="cotador/index.html?embedded=1" style="width:100%;height:1350px;border:1px solid #d7e3ee;border-radius:12px"></iframe>
+                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1" style="width:100%;height:1350px;border:1px solid #d7e3ee;border-radius:12px"></iframe>
                     </div>
                 </details>
             </div>
@@ -901,6 +901,8 @@
                 if (!c) return;
                 document.getElementById('tituloCotacao').textContent = 'Editar cotação simples';
                 document.getElementById('formCotacao').reset();
+                // Registros antigos guardam os totais, mas não os insumos internos do cálculo.
+                ['quantidadeMilhas', 'valorMilheiro'].forEach(id => { document.getElementById(id).required = false; });
                 const fields = {
                     nomeCliente:c.nomeCliente, adultos:c.adultos, criancas:c.criancas, bebes:c.bebes,
                     origemCotacao:c.origem, destinoCotacao:c.destino, companhiaCotacao:c.companhiaAerea,
@@ -929,15 +931,16 @@
                     if (city) city.value = p.cidade || '';
                     if (wait) wait.value = p.tempo || '';
                 });
+                calcularTotalPassageiros();
                 document.getElementById('valorPorPessoa').textContent = Utils.formatCurrency(c.valorPorPessoa || 0);
                 document.getElementById('valorTotalPix').textContent = Utils.formatCurrency(c.valorTotalPix || 0);
                 document.getElementById('valorParcela').textContent = Utils.formatCurrency(c.valorParcela || 0);
                 document.getElementById('totalParcelado').textContent = 'Total: ' + Utils.formatCurrency(c.totalParcelado || 0);
-                calcularTotalPassageiros();
             } else {
                 // Modo NOVA COTAÇÃO
                 document.getElementById('tituloCotacao').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Cotação';
                 document.getElementById('formCotacao').reset();
+                ['quantidadeMilhas', 'valorMilheiro'].forEach(id => { document.getElementById(id).required = true; });
                 document.getElementById('cotacaoId').value = '';
                 limparResultados();
                 calcularTotalPassageiros();

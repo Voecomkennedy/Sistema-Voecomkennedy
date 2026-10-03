@@ -3,6 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// Esta cópia pertence ao painel autenticado; não abre como aplicativo público isolado.
+if (/\/cotador\/index\.html$/.test(location.pathname)) {
+  let allowed = false;
+  try {
+    allowed = new URLSearchParams(location.search).get('embedded') === '1'
+      && window.parent !== window
+      && window.parent.location.origin === location.origin
+      && window.parent.document.documentElement.dataset.appAutenticado === 'true';
+  } catch (_) { allowed = false; }
+  if (!allowed) location.replace('../cotacoes.html');
+}
+</script>
 <title>VoeComKennedy — Painel</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
@@ -5963,7 +5976,7 @@ if (new URLSearchParams(location.search).get('embedded') === '1') {
     switchTab('proposta');
     document.getElementById('p-cliente').readOnly = true;
     const reportHeight = () => window.parent.postMessage({ type: 'vck-proposal-height', height: document.documentElement.scrollHeight }, location.origin);
-    new ResizeObserver(reportHeight).observe(document.body);
+    if (window.ResizeObserver) new ResizeObserver(reportHeight).observe(document.body);
     reportHeight();
   });
 }

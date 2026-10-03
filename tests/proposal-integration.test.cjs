@@ -6,6 +6,7 @@ const vm = require('node:vm');
 
 function harness() {
     const quotes = [];
+    let restored = null;
     const client = { id: 'client-1', nome: 'Cliente de teste', tipo: 'cliente' };
     const events = {};
     const nodes = {
@@ -15,10 +16,10 @@ function harness() {
         propostaEstado: { textContent: '' },
         editorProposta: { open: false, scrollIntoView() {} },
         quadroProposta: {
-            style: {}, addEventListener() {},
+            style: {}, dataset: { src: 'cotador/index.html?embedded=1' }, addEventListener() {},
             contentWindow: {
                 document: { getElementById: () => ({ value: '' }) },
-                restaurarProposta() {}, abrirProposta: async () => true
+                restaurarProposta(value) { restored = value; }, abrirProposta: async () => true
             }
         }
     };
@@ -57,7 +58,7 @@ function harness() {
         valParcela: 'R$ 527,77', parcelas: '10',
         timing: { fields: { 'p-data-chegada-ida': '2026-10-27' } }
     };
-    return { window, nodes, quotes, data, getSyncs: () => syncs };
+    return { window, nodes, quotes, data, getSyncs: () => syncs, getRestored: () => restored };
 }
 
 test('new proposal stores full snapshot and stable identity across repeated saves', () => {
@@ -99,4 +100,22 @@ test('monthly metrics use creation month and count each quote ID once', () => {
     assert.equal(result.total, 2);
     assert.equal(result.converted, 1);
     assert.equal(result.percent, 50);
+});
+
+test('full options survive save and reopen without filtering fields', async () => {
+    const h = harness();
+    h.data = {
+        ...h.data, vooIda: 'LA1234', paradaIda: '2escalas',
+        escalaCidadeIda: 'GRU', escalaTempoIda: '1h 20m',
+        escalaCidade2Ida: 'CWB', escalaTempo2Ida: '2h 10m',
+        hotelNome: 'Hotel de teste', bagDespVolta: 'Não inclusa',
+        calc: { tipo: 'por-milhas', milhas: '125000', compAtivo: true, bagAdd: { ativo: true, custo: '100,00' } },
+        timing: { fields: { 'p-data-chegada-ida': '2026-10-27', 'p-conexao-ida1-saida-data': '2026-10-27' }, ownership: { 'p-data-volta': 'manual' } }
+    };
+    const expected = JSON.stringify(h.data);
+    const saved = h.window.ProposalBridge.save(h.data);
+    assert.equal(JSON.stringify(saved.propostaCompleta), expected);
+    await h.window.editarPropostaCompleta(saved.id);
+    assert.equal(JSON.stringify(h.getRestored()), expected);
+    assert.equal(h.nodes.clienteProposta.value, saved.clienteId);
 });

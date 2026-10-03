@@ -10,8 +10,14 @@
         ? Promise.resolve(frame())
         : new Promise((resolve, reject) => {
             const iframe = $('quadroProposta');
-            iframe.addEventListener('load', () => resolve(frame()), { once: true });
-            iframe.addEventListener('error', reject, { once: true });
+            const timeout = setTimeout(() => { iframe.removeEventListener('load', check); reject(new Error('Editor não carregou.')); }, 15000);
+            const check = () => {
+                if (!frame()?.restaurarProposta) return;
+                clearTimeout(timeout);
+                iframe.removeEventListener('load', check);
+                resolve(frame());
+            };
+            iframe.addEventListener('load', check);
         });
     const money = value => {
         const raw = String(value || '').replace(/[^\d,.-]/g, '');
@@ -150,9 +156,10 @@
         status(`Editando cotação #${quote.id}.`);
         $('editorProposta').scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
-    window.salvarPropostaCompleta = function () {
+    window.salvarPropostaCompleta = async function () {
         try {
-            const d = frame()?.coletarDadosProposta?.();
+            const editor = await whenFrameReady();
+            const d = editor.coletarDadosProposta();
             if (d) bridge.save(d);
         } catch (error) { status(error.message); }
     };
@@ -174,5 +181,6 @@
         ready = true;
         refreshClients();
         $('quadroProposta').addEventListener('load', setClientName);
+        $('quadroProposta').src = $('quadroProposta').dataset.src;
     });
 })();

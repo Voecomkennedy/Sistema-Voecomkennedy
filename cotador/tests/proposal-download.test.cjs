@@ -37,3 +37,14 @@ test('a repeated click waits for the first PDF and an error allows a retry',asyn
   assert.equal(calls,2);
  }finally{dom.window.close();}
 });
+test('long A4 proposal continues onto multiple pages with embedded fonts and links',async()=>{
+ const d={cliente:'Teste sintético',orig:'BSB',dest:'POA',cia:'LATAM',dataIdaISO:'2026-10-27',
+  depIda:'10:10',chegIda:'12:45',valPix:'100',valTotalPix:'100',linkAereo:'https://example.com/voo',
+  obs:Array.from({length:120},(_,i)=>`Linha ${i+1} de condições sintéticas para revisão.`).join('\n')};
+ const buffer=await new Promise(resolve=>pdfMake.createPdf(definition(d)).getBuffer(resolve));
+ const bytes=buffer.toString('latin1');
+ assert.equal(buffer.subarray(0,4).toString(),'%PDF');
+ assert.ok((bytes.match(/\/Type\s*\/Page\b/g)||[]).length>=2);
+ assert.match(bytes,/\/URI\b/);
+ assert.match(bytes,/\/FontFile2\b/);
+});

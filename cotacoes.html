@@ -1163,15 +1163,10 @@
             document.getElementById('cotacoesConvertidas').textContent = cotacoes.filter(c => c.status === 'convertida').length;
             document.getElementById('cotacoesAbertas').textContent = cotacoes.filter(c => c.status === 'aberta').length;
             document.getElementById('cotacoesPerdidas').textContent = cotacoes.filter(c => c.status === 'perdida').length;
-            const now = new Date();
-            const nesteMes = cotacoes.filter(c => {
-                const when = new Date(c.dataCriacao || c.dataCadastro || '');
-                return !Number.isNaN(when.getTime()) && when.getFullYear() === now.getFullYear() && when.getMonth() === now.getMonth();
-            });
-            const convertidas = nesteMes.filter(c => c.status === 'convertida').length;
-            document.getElementById('cotacoesMes').textContent = nesteMes.length;
-            document.getElementById('convertidasMes').textContent = convertidas;
-            document.getElementById('taxaConversaoMes').textContent = nesteMes.length ? `${Math.round(100 * convertidas / nesteMes.length)}%` : '0%';
+            const mes = ProposalMetrics.monthly(cotacoes);
+            document.getElementById('cotacoesMes').textContent = mes.total;
+            document.getElementById('convertidasMes').textContent = mes.converted;
+            document.getElementById('taxaConversaoMes').textContent = `${mes.percent}%`;
         }
 
         // Marcar como perdida

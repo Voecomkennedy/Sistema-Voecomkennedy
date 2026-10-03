@@ -22,6 +22,24 @@
     const client = () => StorageManager.getClienteById($('clienteProposta').value);
     const status = message => { $('propostaEstado').textContent = message; };
 
+    window.ProposalMetrics = {
+        monthly(quotes, now = new Date()) {
+            const seen = new Set();
+            const monthly = (quotes || []).filter(q => {
+                const when = new Date(q.dataCriacao || q.dataCadastro || '');
+                if (Number.isNaN(when.getTime()) || when.getFullYear() !== now.getFullYear() || when.getMonth() !== now.getMonth()) return false;
+                if (q.id != null) {
+                    const key = String(q.id);
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                }
+                return true;
+            });
+            const converted = monthly.filter(q => q.status === 'convertida').length;
+            return { total: monthly.length, converted, percent: monthly.length ? Math.round(100 * converted / monthly.length) : 0 };
+        }
+    };
+
     function refreshClients() {
         const select = $('clienteProposta');
         const selected = select.value;

@@ -86,3 +86,17 @@ test('missing client and converted quote do not silently create or overwrite rec
     assert.throws(() => h.window.ProposalBridge.save(h.data), /virou venda/);
     assert.equal(h.quotes.length, 1);
 });
+
+test('monthly metrics use creation month and count each quote ID once', () => {
+    const h = harness();
+    const now = new Date(2026, 9, 15);
+    const result = h.window.ProposalMetrics.monthly([
+        { id: 'a', dataCriacao: '2026-10-03T12:00:00', status: 'convertida' },
+        { id: 'a', dataCriacao: '2026-10-03T12:00:00', status: 'convertida' },
+        { id: 'b', dataCriacao: '2026-10-04T12:00:00', status: 'aberta' },
+        { id: 'c', dataCriacao: '2026-09-30T12:00:00', status: 'convertida' }
+    ], now);
+    assert.equal(result.total, 2);
+    assert.equal(result.converted, 1);
+    assert.equal(result.percent, 50);
+});

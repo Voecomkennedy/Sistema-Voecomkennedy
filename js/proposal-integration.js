@@ -128,8 +128,18 @@
     window.ProposalBridge = bridge;
 
     window.selecionarClienteProposta = setClientName;
+    window.selecionarContatoProposta = function (id) {
+        if (!ready || document.documentElement.dataset.appAutenticado !== 'true') return false;
+        const contact = StorageManager.getClientes().find(c => String(c.id) === String(id));
+        if (!contact) return false;
+        refreshClients();
+        $('clienteProposta').value = contact.id;
+        setClientName();
+        return true;
+    };
     window.novaPropostaCompleta = function () {
         if (!ready) return;
+        window.reiniciarCadastroContatoProposta?.();
         selectionVersion++;
         currentId = null;
         refreshClients();
@@ -142,6 +152,7 @@
     };
     window.editarPropostaCompleta = async function (id) {
         if (!ready) return;
+        window.reiniciarCadastroContatoProposta?.();
         const version = ++selectionVersion;
         const quote = StorageManager.getCotacaoById(id);
         if (!quote?.propostaCompleta) { abrirModalCotacao(id); return; }

@@ -1,6 +1,7 @@
 /* Vector A4 export of the existing proposal-a4.css composition. */
 (function (root) {
   'use strict';
+  const pricing = typeof module === 'object' && module.exports ? require('./passenger-pricing.js') : root.PassengerPricing;
   const N='#0A1931', B='#1A3D63', S='#4A7FA7', K='#B3CFE5', P='#F6FAFD', M='#677787', L='#DCE6ED';
   const T=(value,extra={})=>({text:Array.isArray(value)?value:String(value??''),...extra});
   const brl=n=>Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -94,6 +95,8 @@
     ],fillColor:P,margin:[12,12,12,12]};
   }
   function options(d,config) {
+    const payment=pricing.presentation(d);
+    const note=payment.note?[T(payment.note,{font:'InterSemi',fontSize:8,color:B,margin:[0,8,0,2]})]:[];
     const rows=root.ProposalPDF?.options?root.ProposalPDF.options(d):[];
     if(!rows.length) {
       const pax=Number(d.totalPax)||1;
@@ -101,10 +104,10 @@
         d.parcelas+'x de '+moneyInput(d.valParcela):moneyInput(d.valCartaoFinal||d.valCartaoBase)):'';
       const sub=d.valCartaoBase?'total '+moneyInput(d.valCartaoFinal||d.valCartaoBase)+(d.comJuros===false?' · sem juros':''):'';
       return [{table:{widths:[171,171,173],heights:()=>79,body:[[
-        priceCard('Por pessoa no Pix',moneyInput(d.valPix),pax+' passageiro'+(pax>1?'s':''),true),
+        priceCard(payment.label,moneyInput(d.valPix),payment.basis,true),
         priceCard('Total no Pix',moneyInput(d.valTotalPix),'Todos os passageiros'),
         priceCard('Cartão de crédito',card,sub)
-      ]]},layout:{...shadeLayout,hLineColor:()=>K,vLineColor:()=>K}}];
+      ]]},layout:{...shadeLayout,hLineColor:()=>K,vLineColor:()=>K}},...note];
     }
     const cards=[];
     for(let i=0;i<rows.length;i+=2) {
@@ -115,7 +118,7 @@
           T(o.label,{font:'MontserratBold',fontSize:10,color:N,margin:[0,5,0,2]}),
           T(o.detail,{font:'Inter',fontSize:7,color:M}),
           T(brl(o.pp),{font:'MontserratBold',fontSize:19,color:N,margin:[0,8,0,0]}),
-          T('por pessoa no Pix',{font:'Inter',fontSize:7,color:M}),
+          T(payment.label,{font:'Inter',fontSize:7,color:M}),
           T('Total no Pix · '+brl(o.total),{font:'InterBold',fontSize:8,color:N,margin:[0,8,0,0]}),
           ...(card?[T('Cartão · '+card.label+' · '+card.sub,{font:'InterSemi',fontSize:7,color:B,margin:[0,4,0,0]})]:[])
         ],fillColor:P,margin:[13,12,13,12]};
@@ -123,7 +126,7 @@
       if(cells.length===1)cells.push({text:''});
       cards.push({table:{widths:[257,258],heights:()=>145,body:[cells],dontBreakRows:true},layout:{...shadeLayout,hLineColor:()=>K,vLineColor:()=>K},margin:[0,0,0,8]});
     }
-    return cards;
+    return [...cards,...note];
   }
   function step(n,title,description) {
     return {columns:[

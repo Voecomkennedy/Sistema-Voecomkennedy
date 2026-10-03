@@ -14,7 +14,7 @@ test('every static proposal field is collected or included in the timing snapsho
     const collector = html.slice(html.indexOf('function coletarDadosProposta()'), html.indexOf('async function gerarProposta()'));
     const timing = fs.readFileSync(path.join(root, 'cotador/js/timing-form.js'), 'utf8');
     const missing = ids.filter(id => !collector.includes(`'${id}'`) && !timing.includes(`'${id}'`));
-    assert.equal(ids.length, 97);
+    assert.equal(ids.length, 99);
     assert.deepEqual(missing, []);
 });
 

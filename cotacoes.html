@@ -66,12 +66,36 @@
         <!-- Botões de Ação -->
         <div class="row mb-4">
             <div class="col-12">
-                <button class="btn btn-primary btn-lg" onclick="abrirModalCotacao()">
-                    <i class="bi bi-plus-circle me-2"></i>Nova Cotação
+                <button class="btn btn-primary btn-lg" onclick="novaPropostaCompleta()">
+                    <i class="bi bi-plus-circle me-2"></i>Nova Proposta Completa
                 </button>
                 <button class="btn btn-outline-secondary btn-lg ms-2" onclick="carregarCotacoes()">
                     <i class="bi bi-arrow-clockwise me-2"></i>Atualizar
                 </button>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <details id="editorProposta" class="card">
+                    <summary class="card-header" style="cursor:pointer">Proposta completa — voos, conexões, tarifas e PDF</summary>
+                    <div class="card-body">
+                        <div class="row g-2 align-items-end mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label" for="clienteProposta">Cliente cadastrado</label>
+                                <select id="clienteProposta" class="form-select" onchange="selecionarClienteProposta()">
+                                    <option value="">Selecione um cliente</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5 d-flex gap-2">
+                                <a class="btn btn-outline-secondary" href="pessoas.html">Cadastrar cliente</a>
+                                <button class="btn btn-primary" type="button" onclick="salvarPropostaCompleta()">Salvar cotação</button>
+                            </div>
+                        </div>
+                        <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente, preencha a proposta e salve. O PDF também salva a mesma cotação.</p>
+                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1" style="width:100%;height:1350px;border:1px solid #d7e3ee;border-radius:12px"></iframe>
+                    </div>
+                </details>
             </div>
         </div>
 
@@ -116,6 +140,11 @@
         </div>
 
         <!-- Filtros -->
+        <div class="row mb-4"><div class="col-12"><div class="card"><div class="card-body d-flex flex-wrap gap-4">
+            <div><strong id="cotacoesMes">0</strong> cotações neste mês</div>
+            <div><strong id="convertidasMes">0</strong> convertidas neste mês</div>
+            <div><strong id="taxaConversaoMes">0%</strong> de conversão</div>
+        </div></div></div></div>
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
@@ -868,12 +897,50 @@
             cotacaoEditandoId = cotacaoId;
 
             if (cotacaoId) {
-                // Modo EDIÇÃO (implementar depois)
-                alert('Edição em desenvolvimento');
+                const c = StorageManager.getCotacaoById(cotacaoId);
+                if (!c) return;
+                document.getElementById('tituloCotacao').textContent = 'Editar cotação simples';
+                document.getElementById('formCotacao').reset();
+                // Registros antigos guardam os totais, mas não os insumos internos do cálculo.
+                ['quantidadeMilhas', 'valorMilheiro'].forEach(id => { document.getElementById(id).required = false; });
+                const fields = {
+                    nomeCliente:c.nomeCliente, adultos:c.adultos, criancas:c.criancas, bebes:c.bebes,
+                    origemCotacao:c.origem, destinoCotacao:c.destino, companhiaCotacao:c.companhiaAerea,
+                    tipoTarifa:c.tipoTarifa, tipoViagem:c.tipoViagem, linkCompanhia:c.linkCompanhia,
+                    dataSaidaIda:c.dataSaidaIda, horaSaidaIda:c.horaSaidaIda,
+                    dataChegadaIda:c.dataChegadaIda, horaChegadaIda:c.horaChegadaIda,
+                    tempoTotalIda:c.tempoTotalIda, temConexaoIda:c.temConexaoIda,
+                    dataSaidaVolta:c.dataSaidaVolta, horaSaidaVolta:c.horaSaidaVolta,
+                    dataChegadaVolta:c.dataChegadaVolta, horaChegadaVolta:c.horaChegadaVolta,
+                    tempoTotalVolta:c.tempoTotalVolta, temConexaoVolta:c.temConexaoVolta,
+                    tipoCotacao:c.tipoCotacao, observacaoCotacao:c.observacao, bagagemIncluida:c.bagagemIncluida,
+                    numParcelas:c.numParcelas
+                };
+                Object.entries(fields).forEach(([id, value]) => {
+                    const el = document.getElementById(id);
+                    if (el && value != null) el.value = value;
+                });
+                toggleVolta(); toggleTipoCotacao(); toggleParadasIda(); toggleParadasVolta();
+                (c.paradasIda || []).forEach((p,i) => {
+                    const city = document.getElementById(`paradaIdaCidade${i+1}`), wait = document.getElementById(`paradaIdaTempo${i+1}`);
+                    if (city) city.value = p.cidade || '';
+                    if (wait) wait.value = p.tempo || '';
+                });
+                (c.paradasVolta || []).forEach((p,i) => {
+                    const city = document.getElementById(`paradaVoltaCidade${i+1}`), wait = document.getElementById(`paradaVoltaTempo${i+1}`);
+                    if (city) city.value = p.cidade || '';
+                    if (wait) wait.value = p.tempo || '';
+                });
+                calcularTotalPassageiros();
+                document.getElementById('valorPorPessoa').textContent = Utils.formatCurrency(c.valorPorPessoa || 0);
+                document.getElementById('valorTotalPix').textContent = Utils.formatCurrency(c.valorTotalPix || 0);
+                document.getElementById('valorParcela').textContent = Utils.formatCurrency(c.valorParcela || 0);
+                document.getElementById('totalParcelado').textContent = 'Total: ' + Utils.formatCurrency(c.totalParcelado || 0);
             } else {
                 // Modo NOVA COTAÇÃO
                 document.getElementById('tituloCotacao').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Cotação';
                 document.getElementById('formCotacao').reset();
+                ['quantidadeMilhas', 'valorMilheiro'].forEach(id => { document.getElementById(id).required = true; });
                 document.getElementById('cotacaoId').value = '';
                 limparResultados();
                 calcularTotalPassageiros();
@@ -897,10 +964,14 @@
             const bebes = parseInt(document.getElementById('bebes').value) || 0;
 
             // Obter valores calculados
-            const valorPorPessoa = document.getElementById('valorPorPessoa').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
-            const valorTotalPix = document.getElementById('valorTotalPix').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
-            const valorParcela = document.getElementById('valorParcela').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
-            const totalParceladoText = document.getElementById('totalParcelado').textContent.replace('Total: ', '').replace('R$ ', '').replace('.', '').replace(',', '.');
+            const valorExibido = id => {
+                const texto = document.getElementById(id).textContent.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+                return Number(texto) || 0;
+            };
+            const valorPorPessoa = valorExibido('valorPorPessoa');
+            const valorTotalPix = valorExibido('valorTotalPix');
+            const valorParcela = valorExibido('valorParcela');
+            const totalParceladoText = valorExibido('totalParcelado');
             const numParcelas = parseInt(document.getElementById('numParcelas').value);
 
             // Coletar dados das paradas de IDA
@@ -982,6 +1053,10 @@
             };
 
             if (cotacaoEditandoId) {
+                const original = StorageManager.getCotacaoById(cotacaoEditandoId);
+                cotacao.status = original.status || 'aberta';
+                cotacao.dataCriacao = original.dataCriacao || original.dataCadastro;
+                cotacao.clienteId = original.clienteId || null;
                 StorageManager.updateCotacao(cotacaoEditandoId, cotacao);
                 Utils.showSuccess('Cotação atualizada com sucesso!');
             } else {
@@ -1073,6 +1148,7 @@
                         <td>${Utils.escapeHTML(Utils.formatCurrency(cotacao.valorTotalPix))}</td>
                         <td>${statusBadge[cotacao.status] || statusBadge['aberta']}</td>
                         <td>
+                            <i class="bi bi-pencil-square action-icon" onclick="editarPropostaCompleta(${Utils.literalJSSeguro(cotacao.id)})" title="Editar cotação"></i>
                             <i class="bi bi-file-pdf action-icon" style="color: #dc3545;" onclick="gerarPDFCotacao(${Utils.literalJSSeguro(cotacao.id)})" title="Gerar PDF"></i>
                             <i class="bi bi-whatsapp action-icon" style="color: #25D366;" onclick="copiarParaWhatsApp(${Utils.literalJSSeguro(cotacao.id)})" title="Copiar para WhatsApp"></i>
                             ${cotacao.status === 'aberta' ? `<i class="bi bi-arrow-right-circle action-icon" style="color: #28a745;" onclick="converterParaVenda(${Utils.literalJSSeguro(cotacao.id)})" title="Converter para Venda"></i>` : ''}
@@ -1094,6 +1170,10 @@
             document.getElementById('cotacoesConvertidas').textContent = cotacoes.filter(c => c.status === 'convertida').length;
             document.getElementById('cotacoesAbertas').textContent = cotacoes.filter(c => c.status === 'aberta').length;
             document.getElementById('cotacoesPerdidas').textContent = cotacoes.filter(c => c.status === 'perdida').length;
+            const mes = ProposalMetrics.monthly(cotacoes);
+            document.getElementById('cotacoesMes').textContent = mes.total;
+            document.getElementById('convertidasMes').textContent = mes.converted;
+            document.getElementById('taxaConversaoMes').textContent = `${mes.percent}%`;
         }
 
         // Marcar como perdida
@@ -1160,6 +1240,7 @@
                     alert('Cotação não encontrada!');
                     return;
                 }
+                if (cotacao.propostaCompleta) return baixarPDFProposta(cotacao.id);
 
                 if (!window.jspdf) {
                     alert('Biblioteca PDF não carregada. Recarregue a página e tente novamente.');
@@ -1790,6 +1871,7 @@
     <script src="js/auth.js?v=10"></script>
     <script src="js/cloud-sync.js?v=10"></script>
     <script src="js/app-bootstrap.js?v=10"></script>
+    <script src="js/proposal-integration.js?v=1"></script>
     <script>AppBootstrap.iniciar();</script>
 </body>
 </html>

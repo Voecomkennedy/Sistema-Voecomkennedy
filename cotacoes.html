@@ -961,10 +961,14 @@
             const bebes = parseInt(document.getElementById('bebes').value) || 0;
 
             // Obter valores calculados
-            const valorPorPessoa = document.getElementById('valorPorPessoa').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
-            const valorTotalPix = document.getElementById('valorTotalPix').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
-            const valorParcela = document.getElementById('valorParcela').textContent.replace('R$ ', '').replace('.', '').replace(',', '.');
-            const totalParceladoText = document.getElementById('totalParcelado').textContent.replace('Total: ', '').replace('R$ ', '').replace('.', '').replace(',', '.');
+            const valorExibido = id => {
+                const texto = document.getElementById(id).textContent.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+                return Number(texto) || 0;
+            };
+            const valorPorPessoa = valorExibido('valorPorPessoa');
+            const valorTotalPix = valorExibido('valorTotalPix');
+            const valorParcela = valorExibido('valorParcela');
+            const totalParceladoText = valorExibido('totalParcelado');
             const numParcelas = parseInt(document.getElementById('numParcelas').value);
 
             // Coletar dados das paradas de IDA

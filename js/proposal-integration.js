@@ -75,6 +75,7 @@
             nomeCliente: client().nome,
             adultos: Number(d.adultos || 0), criancas: Number(d.criancas || 0), bebes: Number(d.bebes || 0),
             totalPassageiros: n || 1,
+            totalPagantes: d.totalPagantes ?? null, paxTarifaBase: d.paxTarifaBase ?? null,
             origem: d.orig || '', destino: d.dest || '',
             companhiaAerea: d.cia || '', tipoTarifa: d.classe || '',
             tipoViagem: d.somenteIda ? 'so-ida' : 'ida-volta',

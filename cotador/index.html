@@ -1292,7 +1292,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
         <input type="number" id="p-criancas" placeholder="0" min="0" max="10" value="0" oninput="onPaxChange();toggleIdadesCriancas()">
       </div>
       <div class="field">
-        <label for="p-bebes">Bebes <span class="label-hint">(0-1 ano)</span></label>
+        <label for="p-bebes">Bebes <span class="label-hint">(menores de 2 anos)</span></label>
         <input type="number" id="p-bebes" placeholder="0" min="0" max="5" value="0" oninput="onPaxChange();toggleIdadesBebes()">
       </div>
     </div>
@@ -1303,6 +1303,21 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
     <div id="idades-bebes-box" style="display:none">
       <div class="section-label" style="margin-top:14px">Idades dos Bebes</div>
       <div id="idades-bebes-inputs" class="field-row" style="flex-wrap:wrap"></div>
+      <div class="field-row" style="margin-top:12px">
+        <div class="field">
+          <label for="p-bebe-cobranca">Tarifa de bebê</label>
+          <select id="p-bebe-cobranca" onchange="onPaxChange();toggleTarifaBebe()">
+            <option value="isento">Isento</option>
+            <option value="valor">Cobrança com valor informado</option>
+            <option value="revisar" hidden>Registro antigo — confira a cobrança</option>
+          </select>
+        </div>
+        <div class="field" id="p-bebe-valor-box" style="display:none">
+          <label for="p-bebe-valor">Valor por bebê no Pix <span class="label-hint">total da viagem</span></label>
+          <input id="p-bebe-valor" type="text" inputmode="decimal" placeholder="R$ 0,00" oninput="onPaxChange()">
+        </div>
+      </div>
+      <p style="font-size:.75rem;color:var(--mid)">A calculadora soma somente a tarifa informada para o bebê. Valores totais digitados já devem incluir essa cobrança. Confira a regra da tarifa, inclusive em viagens internacionais.</p>
     </div>
   </div>
 
@@ -1995,10 +2010,10 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
       </div>
       <!-- Nota LATAM -->
       <div id="calc-nota-latam" style="font-size:.7rem;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:7px 10px;color:#9a3412;margin-bottom:8px">
-        <strong>LATAM:</strong> custo calculado <strong>por pessoa</strong> — total = custo × nº passageiros
+        <strong>LATAM:</strong> custo por adulto/criança × quantidade na tarifa principal, mais a tarifa de bebê informada.
       </div>
       <div id="calc-nota-outras" style="display:none;font-size:.7rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:7px 10px;color:#166534;margin-bottom:8px">
-        <strong>GOL / Azul / Outras:</strong> custo já é o <strong>total</strong> — por pessoa = total ÷ nº passageiros
+        <strong>GOL / Azul / Outras:</strong> custo total dos adultos/crianças, mais a tarifa de bebê informada.
       </div>
       <!-- Bloco interno: custo de aquisição -->
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-top:4px">
@@ -2035,7 +2050,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
     <div id="calc-secao-valor-real" style="display:none">
       <div class="field-row">
         <div class="field">
-          <label for="p-calc-valor-vista">Valor à Vista <span class="label-hint">do site / fornecedor</span></label>
+          <label for="p-calc-valor-vista">Valor à Vista <span class="label-hint">adultos/crianças, sem a tarifa de bebê</span></label>
           <input type="text" id="p-calc-valor-vista" placeholder="R$ 1.200,00" oninput="calcCotacao()">
         </div>
         <div class="field">
@@ -2247,7 +2262,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
         <input type="text" id="p-val-total-pix" placeholder="R$ 2.672,00" oninput="calcValorPorPessoa()">
       </div>
       <div class="field">
-        <label for="p-val-pix-pessoa">Por Pessoa (Pix) <span class="label-hint">calculado automatico</span></label>
+        <label for="p-val-pix-pessoa">Por adulto/criança (Pix) <span class="label-hint">bebê com tarifa separada</span></label>
         <input type="text" id="p-val-pix-pessoa" placeholder="R$ 1.336,00" readonly style="background:#F6FAFD;cursor:default">
       </div>
     </div>
@@ -3454,6 +3469,9 @@ function restaurarProposta(d) {
   sc('p-com-juros', d.comJuros !== false); toggleJurosUI();
   sv('p-obs', d.obs); sv('p-link-aereo', d.linkAereo);
   sv('p-adultos', d.adultos || 1); sv('p-criancas', d.criancas || 0); sv('p-bebes', d.bebes || 0);
+  sv('p-bebe-cobranca', d.babyPricing?.mode || (d.bebes ? 'revisar' : 'isento'));
+  sv('p-bebe-valor', d.babyPricing?.valorPorBebe || '');
+  _restoredCard = d.valCartaoFinal ? { signature: cardSignature(), total: d.valCartaoFinal, parcela: d.valParcela } : null;
   // Acionar toggles (cada um protegido — falha de um nao quebra os outros)
   tryRun('toggleEscalaIda',    () => toggleEscalaIda());
   tryRun('toggleEscalaVolta',  () => toggleEscalaVolta());
@@ -3466,6 +3484,7 @@ function restaurarProposta(d) {
   tryRun('syncHotelCheckout',  () => syncHotelCheckout());
   tryRun('calcNoites',         () => calcNoites());
   tryRun('calcValorPorPessoa', () => calcValorPorPessoa());
+  sv('p-val-pix-pessoa', d.valPix); // Keep the price recorded in a closed/legacy quote.
   tryRun('calcJurosCartao',    () => calcJurosCartao());
   // Restaurar calculadora
   if (d.calc) {
@@ -3515,8 +3534,21 @@ function restaurarProposta(d) {
   }
   tryRun('toggleIdadesCriancas', () => toggleIdadesCriancas());
   tryRun('toggleIdadesBebes',    () => toggleIdadesBebes());
+  toggleTarifaBebe();
   if (d.idadesCriancas) d.idadesCriancas.forEach((v,i) => sv('p-crianca-idade-'+i, v));
   if (d.idadesBebes)    d.idadesBebes.forEach((v,i)    => sv('p-bebe-idade-'+i, v === 'menos de 1 ano' ? '0' : '1'));
+  // Preserve the comparison values recorded in the quote, including legacy totals.
+  if (d.calc) {
+    ['A','B','C','D'].forEach(key => {
+      if (d.calc['compOpt'+key]) document.getElementById('calc-comp-resultado').dataset['opt'+key] = typeof d.calc['compOpt'+key] === 'string' ? d.calc['compOpt'+key] : JSON.stringify(d.calc['compOpt'+key]);
+    });
+    if (d.calc.bagAdd?.bagRes) {
+      Object.assign(document.getElementById('calc-bag-resultado').dataset, d.calc.bagAdd.bagRes);
+      if (d.calc.bagAdd.ativo) document.getElementById('calc-bag-resultado').style.display = '';
+    }
+    _calcCompOpcaoSelecionada = d.calc.compOpcaoSelecionada ? {opcao:d.calc.compOpcaoSelecionada} : null;
+    _calcBagOpcaoSelecionada = d.calc.bagAdd?.opcaoSelecionada || null;
+  }
   document.getElementById('p-somente-ida').checked = !!d.somenteIda;
   toggleSomenteIda();
   TimingUI.restore('proposta', d.timing);
@@ -4504,6 +4536,7 @@ function toggleIdadesCriancas() {
   const n = parseInt(document.getElementById('p-criancas').value) || 0;
   const box = document.getElementById('idades-criancas-box');
   const wrap = document.getElementById('idades-criancas-inputs');
+  const previous = Array.from(wrap.querySelectorAll('select'), el => el.value);
   if (n > 0) {
     box.style.display = 'block';
     wrap.innerHTML = Array.from({length:n}, (_,i) =>
@@ -4514,6 +4547,7 @@ function toggleIdadesCriancas() {
         </select>
       </div>`
     ).join('');
+    previous.slice(0,n).forEach((age,i) => { document.getElementById('p-crianca-idade-'+i).value = age; });
   } else {
     box.style.display = 'none';
     wrap.innerHTML = '';
@@ -4524,6 +4558,7 @@ function toggleIdadesBebes() {
   const n = parseInt(document.getElementById('p-bebes').value) || 0;
   const box = document.getElementById('idades-bebes-box');
   const wrap = document.getElementById('idades-bebes-inputs');
+  const previous = Array.from(wrap.querySelectorAll('select'), el => el.value);
   if (n > 0) {
     box.style.display = 'block';
     wrap.innerHTML = Array.from({length:n}, (_,i) =>
@@ -4535,10 +4570,24 @@ function toggleIdadesBebes() {
         </select>
       </div>`
     ).join('');
+    previous.slice(0,n).forEach((age,i) => { document.getElementById('p-bebe-idade-'+i).value = age; });
   } else {
     box.style.display = 'none';
     wrap.innerHTML = '';
   }
+}
+
+function toggleTarifaBebe() {
+  document.getElementById('p-bebe-valor-box').style.display = document.getElementById('p-bebe-cobranca').value === 'valor' ? '' : 'none';
+}
+
+function getPassengerPricingData() {
+  return {
+    adultos: document.getElementById('p-adultos').value,
+    criancas: document.getElementById('p-criancas').value,
+    bebes: document.getElementById('p-bebes').value,
+    babyPricing: { mode: document.getElementById('p-bebe-cobranca').value, valorPorBebe: document.getElementById('p-bebe-valor').value }
+  };
 }
 
 // ── TABELA DE JUROS CARTAO ────────────────────────────────────────────────────
@@ -4659,7 +4708,12 @@ function onFaixaChange() {
 
 function calcCotacao() {
   const tipo = document.getElementById('p-calc-tipo').value;
-  const totalPax = Math.max(1, getTotalPax());
+  const passengerData = getPassengerPricingData();
+  let pricing;
+  try { pricing = PassengerPricing.summary(passengerData); }
+  catch { document.getElementById('calc-resultado-box').style.display = 'none'; document.getElementById('calc-comp-resultado').style.display = 'none'; return; }
+  if (!pricing.known) { document.getElementById('calc-resultado-box').style.display = 'none'; document.getElementById('calc-comp-resultado').style.display = 'none'; return; }
+  const totalPax = pricing.basePax;
   let custoPorPessoa = 0, custoTotalPix = 0;
 
   if (tipo === 'por-milhas') {
@@ -4692,8 +4746,7 @@ function calcCotacao() {
       if (!idaL || !idaS || !voltaL || !voltaS || !milheiro) { compBox.style.display = 'none'; return; }
       const calcTotalComp = (milhasTotal) => {
         const cm = (milhasTotal / 1000) * milheiro;
-        if (cia === 'LATAM') { const pp = cm + taxas; return { porPessoa: pp, total: pp * totalPax }; }
-        const tot = cm + taxas; return { porPessoa: tot / totalPax, total: tot };
+        return PassengerPricing.quote(cm + taxas, cia === 'LATAM', passengerData);
       };
       const optA = calcTotalComp(idaL + voltaL);
       const optB = calcTotalComp(idaS + voltaS);
@@ -4765,18 +4818,18 @@ function calcCotacao() {
     const custoMilhas = (milhas / 1000) * milheiro;
     if (cia === 'LATAM') {
       custoPorPessoa = custoMilhas + taxas;
-      custoTotalPix  = custoPorPessoa * totalPax;
+      custoTotalPix  = custoPorPessoa * totalPax + pricing.babyTotal;
     } else {
-      custoTotalPix  = custoMilhas + taxas;
-      custoPorPessoa = custoTotalPix / totalPax;
+      custoTotalPix  = custoMilhas + taxas + pricing.babyTotal;
+      custoPorPessoa = (custoMilhas + taxas) / totalPax;
     }
   } else {
     const vista = calcParseBRL(document.getElementById('p-calc-valor-vista').value);
     const lucro = calcParseBRL(document.getElementById('p-calc-lucro').value);
     const taxas = calcParseBRL(document.getElementById('p-calc-taxas-real').value);
     if (!vista) { document.getElementById('calc-resultado-box').style.display='none'; document.getElementById('calc-lucro-box').style.display='none'; return; }
-    custoTotalPix  = vista + lucro + taxas;
-    custoPorPessoa = custoTotalPix / totalPax;
+    custoTotalPix  = vista + lucro + taxas + pricing.babyTotal;
+    custoPorPessoa = (vista + lucro + taxas) / totalPax;
   }
 
   // Parcelamento
@@ -4804,11 +4857,11 @@ function calcCotacao() {
   // Mostrar toggle de bagagem adicional (apenas no modo normal, sem comparativo)
   const bagToggleWrap = document.getElementById('calc-bag-toggle-wrap');
   if (bagToggleWrap) bagToggleWrap.style.display = '';
-  if (document.getElementById('p-calc-bag-ativo')?.checked) calcBagAdd();
 
   // Guardar para o Aplicar
   document.getElementById('calc-resultado-box').dataset.totalPix    = custoTotalPix.toFixed(2);
   document.getElementById('calc-resultado-box').dataset.parcelas    = numParc;
+  if (document.getElementById('p-calc-bag-ativo')?.checked) calcBagAdd();
 
   // Análise de lucro (só para modo por-milhas com custo de aquisição informado)
   const lucroBox = document.getElementById('calc-lucro-box');
@@ -4859,6 +4912,7 @@ function calcAplicar() {
   const totalPix = parseFloat(box.dataset.totalPix);
   const parcelas = box.dataset.parcelas;
   if (!totalPix) { showToast('Calcule primeiro antes de aplicar.'); return; }
+  _restoredCard = null;
   document.getElementById('p-val-total-pix').value = calcFmt(totalPix);
   calcValorPorPessoa();
   document.getElementById('p-val-cartao').value = calcFmt(totalPix);
@@ -4873,6 +4927,7 @@ function calcAplicarSilent() {
   const totalPix = parseFloat(box.dataset.totalPix);
   const parcelas = box.dataset.parcelas;
   if (!totalPix) return;
+  _restoredCard = null;
   document.getElementById('p-val-total-pix').value = calcFmt(totalPix);
   calcValorPorPessoa();
   document.getElementById('p-val-cartao').value = calcFmt(totalPix);
@@ -4896,6 +4951,7 @@ function calcCompAplicar(opcao) {
   const key  = 'opt' + opcao.toUpperCase();
   if (!box.dataset[key]) return;
   const data = JSON.parse(box.dataset[key]);
+  _restoredCard = null;
   _calcCompOpcaoSelecionada = { opcao, ...data };
   document.getElementById('p-val-total-pix').value = data.totalFmt;
   calcValorPorPessoa();
@@ -4925,15 +4981,19 @@ function calcBagAdd() {
   const qtd      = parseInt(document.getElementById('p-calc-bag-qtd').value) || 1;
   const trecho   = document.getElementById('p-calc-bag-trechos').value;
   const nTrechos = trecho === '2' ? 2 : 1;
-  const totalPax = getTotalPax();
+  let pricing;
+  try { pricing = PassengerPricing.summary(getPassengerPricingData()); }
+  catch { bag.style.display = 'none'; return; }
+  if (!pricing.known) { bag.style.display = 'none'; return; }
+  const totalPax = pricing.basePax;
   const baseTotalEl = document.getElementById('calc-resultado-box');
   const baseTotal   = parseFloat(baseTotalEl?.dataset?.totalPix) || 0;
   if (!custo || !baseTotal) { bag.style.display = 'none'; return; }
   const custoBagPP    = custo * qtd * nTrechos;
   const custoBagTotal = custoBagPP * totalPax;
   const comTotal = baseTotal + custoBagTotal;
-  const basePP   = baseTotal / totalPax;
-  const comPP    = comTotal  / totalPax;
+  const basePP   = PassengerPricing.perPerson(baseTotal, getPassengerPricingData());
+  const comPP    = PassengerPricing.perPerson(comTotal, getPassengerPricingData());
   const trechoLabel = trecho === '2' ? 'Ida + Volta' : trecho === '1ida' ? 'Somente Ida' : 'Somente Volta';
   const detalhe = `${qtd} mala${qtd>1?'s':''} \xd7 ${nTrechos} trecho${nTrechos>1?'s':''} \xd7 ${totalPax} pax`;
   document.getElementById('calc-bag-sem-total').textContent  = calcFmt(baseTotal);
@@ -4954,6 +5014,7 @@ function calcBagAdd() {
 }
 
 function calcBagAplicar(opcao) {
+  _restoredCard = null;
   const bag   = document.getElementById('calc-bag-resultado');
   const total = opcao === 'com'
     ? parseFloat(bag.dataset.comTotal)
@@ -5088,8 +5149,9 @@ function calcJurosCartao() {
     totalLabel.textContent = n === 1 ? 'Total' : 'Total (sem juros)';
   }
 
-  document.getElementById('juros-total-display').textContent   = fmtBRL(total);
-  document.getElementById('juros-parcela-display').textContent = fmtBRL(parcela);
+  const restored = _restoredCard?.signature === cardSignature() ? _restoredCard : null;
+  document.getElementById('juros-total-display').textContent   = restored?.total || fmtBRL(total);
+  document.getElementById('juros-parcela-display').textContent = restored?.parcela || fmtBRL(parcela);
   box.style.display = 'block';
 }
 
@@ -5111,29 +5173,21 @@ function getTotalPax() {
   return Math.max(1, adultos + criancas + bebes);
 }
 
-let _pixPorPessoaBase = 0; // Preco por pessoa — referencia para recalcular total quando pax muda
+let _restoredCard = null;
+function cardSignature() {
+  return JSON.stringify(['p-val-cartao','p-parcelas'].map(id => document.getElementById(id).value).concat(document.getElementById('p-com-juros').checked));
+}
 
 function calcValorPorPessoa() {
-  const totalPax = getTotalPax();
   const totalPix = parseBRL(document.getElementById('p-val-total-pix').value);
-  if (!isNaN(totalPix) && totalPix > 0 && totalPax > 0) {
-    _pixPorPessoaBase = totalPix / totalPax;
-    document.getElementById('p-val-pix-pessoa').value = fmtBRL(_pixPorPessoaBase);
-  } else {
-    _pixPorPessoaBase = 0;
-    document.getElementById('p-val-pix-pessoa').value = '';
-  }
+  let amount = NaN;
+  try { if (totalPix > 0) amount = PassengerPricing.perPerson(totalPix, getPassengerPricingData()); } catch { /* Review the configured fee before generating. */ }
+  document.getElementById('p-val-pix-pessoa').value = fmtBRL(amount);
 }
 
 function onPaxChange() {
-  if (_pixPorPessoaBase > 0) {
-    const newTotal = _pixPorPessoaBase * getTotalPax();
-    document.getElementById('p-val-total-pix').value  = fmtBRL(newTotal);
-    document.getElementById('p-val-pix-pessoa').value = fmtBRL(_pixPorPessoaBase);
-    document.getElementById('p-val-cartao').value     = fmtBRL(newTotal);
-  } else {
-    calcValorPorPessoa();
-  }
+  // Passenger edits update the basis, never a closed Pix/card total.
+  calcValorPorPessoa();
   calcCotacao();
   calcJurosCartao();
 }
@@ -5171,6 +5225,12 @@ function coletarDadosProposta() {
   const totalPax = Math.max(1, adultos + criancas + bebes);
   const valTotalPix = document.getElementById('p-val-total-pix').value.trim();
   const valPixPessoa = document.getElementById('p-val-pix-pessoa').value.trim();
+  const babyPricing = { mode: document.getElementById('p-bebe-cobranca').value, valorPorBebe: document.getElementById('p-bebe-valor').value };
+  let pricing;
+  try {
+    pricing = PassengerPricing.summary({ adultos, criancas, bebes, babyPricing });
+    if (valTotalPix) PassengerPricing.perPerson(parseBRL(valTotalPix), { adultos, criancas, bebes, babyPricing });
+  } catch (error) { showToast(error.message); return; }
 
   // Calcular juros do cartao
   const valCartaoBase = document.getElementById('p-val-cartao').value.trim();
@@ -5197,12 +5257,17 @@ function coletarDadosProposta() {
     }
   }
 
+  if (_restoredCard?.signature === cardSignature()) {
+    valCartaoFinal = _restoredCard.total;
+    valParcela = _restoredCard.parcela || valParcela;
+  }
   const dados = {
     timing: TimingUI.snapshot('proposta'),
     dataChegadaIda: fmtDatePT(document.getElementById('p-data-chegada-ida').value),
     dataChegadaVolta: fmtDatePT(document.getElementById('p-data-chegada-volta').value),
     cliente,
     adultos, criancas, bebes, totalPax,
+    babyPricing, totalPagantes: pricing.payingPax, paxTarifaBase: pricing.basePax,
     idadesCriancas, idadesBebes,
     orig, dest,
     cia:   document.getElementById('p-cia').value,
@@ -5342,7 +5407,7 @@ async function gerarProposta() {
     return;
   }
   try {
-    addHist({ tipo: 'proposta', nome: cliente, subtitulo: orig.split('\u2014')[0].trim() + ' \u2192 ' + dest.split('\u2014')[0].trim() + ' \u2014 ' + totalPax + ' pax', url: 'PROPOSTA \u2014 ' + cliente + ' \u2014 ' + orig + ' \u2192 ' + dest + ' (' + dados.dataIda + ')', dados: JSON.parse(JSON.stringify(dados)) });
+    addHist({ tipo: 'proposta', nome: dados.cliente, subtitulo: dados.orig.split('\u2014')[0].trim() + ' \u2192 ' + dados.dest.split('\u2014')[0].trim() + ' \u2014 ' + dados.totalPax + ' pax', url: 'PROPOSTA \u2014 ' + dados.cliente + ' \u2014 ' + dados.orig + ' \u2192 ' + dados.dest + ' (' + dados.dataIda + ')', dados: JSON.parse(JSON.stringify(dados)) });
     updateHistBadge();
   } catch(e) { console.warn('Historico nao salvo:', e); }
 }
@@ -5364,6 +5429,7 @@ async function abrirProposta(d) {
 }
 
 function limparProposta(restaurando = false) {
+  _restoredCard = null;
   const ids = ['p-cliente','p-orig','p-dest','p-voo-ida','p-hora-dep','p-hora-cheg',
     'p-duracao-ida','p-escala-cidade','p-escala-tempo','p-voo-ida2',
     'p-troca-ida1-dest','p-escala-cidade2','p-escala-tempo2','p-voo-ida3','p-troca-ida2-dest',
@@ -5387,6 +5453,9 @@ function limparProposta(restaurando = false) {
   document.getElementById('p-adultos').value = '1';
   document.getElementById('p-criancas').value = '0';
   document.getElementById('p-bebes').value = '0';
+  document.getElementById('p-bebe-cobranca').value = 'isento';
+  document.getElementById('p-bebe-valor').value = '';
+  toggleTarifaBebe();
   document.getElementById('idades-criancas-box').style.display = 'none';
   document.getElementById('idades-bebes-box').style.display = 'none';
   document.getElementById('idades-criancas-inputs').innerHTML = '';
@@ -5965,10 +6034,11 @@ document.getElementById('baseUrl').addEventListener('change', function() {
 <script src="js/flight-time.js?v=20260924-1"></script>
 <script src="js/timing-form.js?v=20261003-1"></script>
 <script src="js/airline-logos.js?v=20260924-1"></script>
-<script src="js/proposal-pdf.js?v=20260924-1"></script>
+<script src="js/passenger-pricing.js?v=20261003-1"></script>
+<script src="js/proposal-pdf.js?v=20261003-1"></script>
 <script src="assets/vendor/pdfmake.min.js"></script>
 <script src="assets/vendor/vfs_fonts.js"></script>
-<script src="js/proposal-download.js?v=20261003-3"></script>
+<script src="js/proposal-download.js?v=20261003-4"></script>
 <script>
 if (new URLSearchParams(location.search).get('embedded') === '1') {
   document.documentElement.classList.add('embedded-proposta');

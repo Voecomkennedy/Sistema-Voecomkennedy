@@ -11,7 +11,7 @@ async function app() {
     beforeParse(w) { w.HTMLElement.prototype.scrollIntoView = () => {}; w.alert = () => {}; }
   });
   const {window:w} = dom;
-  for(const file of ['airport-timezones.js','flight-time.js','timing-form.js']) w.eval(fs.readFileSync(path.join(root,'js',file),'utf8'));
+  for(const file of ['passenger-pricing.js','airport-timezones.js','flight-time.js','timing-form.js']) w.eval(fs.readFileSync(path.join(root,'js',file),'utf8'));
   if(w.document.readyState === 'loading') await new Promise(resolve=>w.document.addEventListener('DOMContentLoaded',resolve,{once:true}));
   const el=id=>w.document.getElementById(id);
   const set=(id,v)=>{if(el(id).type==='checkbox')el(id).checked=v;else el(id).value=v;el(id).dispatchEvent(new w.Event('input',{bubbles:true}));el(id).dispatchEvent(new w.Event('change',{bubbles:true}));};

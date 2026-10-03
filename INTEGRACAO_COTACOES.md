@@ -8,6 +8,14 @@ Após a autenticação e a sincronização inicial do painel, o vendedor selecio
 
 As métricas mensais contam cotações pela data original de criação e conversões entre essas cotações. A venda gerada de uma cotação seleciona o cliente vinculado quando ele ainda existe; a cotação só fica convertida após salvar a venda. `CloudSync.agendarBackup()` envia a alteração pelo mecanismo autenticado já existente. Confira o indicador de nuvem antes de trocar de aparelho.
 
+## Bebês e valores da proposta
+
+As idades “menos de 1 ano” e “1 ano” representam bebês menores de dois anos. A composição mantém todos os viajantes; a calculadora multiplica a tarifa principal somente por adultos e crianças. **Tarifa de bebê** permite escolher isenção ou informar um valor por bebê para a viagem inteira, independentemente do país. Nos insumos da calculadora, os custos dos adultos/crianças são separados dessa cobrança. Nos campos de total fechado, o valor informado já inclui a cobrança dos bebês: ela não é somada novamente. O valor por adulto/criança é `(total PIX − tarifa explícita dos bebês) ÷ adultos/crianças`; o PDF identifica essa base e a tarifa dos bebês separadamente.
+
+Alterar a composição atualiza a calculadora e o valor por adulto/criança, conservando os totais PIX/cartão preenchidos. Aplicar um resultado da calculadora é uma ação explícita. A restauração conserva preços, parcelas e comparativos salvos. Registros antigos com bebês e sem decisão de cobrança são marcados para revisão antes de recalcular, preservando seus números. A composição e a decisão de cobrança ficam no snapshot e o resumo do painel distingue viajantes e pagantes. O histórico local usa esse mesmo snapshot.
+
+A causa estava no módulo copiado de `Sistema-de-cotacao`: `getTotalPax()` incluía bebês na multiplicação/divisão e `onPaxChange()` reescrevia os totais. Este ajuste é restrito ao cotador integrado; o repositório separado continua precisando da correção. Testes cobrem idades abaixo de um ano, um ano e criança de dois anos; isenção e cobrança explícita; PIX/cartão/parcelas; totais manuais e legado; bagagem, quatro tarifas, hospedagem, histórico e PDF vetorial A4.
+
 ## Testes locais
 
 ```sh

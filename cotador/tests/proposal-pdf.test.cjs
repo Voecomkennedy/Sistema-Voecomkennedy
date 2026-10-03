@@ -42,8 +42,13 @@ test('negotiated card values are never extrapolated to a different baggage choic
  const manual={...d,valCartaoBase:'R$ 7.900,00'};
  assert.equal(P.cardForOption(manual,{total:8731.78,selected:false},{cardDivisor:.9054}),null);
  assert.deepEqual(P.cardForOption(manual,{total:7331.78,selected:true},{cardDivisor:.9054}),{label:'10x de R$ 809,78',sub:'total R$ 8.097,84'});
- const noInterest=P.cardForOption({...d,comJuros:false},{total:8000},{cardDivisor:.9054});
+ const noInterest=P.cardForOption({...d,comJuros:false,valCartaoFinal:d.valCartaoBase},{total:8000},{cardDivisor:.9054});
  assert.match(noInterest.label,/800,00/);assert.match(noInterest.sub,/sem juros/);
+});
+test('closed card final is preserved even when its base equals the selected Pix total',()=>{
+ const negotiated={...d,valCartaoFinal:'R$ 9.000,00',valParcela:'R$ 900,00'};
+ assert.deepEqual(P.cardForOption(negotiated,{total:7331.78,selected:true},{cardDivisor:.9054}),{label:'10x de R$ 900,00',sub:'total R$ 9.000,00'});
+ assert.equal(P.cardForOption(negotiated,{total:8731.78,selected:false},{cardDivisor:.9054}),null);
 });
 test('all connections, flights and airport transfers survive the template change',()=>{
  const html=P.render({...d,somenteIda:true,paradaIda:'3escalas',escalaCidadeIda:'MIA',escalaCidade2Ida:'DFW',escalaCidade3Ida:'LAX',escalaTempo3Ida:'2h 10m',vooIda:'AA1',vooIda2:'AA2',vooIda3:'AA3',vooIda4:'AA4',trocaIda2:true,trocaIda2Dest:'DAL'});

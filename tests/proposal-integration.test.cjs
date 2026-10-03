@@ -76,6 +76,17 @@ test('new proposal stores full snapshot and stable identity across repeated save
     assert.equal(h.getSyncs(), 2);
 });
 
+test('infant remains in traveler composition while payment metadata follows the configured fare', () => {
+    const h = harness();
+    const quote = h.window.ProposalBridge.save({ ...h.data, bebes: 1, totalPax: 3, totalPagantes: 2, paxTarifaBase: 2, babyPricing: {mode:'isento'} });
+    assert.equal(quote.totalPassageiros, 3);
+    assert.equal(quote.totalPagantes, 2);
+    assert.equal(quote.paxTarifaBase, 2);
+    assert.equal(quote.bebes, 1);
+    assert.equal(quote.valorTotalPix, 4778.43);
+    assert.equal(quote.propostaCompleta.babyPricing.mode, 'isento');
+});
+
 test('missing client and converted quote do not silently create or overwrite records', () => {
     const h = harness();
     h.nodes.clienteProposta.value = '';

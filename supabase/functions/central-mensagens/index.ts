@@ -2,17 +2,17 @@
 import { createSupabaseAdapter } from "../_shared/central-mensagens/adapter.ts";
 import { createHandler } from "../_shared/central-mensagens/handler.ts";
 import { domain } from "../_shared/central-mensagens/domain.ts";
-import {
-  corsHeaders,
-  parseOrigins,
-} from "../_shared/central-mensagens/cors.ts";
+import { corsHeaders } from "../_shared/central-mensagens/cors.ts";
+import { resolveDeployment } from "../_shared/central-mensagens/deployment.ts";
+import deploymentConfig from "./deployment-config.json" with { type: "json" };
 
-let allowedOrigins: string[] = [];
-try {
-  allowedOrigins = parseOrigins(
-    Deno.env.get("CENTRAL_MENSAGENS_ORIGENS") ?? "",
-  );
-} catch { /* Lista inválida não libera nenhuma origem de navegador. */ }
+// Configuração pública versionada por função. Nenhum segredo global é escrito.
+const deployment = resolveDeployment(deploymentConfig, {
+  supabaseUrl: Deno.env.get("SUPABASE_URL"),
+  modeOverride: Deno.env.get("CENTRAL_MENSAGENS_HABILITADA"),
+  originsOverride: Deno.env.get("CENTRAL_MENSAGENS_ORIGENS"),
+});
+const allowedOrigins = deployment.allowedOrigins;
 const disabled = (request: Request) => {
   let cors: Record<string, string>;
   try {
@@ -37,7 +37,7 @@ const disabled = (request: Request) => {
 };
 
 let handler: (request: Request) => Promise<Response> | Response = disabled;
-if (Deno.env.get("CENTRAL_MENSAGENS_HABILITADA") === "simulacao") {
+if (deployment.enabled) {
   try {
     const adapter = createSupabaseAdapter({
       url: Deno.env.get("SUPABASE_URL") ?? "",

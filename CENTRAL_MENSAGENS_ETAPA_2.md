@@ -38,7 +38,7 @@ Os dados operacionais continuam em `dados_app`; a Central lê a fonte da conta a
 
 RLS permite ao usuário autenticado somente ler os registros próprios. Escritas e RPCs ficam restritas ao papel de serviço no backend. A identidade vem de Auth, nunca do corpo enviado pelo navegador. A resposta pública não inclui credenciais, CPF, custos, tokens de reserva ou o snapshot bruto da fonte.
 
-A migration remove privilégios herdados nas quatro tabelas novas antes de conceder o mínimo, inclusive removendo `TRUNCATE` do serviço no histórico. Na fonte `dados_app`, o bloqueio de linha requer somente `UPDATE(versao)`, além da leitura; não é concedida atualização de `conteudo`. As RPCs da Central não alteram nenhuma coluna dessa fonte. A implantação depende de autorização dessa permissão adicional quando ela estiver ausente no ambiente existente.
+A migration remove privilégios herdados nas quatro tabelas novas antes de conceder o mínimo, inclusive removendo `TRUNCATE` do serviço no histórico. Na fonte `dados_app`, o bloqueio de linha requer somente `UPDATE(versao)`, além da leitura; não é concedida atualização de `conteudo`. As RPCs da Central não alteram nenhuma coluna dessa fonte. Essa permissão foi expressamente aprovada e aplicada no projeto autorizado, sem ampliar UPDATE para outras colunas.
 
 `mensagens_fonte(uuid)` retorna versão, conteúdo e fingerprint da mesma leitura. `mensagens_preparar(uuid,bigint,bigint,jsonb,text)` compara novamente a versão e o fingerprint sob lock. O hash por tarefa inclui venda, contato e cotações vinculadas: uma edição sem incremento de versão também invalida a reserva anterior. Configurações usam controle de versão; conflito 409 preserva a edição na tela e exige revisão, sem sobrescrita automática.
 
@@ -59,11 +59,11 @@ O banco revalida pausa, arquivamento, versões, fonte, horário de silêncio e p
 - `mensagens.html`, `css/messages.css`, `js/messages-page.mjs`: interface.
 - `js/messages-api.js`: chamada autenticada da função; erros não são substituídos por dados fictícios.
 - `js/messages-domain.mjs`: validação, composição e planejamento compartilhados.
-- `supabase/functions/central-mensagens/index.ts`: entrypoint novo, fechado por padrão.
+- `supabase/functions/central-mensagens/index.ts`: entrypoint novo, restrito ao projeto e modo configurados.
 - `supabase/functions/_shared/central-mensagens/`: handler, adaptador REST/Auth, CORS e documentação detalhada.
-- `supabase/migrations/20261004213417_central_mensagens.sql`: schema e contrato transacional, ainda não aplicados em produção.
+- `supabase/migrations/20261004233222_central_mensagens.sql`: schema e contrato transacional aplicados no projeto autorizado.
 
-Mesmo em ambiente de teste autorizado, a função exige `CENTRAL_MENSAGENS_HABILITADA=simulacao`; nenhum valor ativa envio real. CORS aceita somente origens exatas configuradas. A lista de variáveis e o contrato HTTP estão no [README do backend](supabase/functions/_shared/central-mensagens/README.md).
+A função exige configuração pública versionada com modo `simulacao`, projeto `qryobmqrkzddcvlvgfrp` e origem oficial. Copiar o pacote para outro projeto mantém o gate fechado. Overrides de ambiente só restringem; JSON desligado sempre vence ENV. Nenhum valor ativa envio real. CORS aceita somente origens exatas configuradas. A lista de variáveis e o contrato HTTP estão no [README do backend](supabase/functions/_shared/central-mensagens/README.md).
 
 ## Como verificar localmente
 
@@ -88,10 +88,10 @@ A revisão visual usa somente um adaptador em memória e dados fictícios, separ
 
 ## Limites e próxima liberação
 
-Não houve merge, publicação, migration em produção, alteração da função `pos-venda` v9, cron ou configuração Z-API. O arquivo arquivado da v9 permanece com SHA-256 `24abc67772e29404e8436202db756b392c674c9beccc2dc6a7ee084d6acf3864`.
+A migration e a função de simulação foram publicadas no projeto existente após autorização explícita. Permissões, lock real e bloqueios HTTP foram conferidos. A publicação do painel segue o roteiro em [PUBLICACAO_CENTRAL_SIMULACAO.md](PUBLICACAO_CENTRAL_SIMULACAO.md). Não houve alteração da função `pos-venda` v9, cron ou configuração Z-API. O arquivo arquivado da v9 permanece com SHA-256 `24abc67772e29404e8436202db756b392c674c9beccc2dc6a7ee084d6acf3864`.
 
 A lista retorna até 500 tarefas e 200 eventos; não é uma exportação completa. Histórico legado não foi migrado porque a propriedade dos registros precisa ser estabelecida. Retorno multitrecho precisa de campos próprios antes de ser liberado. Não há reconciliação com provedor, webhook, transporte real ou agendamento automático.
 
 Antes de operação real, é necessário homologar em projeto isolado o Auth/REST, RLS, bundle da Edge Function, frontend e backup/restauração. Depois, com autorização específica, testar o transporte em número controlado e trocar a automação antiga por um único disparador. Follow-up por ausência de resposta depende de captura confiável das respostas e da associação com a proposta correta.
 
-Referências técnicas verificadas: [RLS no Supabase](https://supabase.com/docs/guides/database/postgres/row-level-security), [funções de banco](https://supabase.com/docs/guides/database/functions), [bloqueios de linhas no PostgreSQL](https://www.postgresql.org/docs/current/sql-select.html). As garantias descritas acima também foram exercitadas pelas suítes locais; não são uma afirmação sobre o ambiente de produção.
+Referências técnicas verificadas: [RLS no Supabase](https://supabase.com/docs/guides/database/postgres/row-level-security), [funções de banco](https://supabase.com/docs/guides/database/functions), [bloqueios de linhas no PostgreSQL](https://www.postgresql.org/docs/current/sql-select.html). As suítes locais comprovam os cenários sintéticos; as verificações remotas executadas estão discriminadas no roteiro de publicação. Nenhuma delas comprova entrega no WhatsApp.

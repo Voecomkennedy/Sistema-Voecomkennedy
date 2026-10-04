@@ -1,13 +1,21 @@
 # Backend da Central — etapa 2, somente simulação
 
-Implementação local para revisão e testes. **Nenhuma implantação, alteração do
-cron ou conexão/envio ao WhatsApp faz parte desta etapa.** A função preservada
-`../../pos-venda/index.ts` continua separada e não importa estes arquivos.
+Backend da nova Central, com publicação autorizada exclusivamente em simulação
+no projeto `qryobmqrkzddcvlvgfrp`. Este documento descreve o código e os testes;
+não comprova que uma versão já foi implantada. **O backend não altera cron nem
+conecta/envia ao WhatsApp.** A função preservada `../../pos-venda/index.ts`
+continua separada e não importa estes arquivos.
 
-`../../central-mensagens/index.ts` é um entrypoint novo. Ele permanece fechado
-sem `CENTRAL_MENSAGENS_HABILITADA=simulacao`. Nenhum valor ativa envio real;
-nenhum módulo conhece um endpoint ou credencial Z-API. O número de teste salvo é
-apenas configuração revisável, nunca destino de uma requisição nesta etapa.
+`../../central-mensagens/index.ts` é um entrypoint novo. A configuração pública
+versionada `../../central-mensagens/deployment-config.json` autoriza somente o
+projeto acima, `mode: "simulacao"` e a origem
+`https://sistema.voecomkennedy.tur.br`. O resolver exige `SUPABASE_URL`
+exatamente desse projeto por HTTPS, sem credenciais, query ou caminho adicional.
+Configuração ausente/inválida ou outro projeto falha fechada; um JSON
+ausente/malformado pode impedir o próprio bundle/boot. Nenhum valor ativa envio
+real e nenhum módulo conhece endpoint ou credencial Z-API. O número de teste
+salvo continua somente configuração revisável, nunca destino de uma requisição
+nesta etapa.
 
 ## Componentes e autenticação
 
@@ -17,8 +25,10 @@ apenas configuração revisável, nunca destino de uma requisição nesta etapa.
   `/auth/v1/user` e `/rest/v1`. Usa timeout de 10 segundos, não segue redirects
   nem repete chamadas em falhas. Não incorpora SDK ou transporte de mensagens.
 - `domain.ts`: importa `js/messages-domain.mjs`, usado também na interface. O
-  futuro bundle da função precisa incluir esse módulo local.
+  bundle da função precisa incluir esse módulo local.
 - `cors.ts`: lista exata de origens, sem wildcard ou credenciais de cookies.
+- `deployment.ts`: resolver puro da configuração pública. Sem rede, ambiente,
+  leitura de arquivo ou credencial; o entrypoint fornece os valores recebidos.
 
 O servidor valida o bearer em Auth antes de ler os dados. A identidade retornada
 define o proprietário de todas as consultas e RPCs; `user_id`, relógio, modo e
@@ -27,12 +37,29 @@ Central. O corpo máximo é 256 KiB. A API nunca retorna a service key, corpo de
 erro do upstream, token de reserva, hash interno da fonte ou o snapshot
 `dados_app`.
 
-Na futura configuração de um ambiente autorizado, as variáveis são
-`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, opcionalmente `SUPABASE_ANON_KEY`
-para Auth, e `CENTRAL_MENSAGENS_ORIGENS` contendo origens completas separadas
-por vírgula. HTTPS é obrigatório fora de localhost/loopback. Origens vazias não
-liberam chamadas de navegador. Chamadas sem cabeçalho Origin continuam exigindo
-bearer válido. Não definir ou copiar essas variáveis de produção para testes.
+O entrypoint somente lê as variáveis Supabase já injetadas: `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY` e opcionalmente `SUPABASE_ANON_KEY` para Auth. As
+duas chaves são legadas e precisam continuar ativas. A configuração pública não
+lê, grava, gera ou rotaciona credenciais. Chamadas sem cabeçalho Origin
+continuam exigindo bearer válido. Não copiar valores de produção para testes.
+
+Overrides existentes são apenas restritivos:
+
+- O gate exige **JSON em simulação E ENV ausente ou igual a `simulacao`**.
+  Qualquer outro `CENTRAL_MENSAGENS_HABILITADA`, inclusive string vazia, fecha.
+- `CENTRAL_MENSAGENS_ORIGENS`, se informado, precisa ser uma lista não vazia de
+  origens exatas já contidas no JSON. Uma origem adicional ou inválida fecha o
+  gate. A variável nunca amplia a lista autorizada pelo arquivo.
+- Para reverter sem alterar segredos globais, versionar `mode: "desabilitada"`
+  no JSON e republicar **somente a Central**. Mesmo ENV=`simulacao` não reativa
+  JSON desligado. Confirmar a resposta 503 em nova chamada da origem permitida;
+  uma tentativa fictícia já iniciada pode concluir seu registro.
+
+O pacote tem nove módulos/arquivos de runtime: entrypoint, JSON, `adapter.ts`,
+`handler.ts`, `types.ts`, `cors.ts`, `domain.ts`, `deployment.ts` e
+`js/messages-domain.mjs`. Preservar os caminhos relativos. Não incluir v9,
+testes, `.env` ou outros arquivos. A publicação deve manter `verify_jwt=true`,
+sem modificar permissões ou configurações das outras funções.
 
 ## Operações e histórico
 

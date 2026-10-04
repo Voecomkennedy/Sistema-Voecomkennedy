@@ -4,7 +4,7 @@ O objetivo é controlar mensagens de cotação, emissão, check-in e pós-viagem
 
 ## Etapa 1 — Base confiável
 
-Implementação preparada em branch separada, sem alterar a operação em produção:
+Implementação do PR #17, preservando os dados e a integração operacional:
 
 - Texto de WhatsApp das propostas completas baseado no snapshot da proposta: retorno independente, companhia, bagagens, comparativos, preços condicionais, bebês, hotel e observações. O gerador usa somente os campos comerciais; botão continua apenas copiar. Cotações legadas conservam o caminho anterior.
 - Conversão em venda sem vínculo residual: fechar, abrir nova venda ou editar outra venda encerra o contexto; cancelamento também cancela o preenchimento atrasado. O formulário busca a cotação atual na conta autenticada, sem reutilizar o conteúdo do cache de navegação.
@@ -16,7 +16,7 @@ Implementação preparada em branch separada, sem alterar a operação em produ�
 
 ## Etapa 2 — Central de Mensagens e integração do motor
 
-**Implementada no PR #17, exclusivamente em simulação.** Sem publicação do painel, aplicação da migration em produção, alteração de cron ou transporte Z-API. A especificação e as instruções de teste estão em [CENTRAL_MENSAGENS_ETAPA_2.md](CENTRAL_MENSAGENS_ETAPA_2.md).
+**Implementada no PR #17, exclusivamente em simulação.** Publicação autorizada no projeto existente: migration e função já aplicadas, painel pela publicação do PR. Sem alteração de cron ou transporte Z-API. A especificação e as instruções de teste estão em [CENTRAL_MENSAGENS_ETAPA_2.md](CENTRAL_MENSAGENS_ETAPA_2.md).
 
 Uma opção Mensagens no painel oferece:
 
@@ -25,7 +25,7 @@ Uma opção Mensagens no painel oferece:
 - **Regras:** pausa global, ativação por tipo, antecedência, silêncio, validade, confirmação de emissão, fusos e chegada final.
 - **Histórico:** eventos imutáveis por conta e resultado fictício identificado como `simulada`. Não afirma aceite ou entrega do WhatsApp.
 
-Reserva atômica por tarefa e conversa, controle de versões e fonte, isolamento por proprietário e registro da tentativa antes do resultado estão implementados e testados em PostgreSQL local. A autenticação e o enquadramento HTTP do Supabase são simulados nos testes integrados; ainda falta homologação em um projeto isolado.
+Reserva atômica por tarefa e conversa, controle de versões e fonte, isolamento por proprietário e registro da tentativa antes do resultado estão implementados e testados em PostgreSQL local. A autenticação e o enquadramento HTTP do Supabase são simulados nos testes integrados. O projeto autorizado recebeu verificações reais de permissões, bloqueio de linha, CORS e rejeição de acessos inválidos; cenários completos com fixtures continuam restritos ao ambiente local descartável.
 
 Retornos multitrecho identificados na cotação vinculada ficam pendentes: o cadastro de vendas ainda não guarda os aeroportos independentes de retorno. Não inferimos um trajeto invertendo os aeroportos da ida. O histórico legado da v9 não foi importado nem atribuído a um proprietário por suposição.
 

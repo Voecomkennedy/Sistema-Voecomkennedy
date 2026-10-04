@@ -23,6 +23,34 @@ select id,1,jsonb_build_object('emissao_vendas',(select jsonb_agg(jsonb_build_ob
 from auth.users where id in ('aaaaaaaa-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000002');
 
 set local role service_role;
+-- A migration deve reduzir ALL herdado por default ACL nas tabelas novas, mas
+-- ampliar a fonte apenas com UPDATE(versao), suficiente para seus row locks.
+do $$
+declare alvo record; privilegio text;
+begin
+    for alvo in select * from (values
+        ('public.mensagens_preferencias',array['SELECT','INSERT','UPDATE']),
+        ('public.mensagens_tarefas',array['SELECT','INSERT','UPDATE']),
+        ('public.mensagens_historico',array['SELECT','INSERT']),
+        ('mensagens_privado.conversas',array['SELECT','INSERT','DELETE'])
+    ) as a(tabela,permitidos) loop
+        foreach privilegio in array array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER','MAINTAIN'] loop
+            perform pg_temp.exigir(has_table_privilege(current_user,alvo.tabela,privilegio)=(privilegio=any(alvo.permitidos)), 'least privilege '||alvo.tabela||' '||privilegio);
+        end loop;
+    end loop;
+    perform pg_temp.exigir(has_column_privilege(current_user,'public.dados_app','versao','UPDATE'),'source version column allows row locking');
+    perform pg_temp.exigir(not has_table_privilege(current_user,'public.dados_app','UPDATE'),'no table-wide source UPDATE grant');
+    perform pg_temp.exigir(not has_column_privilege(current_user,'public.dados_app','conteudo','UPDATE'),'source content UPDATE remains forbidden');
+    perform 1 from public.dados_app where user_id='aaaaaaaa-0000-0000-0000-000000000001' for update;
+    begin
+        update public.dados_app set conteudo=conteudo;
+        raise exception 'service source content UPDATE allowed';
+    exception when insufficient_privilege then null; end;
+    begin
+        truncate public.mensagens_historico;
+        raise exception 'service history TRUNCATE allowed';
+    exception when insufficient_privilege then null; end;
+end $$;
 do $$
 declare c jsonb; m jsonb; v jsonb; p jsonb;
 begin
@@ -74,10 +102,14 @@ begin
     perform pg_temp.exigir(public.mensagens_fonte('aaaaaaaa-0000-0000-0000-000000000099') is null,'missing source returns null');
     begin perform public.mensagens_preparar(owner,1,1,items,null); raise exception 'null fingerprint accepted'; exception when sqlstate 'PT409' then null; end;
     begin perform public.mensagens_preparar(owner,1,1,items,'bad'); raise exception 'malformed fingerprint accepted'; exception when sqlstate 'PT409' then null; end;
+    set local role authenticated;
     update public.dados_app set conteudo=jsonb_set(conteudo,'{emissao_pessoas,0,telefone}','"5562999999876"') where user_id=owner;
+    set local role service_role;
     begin perform public.mensagens_preparar(owner,1,1,items,source_read->>'fingerprint'); raise exception 'stale fingerprint accepted without version increment'; exception when sqlstate 'PT409' then null; end;
     perform pg_temp.exigir(not exists(select 1 from public.mensagens_tarefas where user_id=owner),'stale preparation changed no task');
+    set local role authenticated;
     update public.dados_app set conteudo=source_read->'conteudo' where user_id=owner;
+    set local role service_role;
     perform public.mensagens_preparar(owner,1,1,items,source_read->>'fingerprint');
     select id into id1 from public.mensagens_tarefas where user_id=owner and venda_id='v1';
     select id into id2 from public.mensagens_tarefas where user_id=owner and venda_id='v2';
@@ -119,23 +151,37 @@ begin
 
     select id into id1 from public.mensagens_tarefas where user_id=owner and venda_id='v6';
     claimed:=public.mensagens_reservar(owner,id1);
+    set local role authenticated;
     update public.dados_app set conteudo=jsonb_set(conteudo,'{emissao_pessoas,0,telefone}','"5562999994321"') where user_id=owner;
+    set local role service_role;
     perform pg_temp.exigir(public.mensagens_iniciar(owner,id1,(claimed->>'reserva_token')::uuid) is null,'phone changed without source version is rejected');
+    set local role authenticated;
     update public.dados_app set conteudo=jsonb_set(conteudo,'{emissao_pessoas,0,telefone}','"5562999991234"') where user_id=owner;
+    set local role service_role;
 
     select id into id1 from public.mensagens_tarefas where user_id=owner and venda_id='v5';
     select to_jsonb(q) into claimed from public.mensagens_tarefas q where q.id=id1;
     perform pg_temp.exigir(claimed->>'fonte_hash'=mensagens_privado.hash_fonte(public.mensagens_fonte(owner),'v5'),'unchanged reservation source still matches');
+    set local role authenticated;
     update public.dados_app set conteudo=jsonb_set(conteudo,'{emissao_cotacoes}','[{"id":"quote-linked","vendaId":"v5","propostaCompleta":{"multitrecho":true}},{"id":"quote-other-linked","vendaId":"v5","propostaCompleta":{"multitrecho":false}}]') where user_id=owner;
+    set local role service_role;
     perform pg_temp.exigir(public.mensagens_iniciar(owner,id1,(claimed->>'reserva_token')::uuid) is null,'linked quote changed without source version prevents begin');
     quote_hash:=mensagens_privado.hash_fonte(public.mensagens_fonte(owner),'v5');
+    set local role authenticated;
     update public.dados_app set conteudo=jsonb_set(conteudo,'{emissao_cotacoes}','[{"id":"quote-other-linked","vendaId":"v5","propostaCompleta":{"multitrecho":false}},{"id":"quote-linked","vendaId":"v5","propostaCompleta":{"multitrecho":true}}]') where user_id=owner;
+    set local role service_role;
     perform pg_temp.exigir(quote_hash=mensagens_privado.hash_fonte(public.mensagens_fonte(owner),'v5'),'linked quote ordering does not alter canonical hash');
+    set local role authenticated;
     update public.dados_app set conteudo=jsonb_set(conteudo,'{emissao_cotacoes}','{}') where user_id=owner;
+    set local role service_role;
     perform pg_temp.exigir(mensagens_privado.hash_fonte(public.mensagens_fonte(owner),'v5') is null,'malformed quote collection invalidates source');
+    set local role authenticated;
     update public.dados_app set conteudo=jsonb_set(conteudo,'{emissao_cotacoes}','[null]') where user_id=owner;
+    set local role service_role;
     perform pg_temp.exigir(mensagens_privado.hash_fonte(public.mensagens_fonte(owner),'v5') is null,'malformed quote item invalidates source');
+    set local role authenticated;
     update public.dados_app set conteudo=conteudo-'emissao_cotacoes' where user_id=owner;
+    set local role service_role;
     perform pg_temp.exigir(claimed->>'fonte_hash'=mensagens_privado.hash_fonte(public.mensagens_fonte(owner),'v5'),'absent quote collection is an empty collection');
 
     select id into id1 from public.mensagens_tarefas where user_id=owner and venda_id='v7';

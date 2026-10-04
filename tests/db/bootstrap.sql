@@ -24,4 +24,8 @@ alter table public.dados_app enable row level security;
 drop policy if exists dados_app_test_owner on public.dados_app;
 create policy dados_app_test_owner on public.dados_app to authenticated
   using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
-grant select, insert, update, delete on public.dados_app to authenticated, service_role;
+grant select, insert, update, delete on public.dados_app to authenticated;
+grant select on public.dados_app to service_role;
+-- Reproduzir default ACL ampla do Supabase nas futuras tabelas, inclusive no
+-- esquema privado que será criado pela migration. Nunca aplicar este harness fora daqui.
+alter default privileges grant all on tables to anon, authenticated, service_role;

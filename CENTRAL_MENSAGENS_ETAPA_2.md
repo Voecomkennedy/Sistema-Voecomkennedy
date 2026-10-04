@@ -38,6 +38,8 @@ Os dados operacionais continuam em `dados_app`; a Central lê a fonte da conta a
 
 RLS permite ao usuário autenticado somente ler os registros próprios. Escritas e RPCs ficam restritas ao papel de serviço no backend. A identidade vem de Auth, nunca do corpo enviado pelo navegador. A resposta pública não inclui credenciais, CPF, custos, tokens de reserva ou o snapshot bruto da fonte.
 
+A migration remove privilégios herdados nas quatro tabelas novas antes de conceder o mínimo, inclusive removendo `TRUNCATE` do serviço no histórico. Na fonte `dados_app`, o bloqueio de linha requer somente `UPDATE(versao)`, além da leitura; não é concedida atualização de `conteudo`. As RPCs da Central não alteram nenhuma coluna dessa fonte. A implantação depende de autorização dessa permissão adicional quando ela estiver ausente no ambiente existente.
+
 `mensagens_fonte(uuid)` retorna versão, conteúdo e fingerprint da mesma leitura. `mensagens_preparar(uuid,bigint,bigint,jsonb,text)` compara novamente a versão e o fingerprint sob lock. O hash por tarefa inclui venda, contato e cotações vinculadas: uma edição sem incremento de versão também invalida a reserva anterior. Configurações usam controle de versão; conflito 409 preserva a edição na tela e exige revisão, sem sobrescrita automática.
 
 O banco revalida pausa, arquivamento, versões, fonte, horário de silêncio e prazo com seu relógio. A reserva usa token de tentativa, bloqueio da conversa e transações. A tentativa é persistida antes do resultado fictício. Quando o resultado fica incerto, não há repetição automática nem liberação do bloqueio por tempo decorrido.

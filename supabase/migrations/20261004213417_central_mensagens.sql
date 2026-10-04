@@ -73,14 +73,16 @@ alter table public.mensagens_preferencias enable row level security;
 alter table public.mensagens_tarefas enable row level security;
 alter table public.mensagens_historico enable row level security;
 alter table mensagens_privado.conversas enable row level security;
-revoke all on public.mensagens_preferencias, public.mensagens_tarefas, public.mensagens_historico from public, anon, authenticated;
-revoke all on mensagens_privado.conversas from public, anon, authenticated;
+-- Limpar também grants herdados por default ACL antes de conceder o mínimo.
+revoke all on public.mensagens_preferencias, public.mensagens_tarefas, public.mensagens_historico from public, anon, authenticated, service_role;
+revoke all on mensagens_privado.conversas from public, anon, authenticated, service_role;
 grant select on public.mensagens_preferencias, public.mensagens_tarefas, public.mensagens_historico to authenticated;
 grant select, insert, update on public.mensagens_preferencias, public.mensagens_tarefas to service_role;
 grant select, insert on public.mensagens_historico to service_role;
 grant select, insert, delete on mensagens_privado.conversas to service_role;
--- SELECT FOR UPDATE da fonte necessita UPDATE, já concedido ao serviço no Supabase.
-grant select, update on public.dados_app to service_role;
+-- SELECT FOR UPDATE exige UPDATE em ao menos uma coluna, não no conteúdo inteiro.
+-- Não revogar permissões preexistentes da fonte operacional.
+grant select, update (versao) on public.dados_app to service_role;
 create policy mensagens_preferencias_owner on public.mensagens_preferencias for select to authenticated using ((select auth.uid()) = user_id);
 create policy mensagens_tarefas_owner on public.mensagens_tarefas for select to authenticated using ((select auth.uid()) = user_id);
 create policy mensagens_historico_owner on public.mensagens_historico for select to authenticated using ((select auth.uid()) = user_id);

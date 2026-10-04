@@ -43,9 +43,11 @@ const AppBootstrap = {
 
             delete document.documentElement.dataset.appAutenticado;
             const autenticado = await Auth.proteger();
-            if (!autenticado) return false;
+            if (!autenticado || Auth._saidaSolicitada) return false;
 
-            if (await CloudSync.init() !== true) {
+            const sincronizado = await CloudSync.init();
+            if (Auth._saidaSolicitada) return false;
+            if (sincronizado !== true) {
                 this._mostrarErroInicializacao();
                 return false;
             }
@@ -57,7 +59,7 @@ const AppBootstrap = {
             return true;
         })().catch(error => {
             console.error('Falha ao inicializar página protegida:', error);
-            this._mostrarErroInicializacao(error);
+            if (!Auth._saidaSolicitada) this._mostrarErroInicializacao(error);
             return false;
         });
 

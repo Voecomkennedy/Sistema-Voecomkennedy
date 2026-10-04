@@ -188,6 +188,31 @@ Deno.test("não transforma LID, lixo ou telefone vazio em destinatário", () => 
   assert.equal(normalizarTelefone("123"), null);
   assert.equal(normalizarTelefone("+55 (62) 99999-0001"), "5562999990001");
 });
+Deno.test("preserva DDI explícito e aplica Brasil somente ao nacional sem +", () => {
+  assert.equal(normalizarTelefone("+1 (212) 555-0100"), "12125550100");
+  assert.equal(normalizarTelefone(" +351 912 345 678 "), "351912345678");
+  assert.equal(normalizarTelefone("+55 (62) 99999-0001"), "5562999990001");
+  assert.equal(normalizarTelefone("(62) 99999-0001"), "5562999990001");
+  assert.equal(normalizarTelefone("(62) 3333-0001"), "556233330001");
+  assert.equal(normalizarTelefone("5562999990001"), "5562999990001");
+});
+Deno.test("rejeita destinatários obviamente inválidos sem transformar texto", () => {
+  for (
+    const entrada of [
+      "00000000000",
+      "11111111111",
+      "00999990001",
+      "+00012345678",
+      "+1212",
+      "+1234567890123456",
+      "62/99999-0001",
+      "++1 212 555 0100",
+      "62 99999-0001 ramal 2",
+    ]
+  ) {
+    assert.equal(normalizarTelefone(entrada), null, entrada);
+  }
+});
 Deno.test("chave de envio distingue modo e não reseta ao alterar horário", () => {
   const e = evento();
   const key = chaveEnvio(e, "real");

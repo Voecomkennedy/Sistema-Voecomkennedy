@@ -124,3 +124,24 @@ test('bootstrap distinguishes recovery failure from a connection problem without
         assert.doesNotMatch(w.document.getElementById('erroInicializacaoApp').textContent, /Synthetic/);
     } finally { dom.window.close(); }
 });
+
+test('logout blocks editing synchronously and offers a safe reload when signout fails', async () => {
+    const dom = new JSDOM('<!doctype html><body><main><input id="edit"></main></body>', { url: 'https://synthetic.invalid/', runScripts: 'outside-only' });
+    try {
+        const w = dom.window;
+        let finish;
+        const pendingNetwork = new Promise(resolve => { finish = resolve; });
+        let suspended = false;
+        w.CloudSync = { suspenderSincronizacao() { suspended = true; } };
+        w.getSupabaseClient = () => ({ auth: { signOut: () => pendingNetwork } });
+        w.eval(read('auth.js'));
+        const pending = w.Auth.logout();
+        assert.equal(suspended, true);
+        assert.equal(w.document.querySelector('main').inert, true);
+        finish({ error: new Error('Synthetic signout failure') });
+        assert.equal(await pending, false);
+        assert.match(w.document.getElementById('saidaDaConta').textContent, /dados locais foram mantidos/);
+        assert.equal(w.document.getElementById('saidaDaConta').querySelector('button').textContent, 'Recarregar página');
+        assert.equal(w.location.pathname, '/');
+    } finally { dom.window.close(); }
+});

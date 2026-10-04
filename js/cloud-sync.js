@@ -12,6 +12,7 @@ const CloudSync = {
     _envioEmAndamento: null,
     _reenviarDepois: false,
     _inicializado: false,
+    _geracao: 0,
 
     CHAVES: ['emissao_vendas', 'emissao_pessoas', 'emissao_pacotes', 'emissao_cotacoes'],
     CHAVES_LEGADAS: ['emissao_clientes', 'emissao_fornecedores'],
@@ -21,18 +22,32 @@ const CloudSync = {
     USUARIO_LOCAL_KEY: 'emissao_cloud_sync_usuario_local',
     RECUPERACAO_KEY: 'emissao_cache_recuperacao_v1',
 
+    _novaOperacao() {
+        return { geracao: this._geracao, userId: this._userId };
+    },
+
+    _operacaoAtual(operacao) {
+        return !!operacao.userId && operacao.geracao === this._geracao && operacao.userId === this._userId &&
+            localStorage.getItem(this.USUARIO_LOCAL_KEY) === operacao.userId;
+    },
+
     async init() {
         if (this._inicializado) return true;
+        const geracao = this._geracao;
 
         const client = getSupabaseClient();
         if (!client) return false;
 
-        this._userId = await Auth.getUserId();
+        const userId = await Auth.getUserId();
+        if (geracao !== this._geracao) return false;
+        this._userId = userId;
         if (!this._userId) return false;
+        const operacao = this._novaOperacao();
 
         this._prepararCacheDoUsuario();
         this._online = true;
-        const sincronizado = await this.baixarDaNuvem();
+        const sincronizado = await this.baixarDaNuvem(operacao);
+        if (!this._operacaoAtual(operacao)) return false;
         if (sincronizado !== true) {
             this._online = false;
             return false;
@@ -127,10 +142,16 @@ const CloudSync = {
     },
 
     suspenderSincronizacao() {
+        // As respostas já em trânsito também perdem autorização para tocar o cache.
+        this._geracao++;
         clearTimeout(this._salvandoTimeout);
         this._online = false;
         this._inicializado = false;
         this._userId = null;
+        this._versaoNuvem = null;
+        this._envioEmAndamento = null;
+        this._reenviarDepois = false;
+        this._backupPendente = false;
     },
 
     limparCacheAposLogout() {
@@ -222,7 +243,8 @@ const CloudSync = {
         }));
     },
 
-    async _resolverConflito(local, nuvem, versaoNuvem, atualizadoEm) {
+    async _resolverConflito(local, nuvem, versaoNuvem, atualizadoEm, operacao = this._novaOperacao()) {
+        if (!this._operacaoAtual(operacao)) return false;
         this._registrarConflito(local, nuvem, versaoNuvem, atualizadoEm);
         this._atualizarIndicador('conflito', 'Há alterações diferentes neste aparelho e na nuvem.');
 
@@ -234,6 +256,7 @@ const CloudSync = {
             'Nenhuma opção apaga a cópia de segurança do conflito.'
         );
 
+        if (!this._operacaoAtual(operacao)) return false;
         this._versaoNuvem = Number(versaoNuvem) || 0;
         if (usarNuvem) {
             this._registrarConflito(local, nuvem, versaoNuvem, atualizadoEm, 'nuvem');
@@ -245,26 +268,27 @@ const CloudSync = {
         }
 
         this._registrarConflito(local, nuvem, versaoNuvem, atualizadoEm, 'local');
-        return this._enviarConteudo(local, true);
+        return this._enviarConteudo(local, true, operacao);
     },
 
-    async baixarDaNuvem() {
+    async baixarDaNuvem(operacao = this._novaOperacao()) {
         const client = getSupabaseClient();
-        if (!client || !this._userId) return false;
+        if (!client || !this._operacaoAtual(operacao)) return false;
 
         try {
             const { data, error } = await client
                 .from('dados_app')
                 .select('conteudo, atualizado_em, versao')
-                .eq('user_id', this._userId)
+                .eq('user_id', operacao.userId)
                 .maybeSingle();
 
+            if (!this._operacaoAtual(operacao)) return false;
             if (error) throw error;
 
             const local = this._obterConteudoLocal();
             if (!data) {
                 this._versaoNuvem = null;
-                return this._enviarConteudo(local);
+                return this._enviarConteudo(local, false, operacao);
             }
 
             const nuvem = data.conteudo || {};
@@ -297,35 +321,38 @@ const CloudSync = {
             }
 
             if (nuvemNaoMudou) {
-                return this._enviarConteudo(local);
+                return this._enviarConteudo(local, false, operacao);
             }
 
-            return this._resolverConflito(local, nuvem, versaoNuvem, data.atualizado_em);
+            return this._resolverConflito(local, nuvem, versaoNuvem, data.atualizado_em, operacao);
         } catch (error) {
+            if (!this._operacaoAtual(operacao)) return false;
             console.error('Erro ao baixar da nuvem:', error);
             this._atualizarIndicador('erro', error.message);
             return false;
         }
     },
 
-    async _buscarVersaoAtual() {
+    async _buscarVersaoAtual(operacao = this._novaOperacao()) {
+        if (!this._operacaoAtual(operacao)) return null;
         const client = getSupabaseClient();
         const { data, error } = await client
             .from('dados_app')
             .select('conteudo, atualizado_em, versao')
-            .eq('user_id', this._userId)
+            .eq('user_id', operacao.userId)
             .maybeSingle();
+        if (!this._operacaoAtual(operacao)) return null;
         if (error) throw error;
         return data;
     },
 
-    async _enviarConteudo(conteudo, confirmouSobrescrita = false) {
+    async _enviarConteudo(conteudo, confirmouSobrescrita = false, operacao = this._novaOperacao()) {
         const client = getSupabaseClient();
-        if (!client || !this._userId) return false;
+        if (!client || !this._operacaoAtual(operacao)) return false;
 
         const proximaVersao = (Number(this._versaoNuvem) || 0) + 1;
         const registro = {
-            user_id: this._userId,
+            user_id: operacao.userId,
             conteudo,
             versao: proximaVersao,
             atualizado_em: new Date().toISOString()
@@ -342,12 +369,13 @@ const CloudSync = {
             resposta = await client
                 .from('dados_app')
                 .update(registro)
-                .eq('user_id', this._userId)
+                .eq('user_id', operacao.userId)
                 .eq('versao', this._versaoNuvem)
                 .select('versao, atualizado_em')
                 .maybeSingle();
         }
 
+        if (!this._operacaoAtual(operacao)) return false;
         if (resposta.error) {
             if (resposta.error.code !== '23505') throw resposta.error;
         } else if (resposta.data) {
@@ -358,24 +386,27 @@ const CloudSync = {
             return true;
         }
 
-        const atual = await this._buscarVersaoAtual();
+        const atual = await this._buscarVersaoAtual(operacao);
+        if (!this._operacaoAtual(operacao)) return false;
         if (!atual) throw new Error('A nuvem não retornou o registro esperado.');
 
         if (confirmouSobrescrita) {
             // Outro conflito aconteceu enquanto a escolha anterior era aplicada.
             // Volta ao fluxo assistido em vez de insistir automaticamente.
-            confirmadoSobrescrita = false;
+            confirmouSobrescrita = false;
         }
         return this._resolverConflito(
             conteudo,
             atual.conteudo || {},
             Number(atual.versao) || 0,
-            atual.atualizado_em
+            atual.atualizado_em,
+            operacao
         );
     },
 
     async enviarParaNuvem() {
         if (!this._online || !this._userId) return false;
+        const operacao = this._novaOperacao();
 
         if (this._envioEmAndamento) {
             this._reenviarDepois = true;
@@ -384,16 +415,19 @@ const CloudSync = {
 
         this._envioEmAndamento = (async () => {
             try {
-                return await this._enviarConteudo(this._obterConteudoLocal());
+                return await this._enviarConteudo(this._obterConteudoLocal(), false, operacao);
             } catch (error) {
+                if (!this._operacaoAtual(operacao)) return false;
                 console.error('Erro ao enviar para a nuvem:', error);
                 this._atualizarIndicador('erro', error.message);
                 return false;
             } finally {
-                this._envioEmAndamento = null;
-                if (this._reenviarDepois) {
-                    this._reenviarDepois = false;
-                    this.agendarBackup(0);
+                if (this._operacaoAtual(operacao)) {
+                    this._envioEmAndamento = null;
+                    if (this._reenviarDepois) {
+                        this._reenviarDepois = false;
+                        this.agendarBackup(0);
+                    }
                 }
             }
         })();
@@ -406,7 +440,10 @@ const CloudSync = {
         this._backupPendente = true;
         this._atualizarIndicador('salvando');
         clearTimeout(this._salvandoTimeout);
-        this._salvandoTimeout = setTimeout(() => this.enviarParaNuvem(), atraso);
+        const operacao = this._novaOperacao();
+        this._salvandoTimeout = setTimeout(() => {
+            if (this._operacaoAtual(operacao)) this.enviarParaNuvem();
+        }, atraso);
     },
 
     _monitorarLocalStorage() {

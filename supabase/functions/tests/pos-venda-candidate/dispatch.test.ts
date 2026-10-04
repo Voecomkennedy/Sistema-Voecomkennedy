@@ -119,6 +119,21 @@ Deno.test("mesmo voo e destinatário em vendas diferentes não duplica", async (
   await executarCandidatos([f.e, outra], f.deps);
   assert.equal(f.state.enviados.length, 1);
 });
+Deno.test("mesmo voo com caixa e espaços diferentes no IATA não duplica", async () => {
+  for (const tipo of ["48h", "volta_checkin"] as const) {
+    const f = fixture();
+    f.e.tipo = tipo;
+    const outra = {
+      ...f.e,
+      venda: { ...f.e.venda, id: "venda-2", origem: " gyn ", destino: "gru" },
+    };
+    // Preserva a rota de cada candidato: o fake padrão sobrescrevia por f.e.
+    f.deps.atualizar = (e) =>
+      Promise.resolve({ config: f.state.config, revisao: "rev1", evento: e });
+    await executarCandidatos([f.e, outra], f.deps);
+    assert.equal(f.state.enviados.length, 1);
+  }
+});
 Deno.test("timeout fica incerto e não reenvia no próximo tick", async () => {
   const f = fixture();
   let tentativas = 0;
@@ -225,17 +240,38 @@ Deno.test("latência da transação não recupera janela vencida", async () => {
   await executarCandidatos([f.e], f.deps);
   assert.equal(f.state.enviados.length, 0);
 });
-Deno.test("cada mensagem do lote reconsulta silêncio e pausa", async () => {
-  const f = fixture();
-  const outra = { ...f.e, venda: { ...f.e.venda, id: "venda-2" } };
-  const enviar = f.deps.enviar;
-  f.deps.enviar = async (d, t) => {
-    const r = await enviar(d, t);
-    f.state.config.ativo = false;
-    return r;
-  };
-  await executarCandidatos([f.e, outra], f.deps);
-  assert.equal(f.state.enviados.length, 1);
+Deno.test("segundo chat elegível só envia enquanto ativo e fora do silêncio", async () => {
+  for (const alteracao of ["nenhuma", "pausa", "silencio"]) {
+    const f = fixture();
+    f.e.quando = new Date("2026-10-04T23:50:00Z");
+    f.state.agora = new Date("2026-10-04T23:59:00Z");
+    const outra = {
+      ...f.e,
+      venda: { ...f.e.venda, id: "venda-2", clienteId: "pessoa-2" },
+      cliente: {
+        id: "pessoa-2",
+        nome: "Outra pessoa",
+        telefone: "62999990002",
+      },
+    };
+    f.deps.atualizar = (e) =>
+      Promise.resolve({ config: f.state.config, revisao: "rev1", evento: e });
+    const enviar = f.deps.enviar;
+    f.deps.enviar = async (d, t) => {
+      const r = await enviar(d, t);
+      if (alteracao === "pausa") f.state.config.ativo = false;
+      if (alteracao === "silencio") {
+        f.state.agora = new Date("2026-10-05T00:00:00Z");
+      }
+      return r;
+    };
+    await executarCandidatos([f.e, outra], f.deps);
+    assert.equal(
+      f.state.enviados.length,
+      alteracao === "nenhuma" ? 2 : 1,
+      alteracao,
+    );
+  }
 });
 Deno.test("modo teste requer ativo e telefone teste válido", async () => {
   const f = fixture();

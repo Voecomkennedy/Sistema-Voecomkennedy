@@ -106,9 +106,18 @@ export function primeiroNome(nome?: string): string {
     : n;
 }
 export function normalizarTelefone(t?: string): string | null {
-  if (!t || /[a-z@]/i.test(t)) return null; // @lid não é um telefone.
-  const d = t.replace(/\D/g, "");
-  if (d.length === 10 || d.length === 11) return "55" + d;
+  if (!t) return null;
+  const entrada = t.trim();
+  // Apenas formatação de telefone; não converte @lid, ramais ou texto livre.
+  if (!/^\+?[\d\s().-]+$/.test(entrada)) return null;
+  const d = entrada.replace(/\D/g, "");
+  if (!d || /^(\d)\1+$/.test(d)) return null;
+  // DDI explícito com + deve ser preservado, inclusive com 10/11 dígitos.
+  // Validação estrutural conservadora; não comprova existência/WhatsApp.
+  if (entrada.startsWith("+")) return /^[1-9]\d{7,14}$/.test(d) ? d : null;
+  // Sem +, números nacionais de 10/11 dígitos mantêm a região padrão Brasil.
+  // Não adivinha código de operadora/prefixo 00 nem aceita DDD começando em 0.
+  if (/^[1-9]\d{9,10}$/.test(d)) return "55" + d;
   return /^[1-9]\d{11,14}$/.test(d) ? d : null;
 }
 export function nacional(o: string, d: string) {

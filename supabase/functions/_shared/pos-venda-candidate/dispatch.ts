@@ -98,6 +98,7 @@ function preparar(atual: EstadoAtual, agora: Date) {
   const rota = evento.tipo === "volta_checkin"
     ? [evento.venda.destino, evento.venda.origem]
     : [evento.venda.origem, evento.venda.destino];
+  const rotaNormalizada = rota.map((iata) => iata.trim().toUpperCase());
   const pedido: ReservaPedido = {
     chave: chaveEnvio(evento, modo),
     // Impede cobranças duplicadas do mesmo voo/contato em vendas diferentes,
@@ -107,7 +108,7 @@ function preparar(atual: EstadoAtual, agora: Date) {
       normalizarTelefone(evento.cliente?.telefone),
       evento.tipo,
       evento.embarque.toISOString(),
-      rota,
+      rotaNormalizada,
       modo,
     ]),
     revisao: atual.revisao,

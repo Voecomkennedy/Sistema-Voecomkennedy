@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+const queryFor = promise => ({ select() { return this; }, eq() { return this; }, insert() { return this; }, update() { return this; }, maybeSingle() { return promise; } });
 
 function cloud(entries = []) {
     const values = new Map(entries);
@@ -201,4 +203,131 @@ test('identical collections do not accumulate recovery copies when only formatti
     assert.equal(recovery.length, 1);
     assert.equal(recovery[0].dados.emissao_pessoas, '[{"id":"client","nome":"Synthetic"}]');
     assert.equal(recovery[0].metadados.sincronizacao, '{"versao":1,"atualizadoEm":"old"}');
+});
+
+test('logout suspends before signout and preserves the latest cache after the asynchronous wait', async () => {
+    const { sync, localStorage, window, context } = cloud([
+        ['emissao_cloud_sync_usuario_local', 'old-user'],
+        ['emissao_cotacoes', '[{"id":"quote","valor":100}]']
+    ]);
+    const signout = deferred();
+    context.getSupabaseClient = () => ({ auth: { signOut: () => signout.promise } });
+    sync._online = true;
+    sync._userId = 'old-user';
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/auth.js'), 'utf8'), context);
+    const pending = window.Auth.logout();
+    assert.equal(sync._online, false);
+    assert.equal(window.Auth._saidaSolicitada, true);
+    localStorage.setItem('emissao_cotacoes', '[{"id":"quote","valor":200}]');
+    signout.resolve({ error: null });
+    assert.equal(await pending, true);
+    const recovery = JSON.parse(localStorage.getItem(sync.RECUPERACAO_KEY));
+    assert.equal(JSON.parse(recovery[0].dados.emissao_cotacoes)[0].valor, 200);
+    assert.equal(localStorage.getItem('emissao_cotacoes'), null);
+});
+
+test('download finishing after logout cannot restore private cache or write ownerless metadata', async () => {
+    const { sync, localStorage, window, context } = cloud([
+        ['emissao_cloud_sync_usuario_local', 'old-user'],
+        ['emissao_cotacoes', '[{"id":"local-quote"}]']
+    ]);
+    const download = deferred();
+    context.getSupabaseClient = () => ({ auth: { signOut: async () => ({ error: null }) }, from: () => queryFor(download.promise) });
+    sync._userId = 'old-user';
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/auth.js'), 'utf8'), context);
+    const pending = sync.baixarDaNuvem();
+    await window.Auth.logout();
+    download.resolve({ data: { conteudo: { emissao_cotacoes: [{ id: 'private-cloud-quote' }] }, versao: 2 }, error: null });
+    assert.equal(await pending, false);
+    assert.equal(localStorage.getItem('emissao_cotacoes'), null);
+    assert.equal(localStorage.getItem(sync.META_KEY), null);
+});
+
+test('late upload cannot mutate the new session or clear its in-flight operation', async () => {
+    const { sync, localStorage, context } = cloud();
+    const upload = deferred();
+    context.getSupabaseClient = () => ({ from: () => queryFor(upload.promise) });
+    sync._userId = 'old-user';
+    localStorage.setItem(sync.USUARIO_LOCAL_KEY, 'old-user');
+    sync._online = true;
+    const pending = sync.enviarParaNuvem();
+    sync.suspenderSincronizacao();
+    sync._userId = 'new-user';
+    localStorage.setItem(sync.USUARIO_LOCAL_KEY, 'new-user');
+    sync._online = true;
+    sync._versaoNuvem = 77;
+    const nextOperation = Promise.resolve('new-operation');
+    sync._envioEmAndamento = nextOperation;
+    upload.resolve({ data: { versao: 2 }, error: null });
+    assert.equal(await pending, false);
+    assert.equal(sync._versaoNuvem, 77);
+    assert.equal(sync._envioEmAndamento, nextOperation);
+    assert.equal(localStorage.getItem(sync.META_KEY), null);
+});
+
+test('late conflict-version lookup cannot prompt or overwrite a different session', async () => {
+    const { sync, window, context, localStorage } = cloud();
+    const lookup = deferred();
+    const lookupStarted = deferred();
+    let calls = 0;
+    let prompts = 0;
+    context.getSupabaseClient = () => ({ from: () => {
+        calls++;
+        if (calls === 2) lookupStarted.resolve();
+        return queryFor(calls === 1 ? Promise.resolve({ data: null, error: null }) : lookup.promise);
+    } });
+    window.confirm = () => { prompts++; return true; };
+    sync._userId = 'old-user';
+    localStorage.setItem(sync.USUARIO_LOCAL_KEY, 'old-user');
+    const pending = sync._enviarConteudo({ emissao_cotacoes: [] });
+    await lookupStarted.promise;
+    assert.equal(calls, 2);
+    sync.suspenderSincronizacao();
+    sync._userId = 'new-user';
+    localStorage.setItem(sync.USUARIO_LOCAL_KEY, 'new-user');
+    lookup.resolve({ data: { conteudo: { emissao_cotacoes: [{ id: 'old-private' }] }, versao: 9 }, error: null });
+    assert.equal(await pending, false);
+    assert.equal(prompts, 0);
+});
+
+test('authentication resolving after suspension cannot initialize a logged-out session', async () => {
+    const { sync, context, localStorage } = cloud();
+    const user = deferred();
+    context.Auth = { getUserId: () => user.promise };
+    let downloads = 0;
+    sync.baixarDaNuvem = async () => { downloads++; return true; };
+    const pending = sync.init();
+    sync.suspenderSincronizacao();
+    user.resolve('old-user');
+    assert.equal(await pending, false);
+    assert.equal(downloads, 0);
+    assert.equal(localStorage.getItem(sync.USUARIO_LOCAL_KEY), null);
+});
+
+test('logout does not erase a different account that took over while signout was pending', async () => {
+    const { sync, context, window, localStorage } = cloud([['emissao_cloud_sync_usuario_local', 'old-user']]);
+    const signout = deferred();
+    context.getSupabaseClient = () => ({ auth: { signOut: () => signout.promise } });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/auth.js'), 'utf8'), context);
+    const pending = window.Auth.logout();
+    localStorage.setItem(sync.USUARIO_LOCAL_KEY, 'new-user');
+    localStorage.setItem('emissao_cotacoes', '[{"id":"new-account-quote"}]');
+    signout.resolve({ error: null });
+    assert.equal(await pending, true);
+    assert.equal(localStorage.getItem(sync.USUARIO_LOCAL_KEY), 'new-user');
+    assert.equal(JSON.parse(localStorage.getItem('emissao_cotacoes'))[0].id, 'new-account-quote');
+});
+
+test('a different tab changing the owner invalidates a pending download without changing this tab generation', async () => {
+    const { sync, context, localStorage } = cloud([['emissao_cloud_sync_usuario_local', 'old-user']]);
+    const download = deferred();
+    context.getSupabaseClient = () => ({ from: () => queryFor(download.promise) });
+    sync._userId = 'old-user';
+    const pending = sync.baixarDaNuvem();
+    localStorage.setItem(sync.USUARIO_LOCAL_KEY, 'new-user');
+    localStorage.setItem('emissao_cotacoes', '[{"id":"new-account-quote"}]');
+    download.resolve({ data: { versao: 5, conteudo: { emissao_cotacoes: [{ id: 'old-private' }] } }, error: null });
+    assert.equal(await pending, false);
+    assert.equal(JSON.parse(localStorage.getItem('emissao_cotacoes'))[0].id, 'new-account-quote');
+    assert.equal(localStorage.getItem(sync.META_KEY), null);
 });

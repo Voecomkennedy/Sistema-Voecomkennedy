@@ -14,9 +14,12 @@ const CloudSync = {
     _inicializado: false,
 
     CHAVES: ['emissao_vendas', 'emissao_pessoas', 'emissao_pacotes', 'emissao_cotacoes'],
+    CHAVES_LEGADAS: ['emissao_clientes', 'emissao_fornecedores'],
+    CHAVES_CONTEXTO: ['cotacao_para_venda'],
     META_KEY: 'emissao_cloud_sync_meta_v2',
     CONFLITO_KEY: 'emissao_cloud_sync_ultimo_conflito',
     USUARIO_LOCAL_KEY: 'emissao_cloud_sync_usuario_local',
+    RECUPERACAO_KEY: 'emissao_cache_recuperacao_v1',
 
     async init() {
         if (this._inicializado) return true;
@@ -30,24 +33,121 @@ const CloudSync = {
         this._prepararCacheDoUsuario();
         this._online = true;
         const sincronizado = await this.baixarDaNuvem();
+        if (sincronizado !== true) {
+            this._online = false;
+            return false;
+        }
         this._monitorarLocalStorage();
         this._registrarSalvamentoDeEmergencia();
         this._inicializado = true;
 
-        if (sincronizado !== false) this._atualizarIndicador('sincronizado');
-        return sincronizado !== false;
+        this._atualizarIndicador('sincronizado');
+        return true;
+    },
+
+    _assinaturaRecuperacao(dados) {
+        const ordenar = valor => {
+            if (Array.isArray(valor)) return valor.map(ordenar);
+            if (valor && typeof valor === 'object') return Object.fromEntries(
+                Object.keys(valor).sort().map(chave => [chave, ordenar(valor[chave])])
+            );
+            return valor;
+        };
+        return JSON.stringify(Object.fromEntries(Object.keys(dados).sort()
+            .filter(chave => chave !== this.META_KEY)
+            .map(chave => {
+                try { return [chave, ordenar(JSON.parse(dados[chave]))]; }
+                catch { return [chave, dados[chave]]; }
+            })));
+    },
+
+    _preservarCache(chaves, motivo, usuarioId = null) {
+        const valores = Object.fromEntries(chaves
+            .map(chave => [chave, localStorage.getItem(chave)])
+            .filter(([, valor]) => valor !== null));
+        if (!Object.keys(valores).length) return false;
+        const dados = Object.fromEntries(Object.entries(valores).filter(([chave]) => chave !== this.META_KEY));
+        // Metadados de sincronização não são registros do usuário e não justificam
+        // acumular cópias idênticas a cada mudança de versão/horário na nuvem.
+        if (!Object.keys(dados).length) return true;
+
+        // Guarda os valores originais, inclusive JSON inválido, antes de remover
+        // qualquer chave. A cópia fica fora das coleções sincronizadas e não é
+        // importada automaticamente. Uma falha de espaço mantém o original.
+        try {
+            const anteriores = JSON.parse(localStorage.getItem(this.RECUPERACAO_KEY) || '[]');
+            if (!Array.isArray(anteriores)) throw new Error('Formato de recuperação inválido');
+            const conteudo = this._assinaturaRecuperacao(dados);
+            if (!anteriores.some(item => item && item.usuarioId === usuarioId && item.dados &&
+                this._assinaturaRecuperacao(item.dados) === conteudo)) {
+                const copia = { criadoEm: new Date().toISOString(), usuarioId, motivo, dados,
+                    metadados: valores[this.META_KEY] ? { sincronizacao: valores[this.META_KEY] } : {} };
+                const serializado = JSON.stringify([...anteriores, copia]);
+                localStorage.setItem(this.RECUPERACAO_KEY, serializado);
+                if (localStorage.getItem(this.RECUPERACAO_KEY) !== serializado) throw new Error('Cópia não confirmada');
+            }
+            return true;
+        } catch {
+            const erro = new Error('Não foi possível preservar os dados locais para recuperação. Os dados originais foram mantidos.');
+            erro.code = 'CACHE_RECOVERY_FAILED';
+            throw erro;
+        }
+    },
+
+    _isolarCache(chaves, motivo, usuarioId = null) {
+        if (!this._preservarCache(chaves, motivo, usuarioId)) return;
+        chaves.forEach(chave => localStorage.removeItem(chave));
+        this._cacheIsolado = true;
     },
 
     _prepararCacheDoUsuario() {
         const usuarioAnterior = localStorage.getItem(this.USUARIO_LOCAL_KEY);
-        if (usuarioAnterior && usuarioAnterior !== this._userId) {
-            // O LocalStorage é compartilhado por todas as contas deste domínio.
-            // Nunca mostrar nem enviar o cache pertencente a outro usuário.
-            this.CHAVES.forEach(chave => localStorage.removeItem(chave));
-            localStorage.removeItem(this.META_KEY);
-            localStorage.removeItem(this.CONFLITO_KEY);
+        if (usuarioAnterior !== this._userId) {
+            // Sem dono conhecido, também não é seguro atribuir a base à conta
+            // que acabou de entrar. Preservar antes de liberar o cache operacional.
+            this._isolarCache(
+                [...this.CHAVES, ...this.CHAVES_CONTEXTO, this.META_KEY, this.CONFLITO_KEY],
+                usuarioAnterior ? 'troca-de-conta' : 'cache-sem-dono',
+                usuarioAnterior || null
+            );
         }
+        // Nem mesmo um dono atual conhecido comprova a origem destas chaves:
+        // versões antigas deixavam o legado de outras contas no navegador.
+        this._isolarCache(this.CHAVES_LEGADAS, 'legado-sem-dono');
         localStorage.setItem(this.USUARIO_LOCAL_KEY, this._userId);
+    },
+
+    preservarCacheParaLogout() {
+        const usuarioId = localStorage.getItem(this.USUARIO_LOCAL_KEY) || null;
+        this._preservarCache(
+            [...this.CHAVES, ...this.CHAVES_CONTEXTO, this.META_KEY, this.CONFLITO_KEY],
+            'saida-da-conta', usuarioId
+        );
+        this._preservarCache(this.CHAVES_LEGADAS, 'legado-sem-dono');
+    },
+
+    suspenderSincronizacao() {
+        clearTimeout(this._salvandoTimeout);
+        this._online = false;
+        this._inicializado = false;
+        this._userId = null;
+    },
+
+    limparCacheAposLogout() {
+        this.suspenderSincronizacao();
+        [...this.CHAVES, ...this.CHAVES_LEGADAS, ...this.CHAVES_CONTEXTO,
+            this.META_KEY, this.CONFLITO_KEY, this.USUARIO_LOCAL_KEY]
+            .forEach(chave => localStorage.removeItem(chave));
+    },
+
+    mostrarAvisoRecuperacao() {
+        if (!this._cacheIsolado || document.getElementById('avisoRecuperacaoLocal')) return;
+        const aviso = document.createElement('div');
+        aviso.id = 'avisoRecuperacaoLocal';
+        aviso.className = 'alert alert-warning m-3';
+        aviso.setAttribute('role', 'status');
+        aviso.textContent = 'Dados antigos deste navegador foram preservados em uma cópia local separada e não foram importados para esta conta. Não limpe os dados do navegador antes de revisar a recuperação.';
+        document.body.prepend(aviso);
     },
 
     _obterConteudoLocal() {

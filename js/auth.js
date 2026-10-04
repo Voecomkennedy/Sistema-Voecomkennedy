@@ -49,16 +49,31 @@ const Auth = {
     // Faz logout
     async logout() {
         const client = getSupabaseClient();
-        if (client) await client.auth.signOut();
-        // Limpa o cache local de dados do app (cada conta baixa os seus ao logar)
+        const sync = window.CloudSync;
+        let cachePreservado = false;
         try {
-            [
-                'emissao_vendas', 'emissao_pessoas', 'emissao_pacotes', 'emissao_cotacoes',
-                'emissao_cloud_sync_meta_v2', 'emissao_cloud_sync_ultimo_conflito',
-                'emissao_cloud_sync_usuario_local'
-            ].forEach(chave => localStorage.removeItem(chave));
-        } catch (e) { /* ignora */ }
+            if (sync) {
+                sync.preservarCacheParaLogout();
+                cachePreservado = true;
+            }
+        } catch {
+            // Falta de espaço para outra cópia não pode prender a sessão aberta.
+            // Os originais e seu marcador de dono permanecem para o próximo login.
+        }
+        try {
+            if (client) {
+                const { error } = await client.auth.signOut();
+                if (error) throw error;
+            }
+        } catch {
+            window.alert('Não foi possível sair com segurança. Os dados locais foram mantidos. Tente novamente antes de trocar de conta.');
+            return false;
+        }
+        if (sync) sync.suspenderSincronizacao();
+        if (cachePreservado) sync.limparCacheAposLogout();
+        else window.alert('Você saiu da conta. Não foi possível criar uma cópia de recuperação; os dados locais e a identificação da conta foram mantidos neste navegador. Não limpe os dados do navegador antes de recuperar as alterações pendentes.');
         window.location.href = 'login.html';
+        return true;
     },
 
     // Protege uma página: se não estiver logado, manda pro login.

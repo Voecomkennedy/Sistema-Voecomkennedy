@@ -16,23 +16,25 @@ Implementação preparada em branch separada, sem alterar a operação em produ�
 
 ## Etapa 2 — Central de Mensagens e integração do motor
 
-Uma opção Mensagens no painel com:
+**Implementada no PR #17, exclusivamente em simulação.** Sem publicação do painel, aplicação da migration em produção, alteração de cron ou transporte Z-API. A especificação e as instruções de teste estão em [CENTRAL_MENSAGENS_ETAPA_2.md](CENTRAL_MENSAGENS_ETAPA_2.md).
 
-- **Agenda:** destinatário, viagem/trecho, horário, prazo limite, prévia; pausar/cancelar e revisar.
-- **Modelos:** texto editável com variáveis permitidas, prévia e teste explicitamente acionado para o número de teste configurado.
-- **Regras:** ativar cada tipo, antecedência, silêncio, validade e retomada.
-- **Histórico:** aceito pela integração, entregue quando comprovado, falha, incerto, cancelado e expirado.
+Uma opção Mensagens no painel oferece:
+
+- **Agenda:** destinatário, viagem, horário, prazo limite, prévia e simulação; pausar, retomar e cancelar. Vencidas não são reagendadas para o presente.
+- **Modelos:** texto editável, variáveis permitidas e prévia com dados fictícios. Nenhum botão envia ao número de teste.
+- **Regras:** pausa global, ativação por tipo, antecedência, silêncio, validade, confirmação de emissão, fusos e chegada final.
+- **Histórico:** eventos imutáveis por conta e resultado fictício identificado como `simulada`. Não afirma aceite ou entrega do WhatsApp.
+
+Reserva atômica por tarefa e conversa, controle de versões e fonte, isolamento por proprietário e registro da tentativa antes do resultado estão implementados e testados em PostgreSQL local. A autenticação e o enquadramento HTTP do Supabase são simulados nos testes integrados; ainda falta homologação em um projeto isolado.
+
+Retornos multitrecho identificados na cotação vinculada ficam pendentes: o cadastro de vendas ainda não guarda os aeroportos independentes de retorno. Não inferimos um trajeto invertendo os aeroportos da ida. O histórico legado da v9 não foi importado nem atribuído a um proprietário por suposição.
 
 Antes de conectar o candidato ao cron:
 
-1. Implementar e testar a reserva atômica de cada mensagem e conversa, incluindo reconciliação de resultados incertos. Índice de log gravado depois do HTTP não impede disparo duplicado.
-2. Definir proprietário da configuração e dos dados, acesso autenticado do painel e proteção dos segredos. Não expor a configuração bruta contendo a chave do cron.
-3. Salvar modelos/regras e versões das tarefas; alterações de voo, destinatário ou pausa invalidam a versão anterior.
-4. Validar horário local do voo e chegada final. Pós-viagem sem chegada confirmada fica para revisão humana.
-5. Comprovar que retomar após a viagem mantém vencidas como expiradas; não recuperar automaticamente fila antiga. A janela conservadora do candidato deve ser apresentada ao operador antes de ativação.
-6. Testar primeiro sem transporte real, depois em modo de teste autorizado. Substituir o mecanismo antigo por um único disparador; nunca deixar dois crons enviando os mesmos avisos.
-
-O painel pode começar exibindo os registros existentes. Não inferir entrega/leitura pelo status legado `enviado`, que representa aceite da Z-API.
+1. Homologar migration, Auth, REST, bundle da função e interface em ambiente separado; validar backup e restauração.
+2. Revisar chegada, fusos, horários e mensagens com o operador. A janela padrão é de 15 minutos; as regras permitem de 1 a 60.
+3. Implementar o transporte e a reconciliação com o provedor, distinguindo aceitação, entrega e leitura. Não repetir resultados incertos automaticamente.
+4. Somente com autorização, testar um número controlado e planejar a substituição por um único disparador. Nunca manter dois crons enviando os mesmos avisos.
 
 ## Etapa 3 — Cotação e follow-up
 
@@ -50,15 +52,17 @@ Menu lateral com nomes visíveis no computador; gaveta por botão no celular. Un
 ## Verificação local
 
 ```sh
+npm ci --ignore-scripts
 cd cotador
 npm ci --ignore-scripts
 npm test
 cd ..
-node --test tests/*.test.cjs
-deno test --no-config --no-lock --cached-only supabase/functions/tests/pos-venda-candidate/
+npm test
+deno test --no-config --no-lock --cached-only supabase/functions/tests/pos-venda-candidate/ supabase/functions/tests/central-mensagens/
+npm run test:db
 ```
 
-Os testes usam dados sintéticos. O candidato não precisa de permissão de rede, ambiente ou leitura de contas. Teste do painel em DOM não comprova entrega no WhatsApp, RLS real, sincronização entre dois dispositivos nem renderização nativa do PDF.
+Os testes usam dados sintéticos. Deno não precisa de permissão de rede, ambiente ou leitura de contas. `test:db` exige PostgreSQL 17 e cria um cluster descartável em loopback; testa RLS, locks e concorrência reais, com Auth e envelope REST simulados. Nenhuma suíte comprova entrega no WhatsApp ou sincronização real entre dois dispositivos.
 
 ## Implantação e reversão
 

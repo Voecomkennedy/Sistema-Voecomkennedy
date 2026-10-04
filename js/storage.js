@@ -433,7 +433,19 @@ const StorageManager = {
         return null;
     },
 
+    motivoBloqueioExclusaoPessoa(id) {
+        if (id === null || id === undefined || id === '') return '';
+        const vinculado = registro => registro.clienteId !== null &&
+            registro.clienteId !== undefined && String(registro.clienteId) === String(id);
+        const temVendas = this.getTodasVendas().some(vinculado);
+        const temCotacoes = this.getCotacoes().some(vinculado);
+        if (!temVendas && !temCotacoes) return '';
+        return 'Esta pessoa possui cotações ou vendas vinculadas, inclusive arquivadas, e não pode ser excluída. Mantenha o cadastro para preservar o histórico.';
+    },
+
     deletePessoa(id) {
+        // A proteção fica na camada de dados para valer também fora da tela Pessoas.
+        if (this.motivoBloqueioExclusaoPessoa(id)) return false;
         const pessoas = this.getPessoas();
         const filtered = pessoas.filter(p => p.id !== id);
         this.savePessoas(filtered);
@@ -584,35 +596,9 @@ const StorageManager = {
 
     // ========== MIGRAÇÃO DE DADOS ANTIGOS ==========
     migrarDadosAntigos() {
-        // Migrar clientes antigos
-        const clientesAntigos = localStorage.getItem('emissao_clientes');
-        if (clientesAntigos) {
-            const clientes = JSON.parse(clientesAntigos);
-            const pessoas = this.getPessoas();
-            clientes.forEach(c => {
-                c.tipo = 'cliente';
-                if (!pessoas.find(p => p.id === c.id)) {
-                    pessoas.push(c);
-                }
-            });
-            this.savePessoas(pessoas);
-            console.log('Clientes migrados:', clientes.length);
-        }
-
-        // Migrar fornecedores antigos
-        const fornecedoresAntigos = localStorage.getItem('emissao_fornecedores');
-        if (fornecedoresAntigos) {
-            const fornecedores = JSON.parse(fornecedoresAntigos);
-            const pessoas = this.getPessoas();
-            fornecedores.forEach(f => {
-                f.tipo = 'fornecedor';
-                if (!pessoas.find(p => p.id === f.id)) {
-                    pessoas.push(f);
-                }
-            });
-            this.savePessoas(pessoas);
-            console.log('Fornecedores migrados:', fornecedores.length);
-        }
+        // Essas chaves antigas não identificam o dono. CloudSync preserva uma cópia
+        // isolada para recuperação manual; nunca atribuir o legado à conta aberta.
+        return false;
     },
 
     // ========== ESTATÍSTICAS ==========
@@ -748,14 +734,6 @@ const StorageManager = {
         };
     }
 };
-
-// Migrar dados antigos somente depois que o usuário foi validado e os dados
-// corretos da conta foram sincronizados para este navegador.
-if (typeof window !== 'undefined') {
-    document.addEventListener('app:ready', () => {
-        StorageManager.migrarDadosAntigos();
-    }, { once: true });
-}
 
 // Tornar disponível globalmente
 window.StorageManager = StorageManager;

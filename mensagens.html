@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Mensagens — Voecomkennedy</title>
+    <link rel="icon" type="image/png" href="favicon-32.png">
+    <meta name="theme-color" content="#0A1931">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css?v=12">
+    <link rel="stylesheet" href="css/messages.css?v=1">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" aria-label="Navegação principal">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html"><img src="icons/icon-192.png" alt="" class="navbar-brand-logo"><span>Voecomkennedy</span></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="vendas.html">Vendas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="balanco.html">Balanço</a></li>
+                    <li class="nav-item"><a class="nav-link" href="cotacoes.html">Cotações</a></li>
+                    <li class="nav-item"><a class="nav-link" href="checkin.html">Check-in</a></li>
+                    <li class="nav-item"><a class="nav-link active" aria-current="page" href="mensagens.html">Mensagens</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pessoas.html">Pessoas</a></li>
+                </ul>
+                <button class="btn btn-sm btn-outline-light ms-lg-3" type="button" onclick="Auth.logout()">Sair</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="messages-workspace" data-messages-auto="true">
+        <header class="messages-heading">
+            <div><p class="messages-eyebrow">Atendimento e acompanhamento</p><h1>Central de Mensagens</h1><p>Confira a agenda, revise os textos e acompanhe cada etapa.</p></div>
+            <button id="messages-reload" class="btn btn-outline-secondary" type="button">Recarregar dados</button>
+        </header>
+        <div class="messages-simulation" role="note"><strong>Modo de simulação — nenhuma mensagem será enviada.</strong><span>As ações desta central são simulações. A automação antiga e seu histórico não são alterados aqui.</span></div>
+        <p id="messages-status" class="messages-status" role="status" aria-live="polite">Carregando a central…</p>
+        <div id="messages-error" class="messages-error" role="alert" hidden></div>
+        <div id="messages-dirty" class="messages-dirty" hidden><span>Você tem alterações ainda não salvas.</span><button id="messages-discard" type="button" class="btn btn-sm btn-outline-secondary">Descartar alterações e recarregar</button></div>
+
+        <div class="messages-tabs" role="tablist" aria-label="Seções da central">
+            <button id="tab-agenda" type="button" role="tab" aria-selected="true" aria-controls="panel-agenda" tabindex="0">Agenda</button>
+            <button id="tab-modelos" type="button" role="tab" aria-selected="false" aria-controls="panel-modelos" tabindex="-1">Modelos</button>
+            <button id="tab-regras" type="button" role="tab" aria-selected="false" aria-controls="panel-regras" tabindex="-1">Regras</button>
+            <button id="tab-historico" type="button" role="tab" aria-selected="false" aria-controls="panel-historico" tabindex="-1">Histórico</button>
+        </div>
+
+        <section id="panel-agenda" class="messages-panel" role="tabpanel" aria-labelledby="tab-agenda">
+            <div class="messages-section-heading"><div><h2>Agenda de simulação</h2><p id="messages-agenda-summary">Aguardando os dados do ambiente.</p></div><button id="messages-prepare" type="button" class="btn btn-primary" disabled>Atualizar agenda</button></div>
+            <p class="messages-help">Atualizar calcula a agenda com os dados e regras salvos. Nenhum envio é realizado. Mensagens vencidas não serão retomadas.</p>
+            <div id="messages-pending" class="messages-pending" hidden><h3>Precisam de revisão</h3><ul id="messages-pending-list"></ul><button type="button" data-open-tab="regras" class="btn btn-sm btn-outline-secondary">Revisar viagens e regras</button></div>
+            <div id="messages-agenda" class="messages-cards"></div>
+        </section>
+
+        <section id="panel-modelos" class="messages-panel" role="tabpanel" aria-labelledby="tab-modelos" hidden>
+            <div class="messages-section-heading"><div><h2>Modelos de mensagem</h2><p>A prévia usa dados fictícios e não cria uma tarefa.</p></div><button type="button" data-save class="btn btn-primary" disabled>Salvar alterações</button></div>
+            <div class="messages-editor">
+                <div><label for="messages-model-type">Tipo de mensagem</label><select id="messages-model-type" disabled></select><label for="messages-model-text">Texto do modelo</label><textarea id="messages-model-text" rows="12" aria-describedby="messages-variables" disabled></textarea><p id="messages-variables" class="messages-help">Variáveis permitidas: <code>{{primeiro_nome}}</code>, <code>{{origem}}</code>, <code>{{destino}}</code>, <code>{{data_voo}}</code>, <code>{{hora_voo}}</code>, <code>{{quando}}</code>.</p></div>
+                <div class="messages-preview"><h3>Prévia com dados fictícios</h3><div id="messages-model-preview" class="messages-text" aria-live="polite"></div><p id="messages-model-error" class="messages-field-error" role="status"></p></div>
+            </div>
+        </section>
+
+        <section id="panel-regras" class="messages-panel" role="tabpanel" aria-labelledby="tab-regras" hidden>
+            <div class="messages-section-heading"><div><h2>Regras e dados da viagem</h2><p>Estas preferências valem somente para a central de simulação.</p></div><button type="button" data-save class="btn btn-primary" disabled>Salvar alterações</button></div>
+            <fieldset id="messages-config" disabled><legend>Agenda</legend>
+                <label class="messages-check"><input id="messages-paused" type="checkbox"> Pausar agenda de simulação</label>
+                <div class="messages-form-grid">
+                    <div><label for="messages-timezone">Fuso do atendimento</label><input id="messages-timezone" type="text" list="messages-zones" placeholder="America/Sao_Paulo"><p class="messages-help">Usado na exibição e no horário de silêncio.</p></div>
+                    <div><label for="messages-quiet-start">Silêncio a partir de</label><input id="messages-quiet-start" type="time"></div>
+                    <div><label for="messages-quiet-end">Silêncio até</label><input id="messages-quiet-end" type="time"></div>
+                    <div><label for="messages-test-phone">Número de teste (opcional)</label><input id="messages-test-phone" type="tel" placeholder="+55 62 99999-0000"><p class="messages-help">Somente configuração. Não haverá envio nem para este número.</p></div>
+                </div>
+            </fieldset>
+            <fieldset id="messages-type-rules" disabled><legend>Regras por mensagem</legend><div id="messages-type-rules-list"></div><p class="messages-help">Validade é o prazo máximo para executar uma simulação a partir do horário agendado (1 a 60 minutos). O servidor verifica novamente as condições a cada ação.</p></fieldset>
+            <fieldset id="messages-trip" disabled><legend>Revisão da viagem</legend>
+                <label for="messages-sale">Venda</label><select id="messages-sale"></select><p id="messages-sale-summary" class="messages-help"></p>
+                <label class="messages-check"><input id="messages-issued" type="checkbox"> Conferi que a passagem foi realmente emitida</label>
+                <p class="messages-help">Cadastrar uma venda ou gerar um PDF não confirma a emissão na companhia.</p>
+                <div class="messages-form-grid">
+                    <div><label for="messages-outbound-zone">Fuso do aeroporto de saída da ida</label><input id="messages-outbound-zone" type="text" list="messages-zones" placeholder="America/Sao_Paulo"></div>
+                    <div><label for="messages-return-zone">Fuso do aeroporto de saída da volta</label><input id="messages-return-zone" type="text" list="messages-zones" placeholder="Europe/Lisbon"></div>
+                    <div><label for="messages-arrival">Data e hora da chegada final</label><input id="messages-arrival" type="datetime-local" aria-describedby="messages-arrival-help messages-arrival-error"><p id="messages-arrival-help" class="messages-help">Copie do itinerário o horário local de chegada ao destino final. Usado no pós-viagem.</p></div>
+                    <div><label for="messages-arrival-zone">Fuso do aeroporto de chegada final</label><input id="messages-arrival-zone" type="text" list="messages-zones" placeholder="America/Sao_Paulo" aria-describedby="messages-arrival-error"><p class="messages-help">Confirme o fuso da cidade de chegada.</p></div>
+                    <p id="messages-arrival-error" class="messages-field-error messages-wide" role="status"></p>
+                </div>
+            </fieldset>
+            <datalist id="messages-zones"><option value="America/Sao_Paulo"></option><option value="America/Manaus"></option><option value="America/New_York"></option><option value="Europe/Lisbon"></option><option value="Europe/Madrid"></option></datalist>
+        </section>
+
+        <section id="panel-historico" class="messages-panel" role="tabpanel" aria-labelledby="tab-historico" hidden>
+            <h2>Histórico da central</h2><p class="messages-help">“Simulada” registra um teste interno. Não significa envio, entrega ou leitura no WhatsApp. Envios da automação antiga não foram importados.</p><div id="messages-history" class="messages-cards"></div>
+        </section>
+    </main>
+    <dialog id="messages-preview-dialog" class="messages-dialog" aria-labelledby="messages-preview-title"><div class="messages-section-heading"><h2 id="messages-preview-title">Prévia da tarefa</h2><button id="messages-preview-close" type="button" class="btn btn-outline-secondary">Fechar</button></div><p id="messages-preview-recipient"></p><p class="messages-help">Conteúdo previsto da simulação. Expressões como hoje e amanhã são conferidas novamente pelo servidor.</p><div id="messages-task-preview" class="messages-text"></div></dialog>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js?v=10"></script>
+    <script src="js/auth.js?v=12"></script>
+    <script src="js/cloud-sync.js?v=12"></script>
+    <script src="js/messages-api.js?v=1"></script>
+    <script type="module" src="js/messages-page.mjs?v=1"></script>
+</body>
+</html>

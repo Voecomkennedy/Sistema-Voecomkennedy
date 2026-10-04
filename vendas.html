@@ -80,6 +80,7 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill"></i> Mais</a>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill"></i> Mensagens</a></li>
                             <li><a class="dropdown-item" href="pessoas.html"><i class="bi bi-people-fill"></i> Pessoas</a></li>
                             <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill"></i> Cartão de embarque</a></li>
                             <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill"></i> Backup</a></li>
@@ -869,7 +870,7 @@
 
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
-    <script src="js/storage.js?v=13"></script>
+    <script src="js/storage.js?v=14"></script>
     <script src="js/utils.js?v=11"></script>
 
     <script>
@@ -879,6 +880,7 @@
         let modalHistoricoVenda;
         let vendaEditandoId = null;
         let cotacaoOrigemId = null;
+        let cotacaoCarregamentoTimer = null;
         let aeroportos = AEROPORTOS_IATA; // Usar lista de aeroportos do arquivo JS
         console.log(`${aeroportos.length} aeroportos carregados`);
 
@@ -1138,6 +1140,7 @@
         // Inicializar modal
         document.addEventListener('app:ready', () => {
             modalVenda = new bootstrap.Modal(document.getElementById('modalVenda'));
+            document.getElementById('modalVenda').addEventListener('hidden.bs.modal', limparVinculoCotacao);
             modalMovimentoFinanceiro = new bootstrap.Modal(document.getElementById('modalMovimentoFinanceiro'));
             modalIntegridade = new bootstrap.Modal(document.getElementById('modalIntegridade'));
             modalHistoricoVenda = new bootstrap.Modal(document.getElementById('modalHistoricoVenda'));
@@ -1194,13 +1197,14 @@
                     try {
                         const cotacao = JSON.parse(dadosCotacao);
 
-                        cotacaoOrigemId = cotacao.id;
-
                         // Preencher formulário com dados da cotação
-                        setTimeout(() => {
+                        if (cotacaoCarregamentoTimer !== null) clearTimeout(cotacaoCarregamentoTimer);
+                        cotacaoCarregamentoTimer = setTimeout(() => {
+                            cotacaoCarregamentoTimer = null;
                             preencherFormularioComCotacao(cotacao);
                         }, 500);
                     } catch (error) {
+                        limparVinculoCotacao();
                         console.error('Erro ao carregar cotação:', error);
                     }
                 }
@@ -1209,6 +1213,18 @@
 
         // Preencher formulário de venda com dados da cotação
         function preencherFormularioComCotacao(cotacao) {
+            // O cache de navegação não é a fonte de verdade. A cotação pode ter
+            // sido removida/convertida, ou pertencer a uma sessão anterior.
+            const atual = cotacao?.id == null ? null : StorageManager.getCotacaoById(cotacao.id);
+            if (!atual || atual.status === 'convertida') {
+                limparVinculoCotacao();
+                Utils.showError('Esta cotação não está disponível para conversão. Reabra a lista de cotações.');
+                return;
+            }
+            prepararFormularioVendaLimpo();
+            vendaEditandoId = null;
+            cotacao = atual;
+            cotacaoOrigemId = atual.id;
             document.getElementById('tituloModal').innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Nova Venda (de Cotação)';
             if (cotacao.clienteId) definirClientePorId(cotacao.clienteId);
 
@@ -1265,12 +1281,11 @@
             // Abrir modal
             modalVenda.show();
 
-            // A URL e os dados temporários permanecem até a venda ser salva.
-            // Fechar o modal não converte nem altera a cotação.
-
             // Mostrar mensagem
             setTimeout(() => {
-                Utils.showSuccess('Dados da cotação foram carregados! Preencha os dados restantes e salve a venda.');
+                if (cotacaoOrigemId === cotacao.id) {
+                    Utils.showSuccess('Dados da cotação foram carregados! Preencha os dados restantes e salve a venda.');
+                }
             }, 1000);
         }
 
@@ -1884,7 +1899,20 @@
             return { data: '', hora: '' };
         }
 
+        function limparVinculoCotacao() {
+            if (cotacaoCarregamentoTimer !== null) clearTimeout(cotacaoCarregamentoTimer);
+            cotacaoCarregamentoTimer = null;
+            cotacaoOrigemId = null;
+            localStorage.removeItem('cotacao_para_venda');
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('from_cotacao')) {
+                url.searchParams.delete('from_cotacao');
+                history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+            }
+        }
+
         function prepararFormularioVendaLimpo() {
+            limparVinculoCotacao();
             document.getElementById('formVenda').reset();
             document.getElementById('vendaId').value = '';
             limparLocalizadores();
@@ -2148,6 +2176,15 @@
         // Salvar venda
         function salvarVenda() {
             const form = document.getElementById('formVenda');
+            if (cotacaoOrigemId !== null) {
+                const cotacao = StorageManager.getCotacaoById(cotacaoOrigemId);
+                const clienteId = document.getElementById('clienteId').value;
+                if (!cotacao || cotacao.status === 'convertida' || vendaEditandoId ||
+                    (cotacao.clienteId && String(cotacao.clienteId) !== String(clienteId))) {
+                    Utils.showError('O vínculo com a cotação mudou. Reabra a cotação ou use Nova venda para registrar uma venda independente.');
+                    return;
+                }
+            }
             calcularMargem();
             validarDatasVenda();
             validarValoresFinanceiros();
@@ -2295,9 +2332,7 @@
 
             if (vendaSalva && cotacaoOrigemId) {
                 StorageManager.concluirConversaoCotacao(cotacaoOrigemId, vendaSalva.id);
-                localStorage.removeItem('cotacao_para_venda');
-                cotacaoOrigemId = null;
-                history.replaceState({}, document.title, 'vendas.html');
+                limparVinculoCotacao();
             }
 
             modalVenda.hide();
@@ -3022,9 +3057,9 @@
     <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=10"></script>
-    <script src="js/auth.js?v=10"></script>
-    <script src="js/cloud-sync.js?v=10"></script>
-    <script src="js/app-bootstrap.js?v=10"></script>
+    <script src="js/auth.js?v=12"></script>
+    <script src="js/cloud-sync.js?v=12"></script>
+    <script src="js/app-bootstrap.js?v=12"></script>
     <script>AppBootstrap.iniciar();</script>
 </body>
 </html>

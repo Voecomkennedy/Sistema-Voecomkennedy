@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '..');
 async function app() {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace(/<script src="(?:js|assets)\/[^"]+"><\/script>/g, '');
   const dom = new JSDOM(html, { url: 'http://localhost:8765', runScripts: 'dangerously',
-    beforeParse(w) { w.HTMLElement.prototype.scrollIntoView = () => {}; w.alert = () => {}; }
+    beforeParse(w) { require('../../tests/fixtures/card-rates.cjs').install(w); w.HTMLElement.prototype.scrollIntoView = () => {}; w.alert = () => {}; }
   });
   const w = dom.window;
   for (const file of ['passenger-pricing.js','airport-timezones.js','flight-time.js','timing-form.js']) w.eval(fs.readFileSync(path.join(root, 'js', file), 'utf8'));
@@ -161,5 +161,32 @@ test('history stores infant pricing and legacy restoration preserves recorded pr
     a.w.limparProposta();
     assert.equal(a.el('p-bebe-cobranca').value, 'isento');
     assert.equal(a.el('p-bebe-valor').value, '');
+  } finally { a.dom.window.close(); }
+});
+
+test('12x uses the shared cloud table in calculator and proposal; restored totals and rate survive later changes', async () => {
+  const a=await app();
+  try {
+    a.set('p-bebes','0'); a.set('p-calc-parcelas','12'); a.set('p-com-juros',true);
+    a.w.calcCotacao();
+    assert.equal(a.el('p-calc-parcelas').value,'12');
+    a.w.calcAplicar();
+    const data=a.w.coletarDadosProposta();
+    assert.equal(data.parcelas,'12'); assert.equal(data.juroInfo.taxa,'18,29%');
+    assert.equal(data.valCartaoFinal,a.el('calc-total-parcelado').textContent);
+    const newer={...require('../../js/card-rates.js').DEFAULTS,12:25};
+    const R=require('../../js/card-rates.js');
+    a.w.CardRatesService={ready:true,entry:n=>R.entry(newer,n),calculate:(base,n)=>R.calculate(base,n,newer)};
+    a.w.restaurarProposta(JSON.parse(JSON.stringify(data)));
+    a.w.refreshCardRates();
+    const restored=a.w.coletarDadosProposta();
+    assert.equal(restored.valCartaoFinal,data.valCartaoFinal);
+    assert.equal(restored.valParcela,data.valParcela);
+    assert.equal(restored.juroInfo.taxa,'18,29%');
+    a.set('p-val-cartao','3000,00');
+    const changed=a.w.coletarDadosProposta();
+    assert.equal(changed.juroInfo.taxa,'25,00%'); assert.equal(changed.valCartaoFinal,'R$ 4.000,00');
+    a.w.CardRatesService.ready=false;
+    assert.equal(a.w.coletarDadosProposta(),undefined);
   } finally { a.dom.window.close(); }
 });

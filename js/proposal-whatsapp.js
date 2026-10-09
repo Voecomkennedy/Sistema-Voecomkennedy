@@ -35,7 +35,7 @@
         if (!positive(d.valCartaoBase)) return null;
         const total = positive(d.valCartaoFinal) ? d.valCartaoFinal : d.valCartaoBase;
         const installments = Number(d.parcelas);
-        if (!Number.isInteger(installments) || installments < 1 || installments > 10) return null;
+        if (!Number.isInteger(installments) || installments < 1 || installments > 12) return null;
         if (installments > 1) {
             if (!positive(d.valParcela) || !positive(d.valCartaoFinal)) return null;
             return { label: installments + 'x de ' + money(d.valParcela), sub: 'total ' + money(total) + (d.comJuros === false ? ' · sem juros' : '') };

@@ -58,6 +58,7 @@
             font-size: 0.9em;
         }
     </style>
+    <link rel="stylesheet" href="css/card-rates.css?v=1">
 </head>
 <body>
     <!-- Navbar -->
@@ -717,20 +718,21 @@
                             </div>
                             <div class="col-md-6 mb-3" id="campoParcelas" style="display: none;">
                                 <label class="form-label">Quantidade de Parcelas *</label>
+                                <button type="button" class="card-rates-link mb-2" data-card-rates-open>Taxas de cartão</button><p class="small">Taxa de referência atual; não altera o valor da venda salva.</p>
                                 <select class="form-select" id="parcelas" onchange="atualizarInfoTaxa()">
-                                    <option value="1">1x (à vista) - Taxa: 3,08%</option>
-                                    <option value="2">2x - Taxa: 5,55%</option>
-                                    <option value="3">3x - Taxa: 6,20%</option>
-                                    <option value="4">4x - Taxa: 6,91%</option>
-                                    <option value="5">5x - Taxa: 7,58%</option>
-                                    <option value="6">6x - Taxa: 8,26%</option>
-                                    <option value="7">7x - Taxa: 8,42%</option>
-                                    <option value="8">8x - Taxa: 9,16%</option>
-                                    <option value="9">9x - Taxa: 9,90%</option>
-                                    <option value="10">10x - Taxa: 10,45%</option>
+                                    <option value="1">1x</option>
+                                    <option value="2">2x</option>
+                                    <option value="3">3x</option>
+                                    <option value="4">4x</option>
+                                    <option value="5">5x</option>
+                                    <option value="6">6x</option>
+                                    <option value="7">7x</option>
+                                    <option value="8">8x</option>
+                                    <option value="9">9x</option>
+                                    <option value="10">10x</option><option value="11">11x</option><option value="12">12x</option>
                                 </select>
                                 <small class="text-muted">
-                                    ⚠️ Valores &lt; R$ 1.500: máx 5x | Valores ≥ R$ 1.500: máx 10x
+                                    ⚠️ Valores &lt; R$ 1.500: máx 5x | Valores ≥ R$ 1.500: máx 12x
                                 </small>
                             </div>
                         </div>
@@ -1831,7 +1833,7 @@
         function aplicarRegrasParcelas() {
             const valorVenda = Utils.moedaParaNumero(document.getElementById('valorVenda').value);
             const selectParcelas = document.getElementById('parcelas');
-            const maxParcelas = valorVenda < 1500 ? 5 : 10;
+            const maxParcelas = valorVenda < 1500 ? 5 : 12;
 
             // Habilitar/desabilitar opções baseadas no valor
             for (let i = 0; i < selectParcelas.options.length; i++) {
@@ -3060,6 +3062,15 @@
     <script src="js/auth.js?v=12"></script>
     <script src="js/cloud-sync.js?v=12"></script>
     <script src="js/app-bootstrap.js?v=12"></script>
-    <script>AppBootstrap.iniciar();</script>
+    <script src="js/card-rates.js?v=1"></script>
+    <script src="js/card-rates-ui.js?v=1"></script>
+    <script>
+        window.addEventListener('card-rates:changed', () => {
+            for (const option of document.getElementById('parcelas').options) {
+                option.textContent = option.value + 'x' + (CardRatesService.ready ? ' — Taxa: ' + CardRatesService.entry(Number(option.value)).taxa : ' — taxa indisponível');
+            }
+        });
+        AppBootstrap.iniciar();
+    </script>
 </body>
 </html>

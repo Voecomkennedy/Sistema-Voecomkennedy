@@ -46,7 +46,7 @@
       if(!o.selected||Math.abs(o.total-pix)>.02)return null;
       return cardFromForm(d);
     }
-    const n=Number(d.parcelas);if(!Number.isInteger(n)||n<1||n>10)return null;
+    const n=Number(d.parcelas);if(!Number.isInteger(n)||n<1||n>12)return null;
     const divisor=d.comJuros===false?1:Number(config.cardDivisor);
     if(!(divisor>0&&divisor<=1))return null;
     const recorded=number(d.valCartaoFinal);
@@ -54,7 +54,7 @@
       return o.selected&&Math.abs(o.total-pix)<=.02?cardFromForm(d):null;
     }
     if(o.selected&&Math.abs(o.total-pix)<=.02&&d.valCartaoFinal)return cardFromForm(d);
-    const total=o.total/divisor;
+    const total=d.juroInfo?.rounding==='ceil-cent' ? Math.ceil(Math.round(o.total*100)*10000/Math.round(divisor*10000))/100 : o.total/divisor;
     return {label:n>1?n+'x de '+money(total/n):money(total),sub:'total '+money(total)+(d.comJuros===false?' · sem juros':'')};
   }
   function cardFromForm(d){

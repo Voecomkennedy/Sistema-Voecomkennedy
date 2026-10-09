@@ -38,7 +38,7 @@ test('PDF is generated as selectable A4 bytes with all quoted amounts',async()=>
 });
 test('a repeated click waits for the first PDF and an error allows a retry',async()=>{
  const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8').replace(/<script src="(?:js|assets)\/[^"]+"><\/script>/g,'');
- const dom=new JSDOM(html,{url:'http://localhost:8765',runScripts:'dangerously',beforeParse(w){w.HTMLElement.prototype.scrollIntoView=()=>{};w.alert=()=>{};}});
+ const dom=new JSDOM(html,{url:'http://localhost:8765',runScripts:'dangerously',beforeParse(w){require('../../tests/fixtures/card-rates.cjs').install(w);w.HTMLElement.prototype.scrollIntoView=()=>{};w.alert=()=>{};}});
  const w=dom.window;
  try{
   w.ProposalPDF={};let calls=0,release;

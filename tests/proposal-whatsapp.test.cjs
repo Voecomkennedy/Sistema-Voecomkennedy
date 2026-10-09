@@ -150,7 +150,7 @@ test('invalid comparison blocks copying rather than falling back to the lossy qu
 
 test('panel copies complete proposals through the new generator and keeps the legacy clipboard path', async () => {
     const html = fs.readFileSync(path.join(__dirname, '../cotacoes.html'), 'utf8');
-    assert.match(html, /src="js\/proposal-whatsapp\.js\?v=1"/);
+    assert.match(html, /src="js\/proposal-whatsapp\.js\?v=2"/);
     const code = html.slice(html.indexOf('        function copiarParaWhatsApp(id)'), html.indexOf('        // Fallback: mostrar texto em modal'));
     const full = { id: 'full', propostaCompleta: snapshot({ multitrecho: true, origVolta: 'CWB', destVolta: 'VCP' }) };
     const legacy = { id: 'legacy', origem: 'BSB', destino: 'GIG', companhiaAerea: 'LATAM', tipoTarifa: 'Light', adultos: 1, tipoViagem: 'so-ida', dataSaidaIda: '2026-11-01', horaSaidaIda: '10:00', horaChegadaIda: '11:00', valorTotalPix: 1000, valorParcela: 100, totalParcelado: 1000, numParcelas: 10 };

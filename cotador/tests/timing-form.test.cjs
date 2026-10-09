@@ -8,7 +8,7 @@ async function app() {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const dom = new JSDOM(html.replace(/<script src="js\/[^\"]+"><\/script>/g, ''), {
     url: 'http://localhost:8765', runScripts: 'dangerously',
-    beforeParse(w) { w.HTMLElement.prototype.scrollIntoView = () => {}; w.alert = () => {}; }
+    beforeParse(w) { require('../../tests/fixtures/card-rates.cjs').install(w); w.HTMLElement.prototype.scrollIntoView = () => {}; w.alert = () => {}; }
   });
   const {window:w} = dom;
   for(const file of ['passenger-pricing.js','airport-timezones.js','flight-time.js','timing-form.js']) w.eval(fs.readFileSync(path.join(root,'js',file),'utf8'));

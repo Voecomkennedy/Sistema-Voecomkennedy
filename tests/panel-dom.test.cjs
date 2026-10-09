@@ -26,7 +26,7 @@ class LocalResources extends ResourceLoader {
             const stubs = {
                 '/js/auth.js': `window.Auth={proteger:async()=>${this.authenticated},logout(){}};`,
                 '/js/cloud-sync.js': 'window.CloudSync={init:async()=>true,agendarBackup(){window.__syncs=(window.__syncs||0)+1}};',
-                '/js/supabase-config.js': 'window.getSupabaseClient=()=>({});'
+                '/js/supabase-config.js': `window.getSupabaseClient=()=>({auth:{getUser:async()=>({data:{user:{id:'test-user',user_metadata:{}}}}),onAuthStateChange(){}}});`
             };
             if (stubs[parsed.pathname]) return Promise.resolve(Buffer.from(stubs[parsed.pathname]));
             const file = path.join(root, decodeURIComponent(parsed.pathname));

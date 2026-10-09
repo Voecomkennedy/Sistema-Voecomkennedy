@@ -27,7 +27,11 @@
     }
     function createStore(client, notify = () => {}) {
         let current = null, owner = null, revision = null, generation = 0, saving = false;
-        const fingerprint = value => JSON.stringify(value ?? null);
+        // JSONB pode devolver as propriedades em outra ordem.
+        const canonical = value => value && typeof value === 'object'
+            ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+            : value;
+        const fingerprint = value => JSON.stringify(canonical(value ?? null));
         const read = user => {
             const value = user.user_metadata?.[KEY];
             if (value == null) return { rates: { ...DEFAULTS }, revision: 'null' };

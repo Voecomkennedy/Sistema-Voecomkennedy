@@ -58,3 +58,16 @@ test('offline or invalid cloud data never yields a success or default fallback',
     a.client.auth.getUser=async()=>({data:{user:{id:'a',user_metadata:{[R.KEY]:{schema:1,revision:'x',rates:{1:5}}}}}});
     await assert.rejects(s.load(),/12 taxas/); assert.equal(s.ready,false);
 });
+
+test('cloud JSONB property order does not produce a false save failure', async () => {
+    const a=account(), s=R.createStore(a.client);
+    const original=a.client.auth.updateUser;
+    a.client.auth.updateUser=async payload=>{
+        const result=await original(payload);
+        const v=result.data.user.user_metadata[R.KEY];
+        result.data.user.user_metadata[R.KEY]={updatedAt:v.updatedAt, revision:v.revision, rates:v.rates, schema:v.schema};
+        return result;
+    };
+    await s.load(); await s.save(R.DEFAULTS,s.revision);
+    assert.equal(s.rates()[12],18.29);
+});

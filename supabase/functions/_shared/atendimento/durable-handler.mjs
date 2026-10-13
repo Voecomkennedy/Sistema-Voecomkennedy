@@ -1,5 +1,5 @@
 // Sem entrypoint. Envelope HTTP real nos testes locais; Auth/transportes injetados.
-const rules={listar:['search','unread','label'],mensagens:['chatId'],lida:['chatId'],vincular:['chatId','link'],compor:['chatId','text','attachmentId','requestId'],anexar:['chatId','name','bytes','requestId'],arquivo:['fileId'],ingressar_sintetico:['event'],processar_sintetico:[],simular_envio:[],exportar:[],restaurar:['package']};
+const rules={listar:['search','unread','label'],mensagens:['chatId'],lida:['chatId'],vincular:['chatId','link'],compor:['chatId','text','attachmentId','requestId'],anexar:['chatId','name','bytes','requestId'],arquivo:['fileId'],ingressar_sintetico:['event'],processar_sintetico:[],simular_envio:['outcome'],exportar:[],restaurar:['package']};
 export function createDurableHandler({enabled=false,verifyUser,repositoryFor,backupFor,allowedOrigin,transport}){
     return async request=>{
         const response=(status,data)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json','cache-control':'no-store'}});
@@ -24,7 +24,7 @@ export function createDurableHandler({enabled=false,verifyUser,repositoryFor,bac
                 case 'arquivo':data=await repo.file(user.id,body.fileId);break;
                 case 'ingressar_sintetico':data=await repo.enqueue(user.id,body.event);break;
                 case 'processar_sintetico':data=await repo.processNext(user.id);break;
-                case 'simular_envio':data=await repo.dispatchNext(user.id,transport);break;
+                case 'simular_envio':if(body.outcome!==undefined&&!['success','failure','uncertain'].includes(body.outcome))return response(422,{erro:'Resultado sintético inválido.'});data=await repo.dispatchNext(user.id,{mode:'sintetico',send:payload=>transport.send(payload,{outcome:body.outcome||'success'})});break;
                 case 'exportar':data=await backupFor(repo).exportPackage(user.id);break;
                 case 'restaurar':data=await backupFor(repo).restorePackage(user.id,body.package);break;
             }

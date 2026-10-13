@@ -6,6 +6,9 @@ const os = require('node:os');
 const net = require('node:net');
 const { execFileSync, spawn } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
+let stopRequested = false, stopServe = null;
+const requestStop = () => { stopRequested = true; if (stopServe) stopServe(); };
+process.on('SIGINT', requestStop); process.on('SIGTERM', requestStop);
 
 function executable(name) {
     const dirs = [process.env.VCK_PG_BIN, '/opt/homebrew/opt/postgresql@17/bin', '/usr/lib/postgresql/17/bin', '/usr/local/opt/postgresql@17/bin', ...(process.env.PATH || '').split(path.delimiter)].filter(Boolean);
@@ -72,6 +75,37 @@ async function freePort() {
         run('pg_ctl', ['-D', cluster, '-l', path.join(dir, 'postgres-restart.log'), '-o', `-h 127.0.0.1 -p ${port} -k ''`, '-w', 'start']); started = true;
         process.stdout.write('restart: PostgreSQL local descartável encerrado e iniciado de novo\n');
         process.stdout.write(phase('verify'));
+        if (process.argv.includes('--serve')) {
+            const { Pool } = require('pg');
+            const { randomUUID } = require('node:crypto');
+            const [{createPgRepository},{createLocalObjectStore},{DEMO_SOURCE},{createLocalAtendimentoHttpServer}] = await Promise.all([
+                import('../supabase/functions/_shared/atendimento/repository.mjs'),
+                import('../supabase/functions/_shared/atendimento/local-object-store.mjs'),
+                import('../js/atendimento-demo.mjs'),
+                import('./atendimento-local-http.mjs')
+            ]);
+            const pool = new Pool({ connectionString:url });
+            let server;
+            try {
+                const owner = randomUUID();
+                await pool.query('insert into auth.users(id) values($1)',[owner]);
+                await pool.query('insert into public.dados_app(user_id,conteudo) values($1,$2)',[owner,DEMO_SOURCE]);
+                const atendimentoRepo = createPgRepository({pool,owner,objectStore:createLocalObjectStore(path.join(dir,'objects',owner)),financialSummary:sale=>({receitaRealizada:(sale.valorRecebido||0)-(sale.valorReembolsadoCliente||0)})});
+                for(const [messageId,phone,message,at] of [
+                    ['in-ana-1','+5562999990001','Olá! Quero conferir minha proposta para São Paulo.','2026-10-13T09:00:00Z'],
+                    ['in-bruno-1','+5561999990002','Você pode cotar Recife para novembro?','2026-10-13T08:30:00Z'],
+                    ['in-ana-2','+5562999990001','Pode incluir a bagagem no PDF?','2026-10-13T09:05:00Z']
+                ]) {await atendimentoRepo.enqueue(owner,{type:'message',instance:'mock',messageId,phone,fromMe:false,text:message,at,status:'entregue'});await atendimentoRepo.processNext(owner);}
+                const chats=await atendimentoRepo.list(owner);
+                await atendimentoRepo.link(owner,chats.find(c=>c.phone.endsWith('0001')).id,{clienteId:'p-ana',cotacaoId:'q-ana',vendaId:'v-ana',origemContato:'Indicação informada pelo contato (exemplo)',etiquetas:['Proposta','Bagagem']});
+                await atendimentoRepo.link(owner,chats.find(c=>c.phone.endsWith('0002')).id,{clienteId:'p-bruno',cotacaoId:'q-bruno',etiquetas:['Novo contato']});
+                const httpPort=await freePort();
+                server=createLocalAtendimentoHttpServer({root:repo,repository:atendimentoRepo,enabled:true,allowedOrigin:`http://127.0.0.1:${httpPort}`});
+                await new Promise((resolve,reject)=>server.once('error',reject).listen(httpPort,'127.0.0.1',resolve));
+                process.stdout.write(`DEMO_LOCAL=http://127.0.0.1:${httpPort}/atendimento.html?demo=persistente\n`);
+                await new Promise(resolve=>{ stopServe = resolve; if (stopRequested) resolve(); });
+            } finally { if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}await pool.end(); }
+        }
     } finally {
         if (started) run('pg_ctl', ['-D', cluster, '-m', 'immediate', '-w', 'stop']);
         // Only the randomly-created directory from this run is removed.

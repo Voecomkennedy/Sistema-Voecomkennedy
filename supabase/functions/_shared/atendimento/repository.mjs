@@ -81,7 +81,7 @@ export function createPgRepository({pool,owner,objectStore,instance='mock',finan
             return {id:job.id,state:error.status===409?'revisao':'falha'};
         }
     }
-    async function messages(actor,cid){authorized(actor);return await tx(async c=>{await chatFor(c,cid);return (await c.query('select * from public.atendimento_mensagens where user_id=$1 and conversa_id=$2 and substituida_por is null order by ocorrido_em,id',[owner,cid])).rows.map(cleanMessage);});}
+    async function messages(actor,cid){authorized(actor);return await tx(async c=>{await chatFor(c,cid);return (await c.query('select m.*,o.estado as resultado_envio,o.tentativas as tentativas_envio,o.disponivel_em as disponivel_envio from public.atendimento_mensagens m left join public.atendimento_outbox o on o.user_id=m.user_id and o.mensagem_id=m.id where m.user_id=$1 and m.conversa_id=$2 and m.substituida_por is null order by m.ocorrido_em,m.id',[owner,cid])).rows.map(m=>({...cleanMessage(m),result:m.resultado_envio||null,attempt:m.tentativas_envio||0,availableAt:m.disponivel_envio||null}));});}
     async function list(actor,{search='',unread=false,label=''}={}){
         authorized(actor);return await tx(async c=>{
             const chats=(await c.query('select * from public.atendimento_conversas where user_id=$1 order by criado_em,id',[owner])).rows;

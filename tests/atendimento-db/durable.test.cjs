@@ -104,13 +104,13 @@ test('RLS real nas filas novas e fonte comercial só do dono; HTTP rejeita forja
     assert.equal((await handler(makeBody({acao:'listar'}))).status,200);assert.equal((await handler(makeBody({acao:'compor',chatId:f.cid,text:'HTTP',requestId:'http1'}))).status,200);
 });
 test('filas duráveis preservam legado e grupos; erro/receipt de cada consumidor é independente',async()=>{
-    const f=await fixture(),privateConfig={instance:'mock',connectedPhone:'5562999990999'},fanout=f.f.createDurableFanout(f.repo,{privateEnabled:true,privateConfig}),group={instanceId:'mock',connectedPhone:privateConfig.connectedPhone,type:'ReceivedCallback',isGroup:true,phone:'synthetic@g.us',text:{message:'Grupo fictício'},messageId:'group1',fromMe:false,momment:Date.now(),status:'RECEIVED',unknownField:{keep:'intact'}};
+    const f=await fixture(),privateConfig={instance:'mock',connectedPhone:'5562999990999'},fanout=f.f.createDurableFanout(f.repo,{legacyEnabled:true,privateEnabled:true,privateConfig}),group={instanceId:'mock',connectedPhone:privateConfig.connectedPhone,type:'ReceivedCallback',isGroup:true,phone:'synthetic@g.us',text:{message:'Grupo fictício'},messageId:'group1',fromMe:false,momment:Date.now(),status:'RECEIVED',unknownField:{keep:'intact'}};
     await fanout.enqueue(f.owner,{key:'group1',payload:group});await fanout.enqueue(f.owner,{key:'group1',payload:group});
     await assert.rejects(fanout.enqueue(f.owner,{key:'group1',payload:{...group,text:{message:'Mudança'}}}),{status:409});
     const privatePayload={...group,isGroup:false,phone:'5562999990001',messageId:'private1'};
     await fanout.enqueue(f.owner,{key:'private1',payload:privatePayload});
     const offPayload={...privatePayload,messageId:'private2'};
-    await f.f.createDurableFanout(f.repo).enqueue(f.owner,{key:'default-off',payload:offPayload});
+    await f.f.createDurableFanout(f.repo,{legacyEnabled:true}).enqueue(f.owner,{key:'default-off',payload:offPayload});
     const repeated=await fanout.enqueue(f.owner,{key:'default-off',payload:offPayload});assert.deepEqual(repeated.consumers,['legado']);assert.equal(repeated.duplicate,true);
     assert.equal((await pool.query('select count(*) n from public.atendimento_encaminhamentos where user_id=$1',[f.owner])).rows[0].n,'4');
     const deliveries=[];const r=await fanout.dispatch(f.owner,'legado',{mode:'sintetico',send:receipt=>{deliveries.push(receipt);return {durablyAccepted:true};}});assert.equal(r.result,'concluido');assert.deepEqual(deliveries[0].payload,group);
@@ -120,7 +120,7 @@ test('filas duráveis preservam legado e grupos; erro/receipt de cada consumidor
     assert.equal((await fanout.dispatch(f.owner,'legado',{mode:'sintetico',send:()=>({durablyAccepted:true})})).result,'concluido');
 });
 test('rejeição comprovada do legado aguarda retry; resultado incerto exige revisão e não repete',async()=>{
-    const f=await fixture(),fanout=f.f.createDurableFanout(f.repo);
+    const f=await fixture(),fanout=f.f.createDurableFanout(f.repo,{legacyEnabled:true});
     await fanout.enqueue(f.owner,{key:'legacy-safe-fail',payload:{isGroup:true,phone:'synthetic@g.us',messageId:'safe-fail'}});
     let attempts=0;
     const refused={mode:'sintetico',send:()=>{attempts++;return {definitelyNotAccepted:true};}};
@@ -133,4 +133,37 @@ test('rejeição comprovada do legado aguarda retry; resultado incerto exige rev
     await fanout.enqueue(f.owner,{key:'legacy-uncertain',payload:{isGroup:true,phone:'synthetic@g.us',messageId:'uncertain'}});
     assert.equal((await fanout.dispatch(f.owner,'legado',{mode:'sintetico',send:()=>{throw Error('timeout');}})).result,'incerto');
     assert.equal(await fanout.dispatch(f.owner,'legado',refused),null);assert.equal(attempts,2);
+});
+test('sem webhook legado configurado, flags desligadas não criam fila; modo privado não captura grupos',async()=>{
+    const f=await fixture(),config={instance:'mock',connectedPhone:'5562999990999'};
+    const payload={instanceId:'mock',connectedPhone:config.connectedPhone,type:'ReceivedCallback',isGroup:false,phone:'5562999990001',messageId:'private-only',fromMe:false,momment:Date.now(),status:'RECEIVED',text:{message:'Privada sintética'}};
+    const off=f.f.createDurableFanout(f.repo);
+    assert.deepEqual((await off.enqueue(f.owner,{key:'disabled',payload})).consumers,[]);
+    assert.equal((await pool.query('select count(*) n from public.atendimento_encaminhamentos where user_id=$1',[f.owner])).rows[0].n,'0');
+    const privateOnly=f.f.createDurableFanout(f.repo,{privateEnabled:true,privateConfig:config});
+    assert.deepEqual((await privateOnly.enqueue(f.owner,{key:'group',payload:{...payload,isGroup:true,phone:'synthetic@g.us'}})).consumers,[]);
+    assert.deepEqual((await privateOnly.enqueue(f.owner,{key:'private',payload})).consumers,['atendimento']);
+    assert.equal(await privateOnly.dispatch(f.owner,'legado',{mode:'sintetico',send(){throw Error('não há legado');}}),null);
+    assert.equal((await privateOnly.dispatch(f.owner,'atendimento',{mode:'sintetico',send:()=>({durablyAccepted:true})})).result,'concluido');
+});
+test('ingresso HTTP sintético autentica antes de ler, vincula owner no servidor e só confirma após commit',async()=>{
+    const f=await fixture(),{createSyntheticWebhookIngress}=await import('../../supabase/functions/_shared/atendimento/ingress-candidate.mjs');
+    const connectedPhone='5562999990999';let authCalls=0;
+    const options={enabled:true,privateEnabled:true,connectedPhone,verifyIngress:request=>{authCalls++;return request.headers.get('x-synthetic')==='allowed'?{owner:f.owner,instance:'mock'}:null;},repositoryFor:async()=>f.repo};
+    const ingress=createSyntheticWebhookIngress(options);
+    const payload={instanceId:'mock',connectedPhone,type:'ReceivedCallback',isGroup:false,phone:'5562999990001',messageId:'webhook-fixture',fromMe:false,momment:Date.now(),status:'RECEIVED',text:{message:'Entrada sintética'}};
+    const req=(body,token='allowed')=>new Request('https://local.invalid/atendimento',{method:'POST',headers:{'x-synthetic':token},body:JSON.stringify(body)});
+    assert.equal((await createSyntheticWebhookIngress({...options,enabled:false})(req(payload))).status,503);
+    assert.equal((await ingress(req(payload,'wrong'))).status,401);
+    assert.equal((await ingress(req({...payload,instanceId:'foreign'}))).status,422);
+    assert.equal((await ingress(new Request('https://local.invalid/atendimento',{method:'POST',headers:{'x-synthetic':'allowed'},body:'x'.repeat(200001)}))).status,413);
+    assert.equal((await ingress(new Request('https://local.invalid/atendimento',{method:'POST',headers:{'x-synthetic':'allowed'},body:'{'}))).status,422);
+    assert.equal((await ingress(new Request('https://local.invalid/atendimento',{method:'GET'}))).status,405);
+    const accepted=await ingress(req({...payload,owner:f.other}));assert.equal(accepted.status,200);assert.deepEqual((await accepted.json()).consumers,['atendimento']);
+    const duplicate=await ingress(req({...payload,owner:f.other}));assert.equal((await duplicate.json()).duplicate,true);
+    const ignored=await ingress(req({...payload,isGroup:true,phone:'synthetic@g.us',messageId:'group-fixture'}));assert.equal(ignored.status,200);assert.equal((await ignored.json()).ignored,true);
+    assert.equal((await pool.query('select count(*) n from public.atendimento_encaminhamentos where user_id=$1',[f.owner])).rows[0].n,'1');
+    assert.equal((await pool.query('select count(*) n from public.atendimento_encaminhamentos where user_id=$1',[f.other])).rows[0].n,'0');
+    assert.equal((await createSyntheticWebhookIngress({...options,repositoryFor:async()=>{throw Error('db down');}})(req({...payload,messageId:'db-fail'}))).status,503);
+    assert.ok(authCalls>=5);
 });

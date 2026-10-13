@@ -3,8 +3,14 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "test:db": "node scripts/test-messages-db.cjs"
+    "test:db": "node scripts/test-messages-db.cjs",
+    "test:atendimento:db": "node scripts/test-atendimento-db.cjs"
   },
-  "devDependencies": { "pg": "8.23.1" },
-  "engines": { "node": ">=22.19" }
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "pg": "8.23.1"
+  },
+  "engines": {
+    "node": ">=22.19"
+  }
 }

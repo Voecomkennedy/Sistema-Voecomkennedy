@@ -1,0 +1,16 @@
+...
+# Subtest: concurrent HTTP simulation requests cannot both complete, and stale preference edits return 409
+ok 16 - concurrent HTTP simulation requests cannot both complete, and stale preference edits return 409
+  ---
+  duration_ms: 299.852708
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2757.300375

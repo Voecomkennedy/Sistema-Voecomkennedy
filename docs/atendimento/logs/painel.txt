@@ -1,0 +1,16 @@
+...
+# Subtest: removed or already converted quotes cannot be restored from stale transfer data
+ok 123 - removed or already converted quotes cannot be restored from stale transfer data
+  ---
+  duration_ms: 1119.351333
+  type: 'test'
+  ...
+1..123
+# tests 123
+# suites 0
+# pass 123
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8920.47275

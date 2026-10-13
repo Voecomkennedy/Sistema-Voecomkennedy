@@ -1,0 +1,8 @@
+# tests 16
+# pass 16
+# fail 0
+# skipped 0
+seed: mensagem, PDF, entrada pendente e dois envios sintéticos persistidos
+crash: reserva commitada; uma chamada sintética; sem confirmação
+restart: PostgreSQL local descartável encerrado e iniciado de novo
+{"pgRestarted":true,"workerRestarted":true,"committedInboxSurvived":true,"uncertainNotResent":true,"mockCallsBeforeCrash":1,"mockCallsAfterRestart":1,"ownerIsolationVerifiedBySuite":true,"attachmentRestoredWithBytes":true,"restoredMessages":4}

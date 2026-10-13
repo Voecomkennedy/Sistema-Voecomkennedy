@@ -1,0 +1,1 @@
+{"verify_jwt":true,"note":"NÃO PUBLICADO. Teste de texto único: além do JWT do proprietário, exige flag explícita, recepção ligada e reserva única no banco antes do envio. Sem retry automático."}

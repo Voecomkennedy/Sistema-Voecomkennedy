@@ -1,0 +1,11 @@
+# Envio único de texto — preparado, não publicado
+
+Este código **não foi implantado** e a migração `20261013203918_atendimento_teste_envio_unico.sql` **não foi aplicada**. Não há novo endpoint aberto, flag de envio ligada nem mensagem enviada. Ele prepara somente uma mensagem de teste identificada, em vez de usar a prévia do pós-venda.
+
+Para uma etapa futura acompanhada: aplicar a migração aditiva após revisão; publicar esta função com `verify_jwt=true`; manter `ATENDIMENTO_TESTE_ENABLED=false` inicialmente. A função exige JWT válido do proprietário comercial já configurado, `ATENDIMENTO_RECEBIMENTO_ENABLED=true`, igualdade entre `ZAPI_INSTANCE_ID` existente e `ATENDIMENTO_RECEBIMENTO_INSTANCE_ID`, além de `ZAPI_TOKEN` e `ZAPI_CLIENT_TOKEN` **já existentes no servidor**. Não copiar essas credenciais para cliente, chat ou arquivo. Configurar no servidor `ATENDIMENTO_TESTE_DESTINO` com o número completo autorizado, distinto do número conectado. É uma lista de permissão de um único destino; jamais receber destino ou texto do corpo HTTP. Conferir o destino completo privadamente antes de habilitar `ATENDIMENTO_TESTE_ENABLED=true` para a única chamada.
+
+O único método aceito é POST vazio em `/functions/v1/atendimento-teste-unico`, com Authorization Bearer da sessão existente. O texto é constante no código. Uma reserva com chave única é gravada **antes** da chamada `send-text` da Z-API. Após uma tentativa, inclusive timeout, falha de gravação do resultado ou resposta sem ID, a chave não é liberada e novas chamadas retornam 409. Não há retry automático nem lote. O registro mantém horários UTC, estado e ID do provedor quando obtido; não guarda telefone, texto ou token. `200` indica somente aceite da API Z-API, não entrega no WhatsApp. `202` indica resultado incerto e requer conciliação humana.
+
+Não publicar nem invocar esta função enquanto capacidade e callback de recebimento não estiverem ativos e observados. Primeiro validar entrada com texto enviado pessoalmente pelo operador. Depois decidir se o teste de saída ainda é necessário, revisar a configuração restrita e executar apenas uma chamada. Não usar `pos-venda?previa=1`.
+
+Contrato oficial do envio: [Z-API send-text](https://developer.z-api.io/message/send-text).

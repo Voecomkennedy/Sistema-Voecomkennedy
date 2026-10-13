@@ -1,0 +1,181 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const ready=import('../supabase/functions/_shared/atendimento/receiving.mjs');
+const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',instance='INSTANCE_SYNTHETIC',connectedPhone='5562999990999';
+const capability='A'.repeat(43),base=`https://example.invalid/functions/v1/atendimento-recebimento/${capability}`;
+const payload={instanceId:instance,connectedPhone,type:'ReceivedCallback',isGroup:false,isNewsletter:false,
+  phone:'5562999990001',senderLid:'123456789@lid',messageId:'sample-1',fromMe:false,
+  momment:Date.now()-1000,status:'RECEIVED',chatName:'Ana Exemplo',text:{message:'Olá'}};
+const request=(body=payload,url=base)=>new Request(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+const config=(db,extra={})=>({enabled:true,capability,owner,instance,connectedPhone,db,allowedHosts:['cdn.vendor.example'],archivePdf:true,...extra});
+
+test('capacidade e flag são exigidas antes de acessar o corpo, inclusive URL com query',async()=>{
+  const {createRealWebhookIngress}=await ready;
+  const unread={method:'POST',url:base.replace(capability,'B'.repeat(43)),headers:new Headers({'content-type':'application/json'}),get body(){throw Error('corpo lido');}};
+  const db={rpc(){throw Error('não deveria gravar');}};
+  assert.equal((await createRealWebhookIngress(config(db))(unread)).status,401);
+  assert.equal((await createRealWebhookIngress(config(db,{enabled:false}))(unread)).status,503);
+  assert.equal((await createRealWebhookIngress(config(db,{capability:''}))(unread)).status,503);
+  assert.equal((await createRealWebhookIngress(config(db))({method:'POST',url:base+'?leak=1',headers:unread.headers,get body(){throw Error('corpo lido');}})).status,401);
+});
+test('texto privado é normalizado, dono vem do servidor, duplicata e falha não recebem ACK',async()=>{
+  const {createRealWebhookIngress}=await ready;let calls=[];
+  const db={rpc:async(name,args)=>{calls.push({name,args});return{data:{duplicate:calls.length>1},error:null};}};
+  const handler=createRealWebhookIngress(config(db));
+  const result=await handler(request({...payload,owner:'forjado'}));assert.equal(result.status,200);
+  assert.equal((await result.json()).duplicate,false);
+  assert.equal(calls[0].args.p_owner,owner);assert.equal(calls[0].args.p_phone,'5562999990001');
+  assert.equal((await handler(request(payload))).status,200);assert.equal(calls.length,2);
+  assert.equal((await handler(request({...payload,isGroup:true,phone:'123@g.us'}))).status,200);assert.equal(calls.length,2);
+  assert.equal((await handler(request({...payload,fromMe:true}))).status,200);assert.equal(calls.length,2);
+  assert.equal((await handler(request({...payload,instanceId:'OUTRA'}))).status,422);
+  assert.equal((await createRealWebhookIngress(config({rpc:async()=>({error:{code:'08006'}})}))(request())).status,503);
+  assert.equal((await handler(new Request(base,{method:'POST',headers:{'content-type':'application/json'},body:'x'.repeat(200001)}))).status,413);
+});
+test('piloto somente texto marca PDF pendente sem buscar URL e aceita telefone não fixado',async()=>{
+  const {createRealWebhookIngress}=await ready;const calls=[];
+  const db={rpc:async(_,args)=>{calls.push(args);return{data:{duplicate:calls.length>1}};}};
+  let fetches=0;const handler=createRealWebhookIngress(config(db,{connectedPhone:'',allowedHosts:[],archivePdf:false,fetcher:async()=>{fetches++;throw Error('não baixar');}}));
+  const doc={...payload,text:undefined,document:{mimeType:'application/pdf',fileName:'proposta.pdf',documentUrl:'https://host-nao-verificado.invalid/x'}};
+  assert.equal((await handler(request(doc))).status,200);
+  assert.equal((await handler(request(doc))).status,200);
+  assert.equal(fetches,0);assert.equal(calls.length,2);
+  assert.equal(calls[0].p_tipo,'outro');assert.equal(calls[0].p_arquivo,null);assert.equal(calls[0].p_nome_arquivo,null);
+  assert.match(calls[0].p_texto,/PDF recebido; arquivo pendente de arquivamento/);
+  assert.equal((await handler(request({...payload,messageId:'other-phone',connectedPhone:'5511999999999'}))).status,200);
+  assert.equal((await handler(request({...payload,messageId:'missing-phone',connectedPhone:undefined}))).status,422);
+  assert.equal((await handler(request({...payload,messageId:'foreign',instanceId:'OUTRA'}))).status,422);
+  assert.equal((await createRealWebhookIngress(config(db,{connectedPhone:'',allowedHosts:[],archivePdf:true}))(request())).status,503);
+});
+test('retry de PDF pendente continua idempotente após habilitar modo de arquivo',async()=>{
+  const {createRealWebhookIngress}=await ready;let fetches=0,recorded;
+  const db={from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:{id:'prior',tipo:'outro',texto:'[PDF recebido; arquivo pendente de arquivamento: proposta.pdf]'},error:null})}),rpc:async(_,args)=>{recorded=args;return{data:{duplicate:true}};}};
+  const doc={...payload,text:undefined,document:{mimeType:'application/pdf',fileName:'proposta.pdf',documentUrl:'https://cdn.vendor.example/file'}};
+  const handler=createRealWebhookIngress(config(db,{fetcher:async()=>{fetches++;throw Error('não baixar duplicata');}}));
+  assert.equal((await handler(request(doc))).status,200);assert.equal(recorded.p_tipo,'outro');assert.equal(fetches,0);
+});
+test('PDF é copiado para bucket privado antes do RPC; host, tamanho, hash e retry são verificados',async()=>{
+  const {createRealWebhookIngress}=await ready;const bytes=new TextEncoder().encode('%PDF-fixture');
+  let upload=0,rpc=0;const stored=new Map();
+  const db={storage:{getBucket:async()=>({data:{id:'atendimento-arquivos',public:false}}),from:()=>({
+    upload:async(path,data)=>{upload++;stored.set(path,data);return{error:null};},download:async path=>stored.has(path)?({error:null,data:new Blob([stored.get(path)])}):({error:{message:'missing'}})
+  })},from:()=>({select:()=>({eq(){return this;},maybeSingle:async()=>({data:null,error:null})})}),rpc:async(_,args)=>{rpc++;assert.equal(args.p_arquivo.sha256.length,64);assert.equal(args.p_arquivo.size,bytes.length);return{data:{duplicate:false}};}};
+  const doc={...payload,text:undefined,document:{mimeType:'application/pdf',fileName:'teste.pdf',documentUrl:'https://cdn.vendor.example/file'}};
+  const fetcher=async()=>new Response(bytes,{headers:{'content-length':String(bytes.length)}});
+  assert.equal((await createRealWebhookIngress(config(db,{fetcher}))(request(doc))).status,200);assert.equal(upload,1);assert.equal(rpc,1);
+  assert.equal((await createRealWebhookIngress(config(db,{fetcher}))(request({...doc,messageId:'bad-host',document:{...doc.document,documentUrl:'https://127.0.0.1/x'}}))).status,422);assert.equal(rpc,1);
+  assert.equal((await createRealWebhookIngress(config(db,{fetcher:async()=>new Response(bytes,{headers:{'content-length':'9999999'}})}))(request({...doc,messageId:'huge'}))).status,413);assert.equal(rpc,1);
+  const failed={...db,storage:{...db.storage,from:()=>({upload:async()=>({error:{message:'fail'}}),download:async()=>({error:{message:'fail'}})})}};
+  assert.equal((await createRealWebhookIngress(config(failed,{fetcher}))(request({...doc,messageId:'failed'}))).status,503);assert.equal(rpc,1);
+});
+test('download bloqueia rede interna, credenciais, redirects, MIME divergente e bytes excedentes',async()=>{
+  const {validateMediaUrl,downloadPdf}=await ready;
+  const hosts=['media.example.invalid','cdn.vendor.example'];
+  for(const url of ['http://cdn.vendor.example/a','https://127.0.0.1/a','https://localhost/a',
+    'https://user:pass@cdn.vendor.example/a','https://cdn.vendor.example:8443/a','https://cdn.vendor.example/a#frag',
+    'https://cdn.vendor.example.evil/a','https://media.example.invalid/a']){
+    assert.throws(()=>validateMediaUrl(url,hosts));
+  }
+  await assert.rejects(downloadPdf('https://cdn.vendor.example/a',{allowedHosts:hosts,fetcher:async()=>Response.redirect('https://evil.invalid/a')}));
+  await assert.rejects(downloadPdf('https://cdn.vendor.example/a',{allowedHosts:hosts,fetcher:async()=>new Response('%PDF-fixture',{headers:{'content-type':'text/html'}})}));
+  await assert.rejects(downloadPdf('https://cdn.vendor.example/a',{allowedHosts:hosts,fetcher:async()=>new Response('%PDF-fixture',{headers:{'content-length':'5242881'}})}));
+  await assert.rejects(downloadPdf('https://cdn.vendor.example/a',{allowedHosts:hosts,fetcher:async()=>new Response(new Uint8Array(5242881))}));
+});
+test('upload concluído e RPC falha: retry reaproveita PDF privado sem depender da URL expirada',async()=>{
+  const {createRealWebhookIngress}=await ready;const bytes=new TextEncoder().encode('%PDF-retry');const stored=new Map();let calls=0,downloads=0;
+  const db={storage:{getBucket:async()=>({data:{id:'atendimento-arquivos',public:false}}),from:()=>({
+    download:async p=>stored.has(p)?{data:new Blob([stored.get(p)]),error:null}:{error:{message:'missing'}},
+    upload:async(p,b)=>{stored.set(p,b);return{error:null};}
+  })},from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null,error:null})}),
+    rpc:async()=>++calls===1?{error:{code:'08006'}}:{data:{duplicate:false}}};
+  const doc={...payload,text:undefined,document:{mimeType:'application/pdf',fileName:'teste.pdf',documentUrl:'https://cdn.vendor.example/a'}};
+  const ingress=createRealWebhookIngress(config(db,{allowedHosts:['cdn.vendor.example'],fetcher:async()=>{downloads++;if(downloads>1)throw Error('URL expirada');return new Response(bytes,{headers:{'content-type':'application/pdf'}});}}));
+  assert.equal((await ingress(request(doc))).status,503);
+  assert.equal((await ingress(request(doc))).status,200);
+  assert.equal(downloads,1);assert.equal(stored.size,1);assert.equal(calls,2);
+});
+test('backup e restauração copiam bytes privados e rejeitam arquivo ausente ou alterado',async()=>{
+  const {exportReceivedMedia,restoreReceivedMedia}=await import('../supabase/functions/_shared/atendimento/received-media-backup.mjs');
+  const bytes=new TextEncoder().encode('%PDF-fixture'),id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const sha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const path=`${owner}/recebidos/${id}.pdf`,rows=[{id,caminho:path,tamanho:bytes.length,sha256}];
+  const source=new Map([[path,bytes]]),target=new Map();
+  const pack=await exportReceivedMedia({owner,rows,get:p=>source.get(p)});
+  assert.equal((await restoreReceivedMedia({pack,owner,rows,get:p=>target.get(p),put:(p,b)=>target.set(p,b)})).verified,true);
+  assert.deepEqual(target.get(path),bytes);
+  const bad=structuredClone(pack);bad.files[0].base64=btoa('%PDF-corrupt');
+  await assert.rejects(restoreReceivedMedia({pack:bad,owner,rows,get:p=>target.get(p),put:()=>{throw Error('não gravar');}}));
+  await assert.rejects(exportReceivedMedia({owner,rows,get:()=>null}));
+});
+test('página de leitura mostra só dados do proprietário e escapa texto recebido',async()=>{
+  const {JSDOM}=require('../cotador/node_modules/jsdom');
+  const fs=require('node:fs'),path=require('node:path');
+  const html=fs.readFileSync(path.join(__dirname,'../atendimento-recebidos.html'),'utf8');
+  const dom=new JSDOM(html,{url:'https://example.invalid/atendimento-recebidos.html'});
+  const module=await import('../js/atendimento-recebidos.mjs');
+  global.document=dom.window.document;
+  const cid='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const rows={atendimento_recepcao_conversas:[{id:cid,nome:'Ana Exemplo'}],
+    atendimento_recepcao_identidades:[{conversa_id:cid,tipo:'telefone',valor:'5562999990001'}],
+    atendimento_recepcao_mensagens:[{id:'m1',conversa_id:cid,texto:'<script>não executar</script>',tipo:'texto',ocorrido_em:'2026-10-13T09:00:00Z'}],
+    atendimento_recepcao_arquivos:[],atendimento_recepcao_gestao:[]};
+  const scopes=[];
+  const client={from:table=>({select(){return this;},eq(key,value){scopes.push([table,key,value]);return this;},range(){return this;},order(){return this;},maybeSingle:async()=>({data:{conteudo:{}},error:null}),then(resolve){resolve({data:rows[table]||[],error:null});}}),auth:{onAuthStateChange(){}}};
+  try{
+    await module.startReceivedPage(client,{getUser:async()=>({id:owner})});
+    assert.equal(dom.window.document.getElementById('rec-workspace').hidden,false);
+    assert.match(dom.window.document.getElementById('rec-messages').textContent,/não executar/);
+    assert.equal(dom.window.document.querySelector('#rec-messages script'),null);
+    assert.ok(dom.window.document.querySelector('#rec-manage'));assert.equal(dom.window.document.querySelector('#rec-compose'),null);
+    assert.equal(scopes.length,6);assert.ok(scopes.every(([,key,value])=>key==='user_id'&&value===owner));
+  }finally{delete global.document;dom.window.close();}
+});
+test('página percorre além do limite de 500 registros com ordem estável',async()=>{
+  const {JSDOM}=require('../cotador/node_modules/jsdom');
+  const fs=require('node:fs'),path=require('node:path');
+  const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../atendimento-recebidos.html'),'utf8'));
+  const {startReceivedPage}=await import('../js/atendimento-recebidos.mjs');
+  global.document=dom.window.document;
+  const cid='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const messages=Array.from({length:501},(_,i)=>({id:String(i).padStart(4,'0'),conversa_id:cid,texto:`linha ${i}`,tipo:'texto',ocorrido_em:'2026-10-13T09:00:00Z'}));
+  const rows={atendimento_recepcao_conversas:[{id:cid,nome:'Ana'}],atendimento_recepcao_identidades:[],atendimento_recepcao_mensagens:messages,atendimento_recepcao_arquivos:[],atendimento_recepcao_gestao:[]};
+  const pages=[],orders=[];
+  const client={from:table=>({select(){return this;},eq(){return this;},range(a,b){this.slice=[a,b];pages.push([table,a,b]);return this;},order(key){orders.push([table,key]);return this;},maybeSingle:async()=>({data:{conteudo:{}},error:null}),then(resolve){const [a,b]=this.slice;resolve({data:(rows[table]||[]).slice(a,b+1),error:null});}}),auth:{onAuthStateChange(){}}};
+  try{
+    await startReceivedPage(client,{getUser:async()=>({id:owner})});
+    assert.equal(dom.window.document.querySelectorAll('#rec-messages article').length,501);
+    assert.ok(pages.some(([table,start])=>table==='atendimento_recepcao_mensagens'&&start===500));
+    assert.ok(orders.some(([table,key])=>table==='atendimento_recepcao_mensagens'&&key==='id'));
+  }finally{delete global.document;dom.window.close();}
+});
+test('CRM do piloto salva etapa, origem, notas, follow-up e vínculos só com registros do cliente',async()=>{
+  const {JSDOM}=require('../cotador/node_modules/jsdom');const fs=require('node:fs'),path=require('node:path');
+  const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../atendimento-recebidos.html'),'utf8'));
+  const {startReceivedPage}=await import('../js/atendimento-recebidos.mjs');global.document=dom.window.document;
+  const cid='dddddddd-dddd-4ddd-8ddd-dddddddddddd',written=[];
+  const rows={atendimento_recepcao_conversas:[{id:cid,instancia:instance,nome:'Ana Exemplo'}],
+    atendimento_recepcao_identidades:[{conversa_id:cid,tipo:'telefone',valor:'5562999990001'}],
+    atendimento_recepcao_mensagens:[{id:'m1',conversa_id:cid,texto:'Olá',tipo:'texto',ocorrido_em:'2026-10-13T09:00:00Z'}],
+    atendimento_recepcao_arquivos:[],atendimento_recepcao_gestao:[]};
+  const conteudo={emissao_pessoas:[{id:'c1',nome:'Cliente 1'},{id:'c2',nome:'Cliente 2'}],
+    emissao_cotacoes:[{id:'q1',clienteId:'c1',origem:'GYN',destino:'GRU'},{id:'q2',clienteId:'c2'}],
+    emissao_vendas:[{id:'v1',clienteId:'c1',origem:'GYN',destino:'GRU'}]};
+  const client={auth:{onAuthStateChange(){}},from:table=>({select(){return this;},eq(){return this;},range(a,b){this.slice=[a,b];return this;},order(){return this;},
+    maybeSingle:async()=>({data:{conteudo},error:null}),then(resolve){const [a,b]=this.slice;resolve({data:(rows[table]||[]).slice(a,b+1),error:null});},
+    async upsert(value){written.push(value);return{error:value.user_id===owner?null:{message:'RLS'}};}})};
+  const $=id=>dom.window.document.getElementById(id);
+  try{
+    await startReceivedPage(client,{getUser:async()=>({id:owner})});
+    $('rec-client').value='c1';$('rec-client').dispatchEvent(new dom.window.Event('change'));
+    assert.ok([...$('rec-quote').options].some(x=>x.value==='q1'));assert.ok(![...$('rec-quote').options].some(x=>x.value==='q2'));
+    $('rec-stage').value='cotacao';$('rec-tags').value='Indicação, Prioridade';$('rec-origin').value='Indicação de cliente';
+    $('rec-note').value='Prefere horário da tarde';$('rec-next-action').value='Ligar';$('rec-quote').value='q1';$('rec-sale').value='v1';
+    $('rec-manage').dispatchEvent(new dom.window.Event('submit',{cancelable:true}));
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(written.length,1);assert.equal(written[0].user_id,owner);assert.equal(written[0].conversa_id,cid);
+    assert.equal(written[0].etapa,'cotacao');assert.deepEqual(written[0].etiquetas,['Indicação','Prioridade']);
+    assert.equal(written[0].cotacao_id,'q1');assert.equal(written[0].venda_id,'v1');
+    assert.match($('rec-summary').textContent,/1 em cotação/);
+    $('rec-mark-read').click();await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(written[1].visto_ate,'2026-10-13T09:00:00Z');
+  }finally{delete global.document;dom.window.close();}
+});

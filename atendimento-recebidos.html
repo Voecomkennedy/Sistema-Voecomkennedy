@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mensagens recebidas — Voecomkennedy</title><link rel="stylesheet" href="css/atendimento.css"></head>
+<body><nav aria-label="Navegação principal"><a class="brand" href="index.html">Voecomkennedy</a><a href="atendimento.html?demo=autenticado">Atendimento demonstrativo</a></nav>
+<main><header><div><p class="eyebrow">Somente leitura</p><h1>Mensagens privadas recebidas</h1></div><span class="pill">Envio pelo CRM desligado</span></header>
+<p class="notice">Esta área mostra apenas mensagens recebidas depois da ativação consciente do callback. Conversas da demonstração continuam separadas. Anexos do piloto aparecem como pendentes: o arquivo não é baixado nem arquivado. Clientes, cotações e vendas ainda não são associados automaticamente.</p>
+<p id="rec-gate" role="status">Verificando sessão…</p><p id="rec-error" role="alert" hidden></p>
+<div id="rec-workspace" class="workspace" hidden>
+  <section class="inbox"><h2>Conversas privadas</h2><p id="rec-summary" class="help"></p><label for="rec-search">Buscar contato ou texto</label><input id="rec-search" type="search" placeholder="Nome, telefone ou texto"><label for="rec-stage-filter">Etapa</label><select id="rec-stage-filter"><option value="">Todas</option><option value="novo">Novo</option><option value="cotacao">Cotação</option><option value="aguardando">Aguardando cliente</option><option value="sem_resposta">Sem resposta</option><option value="emissao">Emissão</option><option value="encerrado">Encerrado</option></select><label for="rec-tag-filter">Etiqueta</label><select id="rec-tag-filter"><option value="">Todas</option></select><label><input id="rec-unread-filter" type="checkbox"> Só não lidas</label><div id="rec-chats"></div></section>
+  <section class="conversation"><h2 id="rec-title">Selecione uma conversa</h2><p id="rec-identity"></p><div id="rec-messages" class="timeline" role="log" aria-label="Mensagens recebidas"></div></section>
+  <aside id="rec-context" class="context" hidden><h2>Organizar atendimento</h2><p class="help">Etapa, origem e vínculos são definidos por você. Follow-ups automáticos ainda estão desligados e dependem de regras e textos aprovados.</p>
+    <form id="rec-manage">
+      <label for="rec-stage">Etapa</label><select id="rec-stage"><option value="novo">Novo</option><option value="cotacao">Cotação</option><option value="aguardando">Aguardando cliente</option><option value="sem_resposta">Sem resposta</option><option value="emissao">Emissão</option><option value="encerrado">Encerrado</option></select>
+      <label><input id="rec-optout" type="checkbox"> Não contatar automaticamente</label>
+      <label for="rec-tags">Etiquetas (até 8, separadas por vírgula)</label><input id="rec-tags" maxlength="320" placeholder="Indicação, prioridade">
+      <label for="rec-origin">Origem do contato</label><input id="rec-origin" maxlength="200" placeholder="Ex.: indicação de cliente">
+      <label for="rec-note">Anotações sobre o cliente</label><textarea id="rec-note" maxlength="4000" rows="4"></textarea>
+      <label for="rec-next-action">Próxima ação manual</label><input id="rec-next-action" maxlength="200" placeholder="Ex.: ligar para confirmar interesse">
+      <label for="rec-next-due">Quando revisar</label><input id="rec-next-due" type="datetime-local">
+      <label for="rec-client">Cliente existente</label><select id="rec-client"><option value="">Sem vínculo</option></select>
+      <label for="rec-quote">Cotação deste cliente</label><select id="rec-quote"><option value="">Sem vínculo</option></select>
+      <label for="rec-sale">Venda deste cliente</label><select id="rec-sale"><option value="">Sem vínculo</option></select>
+      <button type="submit" class="primary">Salvar organização</button>
+    </form><button id="rec-mark-read" type="button">Marcar conversa como lida</button><p id="rec-feedback" role="status" class="help"></p>
+  </aside>
+</div></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/supabase-config.js"></script><script src="js/auth.js"></script><script type="module" src="js/atendimento-recebidos.mjs"></script>
+</body></html>

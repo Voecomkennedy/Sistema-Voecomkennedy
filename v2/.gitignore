@@ -1,0 +1,36 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+
+# Variáveis de ambiente (NUNCA commitar)
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

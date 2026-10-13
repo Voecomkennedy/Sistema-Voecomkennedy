@@ -1,0 +1,15 @@
+volta exige horário para check-in; partida não comprova chegada ... ok (374µs)
+não transforma LID, lixo ou telefone vazio em destinatário ... ok (62µs)
+preserva DDI explícito e aplica Brasil somente ao nacional sem + ... ok (55µs)
+rejeita destinatários obviamente inválidos sem transformar texto ... ok (32µs)
+chave de envio distingue modo e não reseta ao alterar horário ... ok (40µs)
+running 7 tests from ./supabase/functions/tests/pos-venda-candidate/handler.test.ts
+autenticação precede leitura de clientes e qualquer execução ... ok (4ms)
+GET previa e dry nunca enviam, mesmo ativo ou pausado ... ok (1ms)
+POST pausado não lê clientes nem chama executor ... ok (311µs)
+GET sem prévia e métodos estranhos nunca disparam envio ... ok (174µs)
+simular relógio é exclusivo de prévia, nunca POST ... ok (759µs)
+candidato sem executor transacional não se apresenta como pronto ... ok (234µs)
+falha de configuração é fechada e não expõe detalhes sensíveis ... ok (250µs)
+
+ok | 75 passed | 0 failed (266ms)

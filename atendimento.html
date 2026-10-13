@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atendimento — Voecomkennedy</title>
+    <link rel="icon" href="favicon-32.png"><link rel="stylesheet" href="css/atendimento.css">
+</head>
+<body>
+    <nav aria-label="Navegação principal"><a class="brand" href="index.html">Voecomkennedy</a><a href="pessoas.html">Pessoas</a><a href="cotacoes.html">Cotações</a><a href="vendas.html">Vendas</a><a href="mensagens.html">Central de Mensagens</a></nav>
+    <main>
+        <header><div><p class="eyebrow">Conversas e contexto comercial</p><h1>Atendimento</h1></div><span class="pill">MVP • desativado na operação</span></header>
+        <p id="at-gate" class="notice">Este módulo está desativado. A demonstração está disponível somente em localhost com <code>?demo=1</code>.</p>
+        <div id="at-workspace" hidden>
+            <div class="notice"><strong>Demonstração com dados fictícios.</strong> As mensagens e arquivos ficam na memória desta aba. Recarregar reinicia a demonstração. Nenhuma mensagem é enviada ao WhatsApp.</div>
+            <p id="at-status" role="status" aria-live="polite"></p><p id="at-error" role="alert" hidden></p>
+            <div class="workspace">
+                <section class="inbox" aria-label="Conversas privadas">
+                    <h2>Conversas privadas</h2>
+                    <label for="at-search">Buscar contato ou mensagem</label><input id="at-search" type="search" placeholder="Nome, telefone ou texto">
+                    <div class="filters"><label><input id="at-unread" type="checkbox"> Só não lidas</label><label for="at-label">Etiqueta</label><select id="at-label"><option value="">Todas</option></select></div>
+                    <div id="at-chats"></div><button id="at-receive" type="button">Simular nova mensagem</button>
+                </section>
+                <section class="conversation" aria-label="Mensagem e composição">
+                    <div class="chat-heading"><div><h2 id="at-title">Selecione uma conversa</h2><p id="at-phone"></p></div><button id="at-read" type="button">Marcar como lida</button></div>
+                    <div id="at-messages" class="timeline" role="log" aria-label="Histórico de mensagens"></div>
+                    <form id="at-compose">
+                        <label for="at-text">Sua mensagem</label><textarea id="at-text" rows="3" maxlength="10000" placeholder="Escreva uma resposta de teste…"></textarea>
+                        <div class="compose-tools"><label for="at-pdf">Anexar PDF sintético (até 5 MB)</label><input id="at-pdf" type="file" accept="application/pdf,.pdf"><button id="at-sample-pdf" type="button">Usar PDF de exemplo</button></div>
+                        <p id="at-attachment" class="help"></p>
+                        <div class="compose-actions"><label for="at-outcome">Resultado do teste</label><select id="at-outcome"><option value="success">Sucesso simulado</option><option value="failure">Falha segura (permite retry)</option><option value="uncertain">Resultado incerto (bloqueia retry)</option></select><button class="primary" type="submit">Simular envio</button></div>
+                    </form>
+                </section>
+                <aside class="context" aria-label="Contexto comercial">
+                    <h2>Cliente e negócios</h2><div id="at-context"></div>
+                    <form id="at-link"><h3>Vínculo explícito</h3>
+                        <label for="at-client">Cliente do sistema (exemplo)</label><select id="at-client"><option value="">Sem vínculo</option></select>
+                        <label for="at-quote">Cotação vinculada</label><select id="at-quote"><option value="">Sem vínculo</option></select>
+                        <label for="at-sale">Venda vinculada</label><select id="at-sale"><option value="">Sem vínculo</option></select>
+                        <label for="at-origin">Origem informada pelo contato</label><input id="at-origin" maxlength="120" placeholder="Não informada">
+                        <label for="at-tags">Etiquetas (separadas por vírgula)</label><input id="at-tags" placeholder="Proposta, Pós-venda"><button type="submit">Salvar vínculo na demonstração</button>
+                    </form>
+                    <p class="help">Um vínculo não comprova a origem da venda. Valores recebidos vêm do resumo financeiro existente; origem não informada permanece desconhecida.</p>
+                </aside>
+            </div>
+            <section class="archive"><div><h2>Arquivo da demonstração</h2><p>Exporte eventos e bytes dos PDFs. A restauração valida o SHA-256 de cada arquivo antes de substituir a memória da aba.</p></div><button id="at-export" type="button">Exportar pacote sintético</button><label for="at-import">Restaurar pacote sintético</label><input id="at-import" type="file" accept="application/json,.json"></section>
+        </div>
+    </main>
+    <script src="js/storage.js"></script><script type="module" src="js/atendimento-page.mjs"></script>
+</body>
+</html>

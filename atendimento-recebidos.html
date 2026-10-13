@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mensagens recebidas — Voecomkennedy</title><link rel="stylesheet" href="css/atendimento.css"></head>
+<body><nav aria-label="Navegação principal"><a class="brand" href="index.html">Voecomkennedy</a><a href="atendimento.html?demo=autenticado">Atendimento demonstrativo</a></nav>
+<main><header><div><p class="eyebrow">Somente leitura</p><h1>Mensagens privadas recebidas</h1></div><span class="pill">Envio pelo CRM desligado</span></header>
+<p class="notice">Esta área mostra apenas textos recebidos depois da ativação consciente do callback. Anexos do piloto aparecem como pendentes, sem download de arquivo. Conversas da demonstração continuam separadas. Clientes, cotações e vendas ainda não são associados automaticamente.</p>
+<p id="rec-gate" role="status">Verificando sessão…</p><p id="rec-error" role="alert" hidden></p>
+<div id="rec-workspace" class="workspace" hidden>
+  <section class="inbox"><h2>Conversas privadas</h2><label for="rec-search">Buscar contato ou texto</label><input id="rec-search" type="search" placeholder="Nome, telefone ou texto"><div id="rec-chats"></div></section>
+  <section class="conversation"><h2 id="rec-title">Selecione uma conversa</h2><p id="rec-identity"></p><div id="rec-messages" class="timeline" role="log" aria-label="Mensagens recebidas"></div></section>
+</div></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/supabase-config.js"></script><script src="js/auth.js"></script><script type="module" src="js/atendimento-recebidos.mjs"></script>
+</body></html>

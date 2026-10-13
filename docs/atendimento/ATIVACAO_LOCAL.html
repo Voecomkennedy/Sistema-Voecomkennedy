@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; img-src 'none'; base-uri 'none'">
+  <title>Handoff local — recebimento privado</title>
+  <style>
+    body{font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#172033;background:#f7f9fc}
+    main{background:white;padding:1.5rem;border:1px solid #d6dce5;border-radius:12px}
+    h1{font-size:1.6rem}h2{font-size:1.2rem;margin-top:2rem}
+    label{display:block;font-weight:600;margin-top:1rem}input,textarea{box-sizing:border-box;width:100%;padding:.65rem;border:1px solid #8894a7;border-radius:6px;font:inherit}
+    textarea{min-height:4.5rem;resize:vertical}button{margin:.5rem .5rem .5rem 0;padding:.6rem .9rem;border:0;border-radius:6px;background:#174ea6;color:white;cursor:pointer}
+    button.secondary{background:#455468}.notice{padding:1rem;background:#fff4d1;border-left:4px solid #ba8100}.mono{font-family:ui-monospace,monospace;overflow-wrap:anywhere}
+    #output[hidden],#error[hidden]{display:none}#error{color:#a01818;font-weight:600}.small{font-size:.9rem}
+  </style>
+</head>
+<body><main>
+  <h1>Preparar recebimento privado</h1>
+  <p class="notice">Abra este arquivo <strong>localmente</strong> no Mac mini. Ele não envia dados, não usa backend, não grava em disco nem configura a Z-API ou o Supabase. Não cole a capacidade nem a URL completa no chat, Git ou PR.</p>
+  <p>A migração aditiva e a função já foram instaladas de forma <strong>inerte</strong>. Sem os valores abaixo e com a flag desligada, a função respondeu 503. Nenhuma URL de callback foi cadastrada nesta etapa. A página de leitura está no PR em rascunho; confirme sua publicação e a revisão de segurança antes de ativar a Z-API.</p>
+  <p>Destino confirmado: projeto Supabase <span class="mono">qryobmqrkzddcvlvgfrp</span>, função <span class="mono">atendimento-recebimento</span>, proprietário comercial <span class="mono">fbb720b6-80ec-401e-9e53-7fc3e929fb7e</span>. Origem da página do sistema: <span class="mono">https://sistema.voecomkennedy.tur.br</span>. Nome conhecido da instância: <strong>Voecomkennedy</strong>; seu ID e telefone precisam ser lidos no painel.</p>
+  <p>Antes de preencher, entre pessoalmente no painel da instância Z-API <strong>Voecomkennedy</strong>. Confira o <code>instanceId</code>, o <code>connectedPhone</code> recebido nos eventos, a URL atual de <strong>Ao receber</strong>, a opção de mensagens próprias e os filtros globais. Se já existir outro receptor, pare: ele precisa ser preservado por encaminhamento.</p>
+
+  <label for="instance">ID exato da instância Z-API</label>
+  <input id="instance" autocomplete="off" spellcheck="false" placeholder="Copie do painel Z-API; não use o token">
+  <label for="phone">Telefone conectado em connectedPhone (somente dígitos, com país e DDD)</label>
+  <input id="phone" autocomplete="off" spellcheck="false" inputmode="numeric" placeholder="Ex.: 55 + DDD + número">
+  <label for="hosts">Hostnames HTTPS exatos das URLs de PDF (separados por vírgula)</label>
+  <input id="hosts" autocomplete="off" spellcheck="false" placeholder="Confirme em URL legítima de mídia; sem https:// nem caminhos">
+  <p class="small">O host de mídia deve vir de uma URL legítima da própria instância. Não use IP, localhost, curinga ou host inventado. Enquanto ele não for confirmado, mantenha o recebimento desligado.</p>
+  <button id="generate" type="button">Gerar capacidade local de 32 bytes</button>
+  <p id="error" role="alert" hidden></p>
+
+  <section id="output" hidden>
+    <h2>Valores para cadastrar pessoalmente no Supabase</h2>
+    <p>Na configuração de segredos da função/projeto acima, use os nomes abaixo. Deixe <strong>ATENDIMENTO_RECEBIMENTO_ENABLED=false</strong> até terminar a revisão de callback e o teste controlado.</p>
+    <label for="fixed">Variáveis sem segredo</label>
+    <textarea id="fixed" class="mono" readonly></textarea>
+    <button type="button" class="secondary" data-copy="fixed">Copiar variáveis sem segredo</button>
+    <label for="capability">ATENDIMENTO_RECEBIMENTO_CAPABILITY — segredo gerado neste navegador</label>
+    <input id="capability" class="mono" type="password" readonly autocomplete="off">
+    <button type="button" data-copy="capability">Copiar capacidade</button>
+    <button type="button" class="secondary" id="reveal">Mostrar/ocultar</button>
+    <label for="callback">URL de “Ao receber” — cadastre só na etapa de ativação</label>
+    <textarea id="callback" class="mono" readonly></textarea>
+    <button type="button" data-copy="callback">Copiar URL</button>
+    <button type="button" class="secondary" id="clear">Apagar da página</button>
+    <p class="small">A capacidade e a URL ficam apenas na memória desta página e, se copiadas, na área de transferência do Mac. Guarde a capacidade em local seguro de sua escolha. Não reutilize token ou Client-Token da Z-API.</p>
+  </section>
+  <h2>Sequência de ativação</h2>
+  <ol>
+    <li>Com o callback Z-API ainda intacto, cadastrar pessoalmente os valores acima no projeto Supabase confirmado. A função já está publicada com <code>verify_jwt=false</code> somente para este webhook. Manter <code>ATENDIMENTO_RECEBIMENTO_ENABLED=false</code> e conferir que ela continua respondendo 503.</li>
+    <li>Confirmar no painel Z-API se “Ao receber” continua vazio (ou documentar a URL anterior), se mensagens próprias e filtros globais continuam desligados. O backup de banco e arquivos, a migração, o RLS e o bucket privado já foram conferidos; se algo mudou, interrompa e revise.</li>
+    <li>Após a página de leitura estar disponível e a revisão do PR concluída, somente na janela de ativação decidida por você, definir <code>ATENDIMENTO_RECEBIMENTO_ENABLED=true</code> e cadastrar a URL gerada em <strong>Ao receber</strong>. A combinação da flag ligada com essa URL ativa a entrada de futuras mensagens privadas. Não há importação de histórico antigo.</li>
+    <li>Se precisar parar, remover/restaurar a URL anterior de “Ao receber” e voltar <code>ATENDIMENTO_RECEBIMENTO_ENABLED=false</code>. Preservar tabelas e PDFs para conciliação; não apagar dados.</li>
+  </ol>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const project='qryobmqrkzddcvlvgfrp';
+  const owner='fbb720b6-80ec-401e-9e53-7fc3e929fb7e';
+  const clear=()=>{$('capability').value='';$('callback').value='';$('fixed').value='';$('output').hidden=true;};
+  $('generate').addEventListener('click',()=>{
+    clear();$('error').hidden=true;
+    const instance=$('instance').value.trim(),phone=$('phone').value.trim();
+    const hosts=$('hosts').value.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+    if(!/^[A-Za-z0-9_-]{1,160}$/.test(instance)||!/^[0-9]{10,15}$/.test(phone)||!hosts.length||
+       hosts.some(x=>!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(x)||/\.(?:local|localhost|internal|test|invalid)$/.test(x)||/^\d+(?:\.\d+){3}$/.test(x))){
+      $('error').textContent='Confira ID, telefone e hostnames exatos no painel Z-API.';$('error').hidden=false;return;
+    }
+    if(!globalThis.crypto?.getRandomValues){$('error').textContent='Gerador criptográfico indisponível neste navegador. Não use esta página.';$('error').hidden=false;return;}
+    const bytes=crypto.getRandomValues(new Uint8Array(32));
+    const capability=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    bytes.fill(0);
+    $('fixed').value=`ATENDIMENTO_RECEBIMENTO_ENABLED=false\nATENDIMENTO_RECEBIMENTO_OWNER_ID=${owner}\nATENDIMENTO_RECEBIMENTO_INSTANCE_ID=${instance}\nATENDIMENTO_RECEBIMENTO_CONNECTED_PHONE=${phone}\nATENDIMENTO_RECEBIMENTO_MEDIA_HOSTS=${hosts.join(',')}`;
+    $('capability').value=capability;
+    $('callback').value=`https://${project}.supabase.co/functions/v1/atendimento-recebimento/${capability}`;
+    $('output').hidden=false;
+  });
+  $('clear').addEventListener('click',clear);
+  $('reveal').addEventListener('click',()=>{$('capability').type=$('capability').type==='password'?'text':'password';});
+  document.querySelectorAll('[data-copy]').forEach(button=>button.addEventListener('click',async()=>{
+    const value=$(button.dataset.copy).value;
+    if(!value)return;
+    try{await navigator.clipboard.writeText(value);button.textContent='Copiado';setTimeout(()=>{button.textContent=button.dataset.copy==='fixed'?'Copiar variáveis sem segredo':button.dataset.copy==='callback'?'Copiar URL':'Copiar capacidade';},1800);}
+    catch{$('error').textContent='Cópia automática indisponível neste navegador. Selecione o campo e copie manualmente.';$('error').hidden=false;}
+  }));
+  addEventListener('pagehide',clear);
+})();
+</script>
+</body></html>

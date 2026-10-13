@@ -1,6 +1,21 @@
 // Candidato exclusivamente sintético. Sem endpoint, segredo, conexão Z-API ou publicação.
 import { createDurableFanout } from './durable-fanout.mjs';
 const answer=(status,data)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json','cache-control':'no-store'}});
+// A Z-API documenta a URL HTTPS do callback, mas não uma assinatura de origem.
+// Esta capacidade prova somente posse da URL; não prova que a Z-API a enviou.
+// O valor real terá de ser gerado e guardado fora do código em uma etapa autorizada.
+export function createCapabilityVerifier({capability,owner,instance='mock',pathPrefix='/functions/v1/atendimento-webhook'}){
+    if(typeof capability!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(capability)||typeof owner!=='string'||!owner||typeof instance!=='string'||!instance||!pathPrefix.startsWith('/')||pathPrefix.endsWith('/'))throw new Error('Configuração de capacidade inválida.');
+    const expected=pathPrefix+'/'+capability;
+    return request=>{
+        let url;try{url=new URL(request.url);}catch{return null;}
+        if(url.protocol!=='https:'||url.search||url.hash)return null;
+        // Comprimento fixo e comparação integral para não revelar o primeiro byte diferente.
+        const actual=url.pathname;let different=actual.length^expected.length;
+        for(let i=0;i<expected.length;i++)different|=(actual.charCodeAt(i)||0)^expected.charCodeAt(i);
+        return different===0?{owner,instance}:null;
+    };
+}
 async function readLimited(request,maxBytes){
     const reader=request.body?.getReader();if(!reader)throw Object.assign(new Error('Corpo ausente.'),{status:422});
     const chunks=[];let size=0;

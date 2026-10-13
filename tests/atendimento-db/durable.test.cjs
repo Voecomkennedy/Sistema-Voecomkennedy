@@ -167,3 +167,20 @@ test('ingresso HTTP sintético autentica antes de ler, vincula owner no servidor
     assert.equal((await createSyntheticWebhookIngress({...options,repositoryFor:async()=>{throw Error('db down');}})(req({...payload,messageId:'db-fail'}))).status,503);
     assert.ok(authCalls>=5);
 });
+test('capacidade de URL valida caminho exato e não lê corpo nem confia no proprietário do evento',async()=>{
+    const {createCapabilityVerifier,createSyntheticWebhookIngress}=await import('../../supabase/functions/_shared/atendimento/ingress-candidate.mjs');
+    const f=await fixture(),capability='A'.repeat(43),verifyIngress=createCapabilityVerifier({capability,owner:f.owner});
+    const path='/functions/v1/atendimento-webhook/';
+    const request=(suffix,body='{}')=>new Request('https://local.invalid'+path+suffix,{method:'POST',body});
+    assert.deepEqual(verifyIngress(request(capability)),{owner:f.owner,instance:'mock'});
+    for(const suffix of ['',capability.slice(0,-1),capability.slice(0,-1)+'B',capability+'/extra',capability+'?owner='+f.owner])assert.equal(verifyIngress(request(suffix)),null);
+    assert.equal(verifyIngress(new Request('http://local.invalid'+path+capability,{method:'POST',body:'{}'})),null);
+    assert.throws(()=>createCapabilityVerifier({capability:'curta',owner:f.owner}));
+    const ingress=createSyntheticWebhookIngress({enabled:true,privateEnabled:true,connectedPhone:'5562999990999',verifyIngress,repositoryFor:()=>f.repo});
+    const unauthorized=request('B'.repeat(43),'x'.repeat(200001));
+    assert.equal((await ingress(unauthorized)).status,401);
+    assert.equal(unauthorized.bodyUsed,false);
+    const payload={instanceId:'mock',owner:f.other,connectedPhone:'5562999990999',type:'ReceivedCallback',isGroup:false,phone:'5562999990001',messageId:'capability-fixture',fromMe:false,momment:Date.now(),status:'RECEIVED',text:{message:'Sintética'}};
+    assert.equal((await ingress(request(capability,JSON.stringify(payload)))).status,200);
+    assert.equal((await pool.query('select count(*) n from public.atendimento_encaminhamentos where user_id=$1',[f.other])).rows[0].n,'0');
+});

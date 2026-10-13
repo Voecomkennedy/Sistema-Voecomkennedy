@@ -1,0 +1,1 @@
+{"verify_jwt":false,"note":"A função valida a capacidade de 256 bits no caminho antes de ler o corpo. ATENDIMENTO_RECEBIMENTO_ENABLED ausente/desligado retorna 503. Nunca registrar o caminho completo."}

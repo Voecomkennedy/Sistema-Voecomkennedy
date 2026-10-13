@@ -10,5 +10,5 @@ Deno.serve(createRealWebhookIngress({
   owner:Deno.env.get('ATENDIMENTO_RECEBIMENTO_OWNER_ID')||'',
   instance:Deno.env.get('ATENDIMENTO_RECEBIMENTO_INSTANCE_ID')||'',
   connectedPhone:Deno.env.get('ATENDIMENTO_RECEBIMENTO_CONNECTED_PHONE')||'',
-  db,allowedHosts
+  db,allowedHosts,archivePdf:Deno.env.get('ATENDIMENTO_RECEBIMENTO_ARCHIVE_PDF')==='true'
 }));

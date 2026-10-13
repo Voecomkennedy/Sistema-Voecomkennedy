@@ -49,6 +49,7 @@ async function freePort() {
         run('psql', [...sqlArgs, '-f', `supabase/migrations/${durable[0]}`]);
         run('psql', [...sqlArgs, '-f', 'supabase/migrations/20261013164308_atendimento_encaminhamento_retry.sql']);
         run('psql', [...sqlArgs, '-f', 'supabase/migrations/20261013190000_atendimento_recepcao_privada.sql']);
+        run('psql', [...sqlArgs, '-f', 'supabase/migrations/20261013201000_atendimento_recepcao_gestao.sql']);
         run('createdb', ['-h', '127.0.0.1', '-p', String(port), '-U', username, 'vck_atendimento_restore_test']);
         const restoreArgs = sqlArgs.map(value => value === 'vck_central_test' ? 'vck_atendimento_restore_test' : value);
         const restoreBootstrap = path.join(dir, 'restore-bootstrap.sql');
@@ -59,6 +60,7 @@ async function freePort() {
         run('psql', [...restoreArgs, '-f', `supabase/migrations/${durable[0]}`]);
         run('psql', [...restoreArgs, '-f', 'supabase/migrations/20261013164308_atendimento_encaminhamento_retry.sql']);
         run('psql', [...restoreArgs, '-f', 'supabase/migrations/20261013190000_atendimento_recepcao_privada.sql']);
+        run('psql', [...restoreArgs, '-f', 'supabase/migrations/20261013201000_atendimento_recepcao_gestao.sql']);
         const sqlTest = path.join(repo, 'supabase/tests/central-mensagens.sql');
         if (fs.existsSync(sqlTest)) process.stdout.write(run('psql', [...sqlArgs, '-f', sqlTest]));
         const tests = fs.readdirSync(path.join(repo, 'tests/atendimento-db')).filter(name => name.endsWith('.test.cjs')).map(name => path.join('tests/atendimento-db', name));

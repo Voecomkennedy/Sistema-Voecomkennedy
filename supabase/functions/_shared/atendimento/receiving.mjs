@@ -18,18 +18,18 @@ async function readBounded(stream,limit){
 }
 
 export function normalizePrivateReceived(payload,{instance,connectedPhone}){
-  if(!payload||Array.isArray(payload)||typeof payload!=='object'||payload.instanceId!==instance||payload.connectedPhone!==connectedPhone)fail('Instância incompatível.');
+  if(!payload||Array.isArray(payload)||typeof payload!=='object'||payload.instanceId!==instance||!/^[0-9]{10,15}$/.test(payload.connectedPhone||'')||(connectedPhone&&payload.connectedPhone!==connectedPhone))fail('Instância incompatível.');
   if(payload.isGroup===true||payload.isNewsletter===true||/@g\.us$/.test(payload.phone||'')||payload.broadcast===true)return null;
   if(payload.type!=='ReceivedCallback'||payload.fromMe===true||payload.waitingMessage===true||payload.isEdit===true)return null;
   if(payload.isGroup!==false||payload.fromMe!==false||!id(payload.messageId)||!Number.isSafeInteger(payload.momment))fail('Evento privado inválido.');
   const at=new Date(payload.momment);if(!Number.isFinite(at.getTime())||at.getTime()>Date.now()+86400000)fail('Timestamp inválido.');
   const address=identity({phone:payload.phone,lid:payload.senderLid});
   if(!address.phone)fail('Telefone ausente.');
-  let kind='outro',text='[Mídia ou evento não suportado pelo Atendimento]',document=null;
+  let kind='outro',text=(payload.image||payload.video||payload.audio||payload.document)?'[Anexo recebido; arquivo pendente de arquivamento]':'[Evento privado não suportado pelo Atendimento]',document=null;
   if(payload.document?.mimeType==='application/pdf'){
     const d=payload.document;
-    if(typeof d.fileName!=='string'||!/^[^/\\]{1,116}\.pdf$/i.test(d.fileName)||[...d.fileName].some(c=>c.charCodeAt(0)<32)||typeof d.documentUrl!=='string')fail('PDF inválido.');
-    kind='pdf';text='[PDF recebido]';document={name:d.fileName,url:d.documentUrl};
+    if(typeof d.fileName!=='string'||!/^[^/\\]{1,116}\.pdf$/i.test(d.fileName)||[...d.fileName].some(c=>c.charCodeAt(0)<32))fail('PDF inválido.');
+    kind='pdf';text='[PDF recebido]';document={name:d.fileName,url:typeof d.documentUrl==='string'?d.documentUrl:''};
   }else if(typeof payload.text?.message==='string'){
     kind='texto';text=payload.text.message;
   }
@@ -86,8 +86,10 @@ export async function copyReceivedPdf(event,{owner,db,allowedHosts,fetcher=fetch
   return {id:fileId,path,sha256,size:bytes.length};
 }
 
-export function createRealWebhookIngress({enabled=false,capability,owner,instance,connectedPhone,db,allowedHosts=/** @type {string[]} */([]),fetcher=fetch}){
-  const ready=enabled===true&&uuid(owner)&&/^[A-Za-z0-9_-]{1,160}$/.test(instance||'')&&/^\d{10,15}$/.test(connectedPhone||'')&&db&&Array.isArray(allowedHosts);
+const pendingPdf=event=>({...event,kind:'outro',text:`[PDF recebido; arquivo pendente de arquivamento: ${event.document.name}]`,document:null});
+
+export function createRealWebhookIngress({enabled=false,capability,owner,instance,connectedPhone='',db,allowedHosts=/** @type {string[]} */([]),archivePdf=false,fetcher=fetch}){
+  const ready=enabled===true&&uuid(owner)&&/^[A-Za-z0-9_-]{1,160}$/.test(instance||'')&&(connectedPhone===''||/^\d{10,15}$/.test(connectedPhone))&&db&&Array.isArray(allowedHosts)&&(!archivePdf||allowedHosts.length>0);
   let verify=null;
   if(ready)try{verify=createCapabilityVerifier({capability,owner,instance,pathPrefix:'/functions/v1/atendimento-recebimento'});}catch{/* Configuração incompleta: fechado. */}
   return async request=>{
@@ -100,14 +102,16 @@ export function createRealWebhookIngress({enabled=false,capability,owner,instanc
     try{
       const bytes=await readBounded(request.body,LIMIT);
       let payload;try{payload=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{fail('JSON inválido.');}
-      const event=normalizePrivateReceived(payload,{instance,connectedPhone});
+      let event=normalizePrivateReceived(payload,{instance,connectedPhone});
       if(!event)return json(200,{ignored:true});
       let file=null;
+      if(event.document&&!archivePdf)event=pendingPdf(event);
       if(event.document){
         // Duplicata já commitada não depende de URL de mídia que pode ter expirado.
-        const existing=await db.from('atendimento_recepcao_mensagens').select('id').eq('user_id',owner).eq('instancia',instance).eq('provedor_id',event.messageId).maybeSingle();
+        const existing=await db.from('atendimento_recepcao_mensagens').select('id,tipo,texto').eq('user_id',owner).eq('instancia',instance).eq('provedor_id',event.messageId).maybeSingle();
         if(existing.error)fail('Consulta indisponível.',503);
-        if(!existing.data)file=await copyReceivedPdf(event,{owner,db,allowedHosts,fetcher});
+        if(existing.data?.tipo==='outro'&&existing.data.texto===pendingPdf(event).text)event=pendingPdf(event);
+        else if(!existing.data)file=await copyReceivedPdf(event,{owner,db,allowedHosts,fetcher});
       }
       const result=await db.rpc('atendimento_receber_privado',{
         p_owner:owner,p_instancia:instance,p_id:event.messageId,p_phone:event.phone,p_lid:event.lid,

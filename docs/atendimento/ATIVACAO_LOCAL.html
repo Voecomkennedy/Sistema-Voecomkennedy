@@ -19,21 +19,19 @@
   <h1>Preparar recebimento privado</h1>
   <p class="notice">Abra este arquivo <strong>localmente</strong> no Mac mini. Ele não envia dados, não usa backend, não grava em disco nem configura a Z-API ou o Supabase. Não cole a capacidade nem a URL completa no chat, Git ou PR.</p>
   <p>A migração aditiva e a função já foram instaladas de forma <strong>inerte</strong>. Sem os valores abaixo e com a flag desligada, a função respondeu 503. Nenhuma URL de callback foi cadastrada nesta etapa. A página de leitura está no PR em rascunho; confirme sua publicação e os dados pendentes antes de ativar a Z-API.</p>
-  <p>Destino confirmado: projeto Supabase <span class="mono">qryobmqrkzddcvlvgfrp</span>, função <span class="mono">atendimento-recebimento</span>, proprietário comercial <span class="mono">fbb720b6-80ec-401e-9e53-7fc3e929fb7e</span>. Origem da página do sistema: <span class="mono">https://sistema.voecomkennedy.tur.br</span>. Instância conectada <strong>Voecomkennedy</strong>, ID público <span class="mono">3EDD0D599BB271AB83F53EBEF7B316F4</span>. O telefone conectado ainda não apareceu na interface consultada.</p>
+  <p>Destino confirmado: projeto Supabase <span class="mono">qryobmqrkzddcvlvgfrp</span>, função <span class="mono">atendimento-recebimento</span>, proprietário comercial <span class="mono">fbb720b6-80ec-401e-9e53-7fc3e929fb7e</span>. Origem da página do sistema: <span class="mono">https://sistema.voecomkennedy.tur.br</span>. Instância conectada <strong>Voecomkennedy</strong>, ID público <span class="mono">3EDD0D599BB271AB83F53EBEF7B316F4</span>. O número conectado não apareceu na interface consultada e não é necessário para preparar o piloto somente texto.</p>
   <p>Abas para você abrir: <a href="https://supabase.com/dashboard/project/qryobmqrkzddcvlvgfrp/functions/secrets" target="_blank" rel="noreferrer">Segredos das Edge Functions no projeto confirmado</a> e <a href="https://app.z-api.io/" target="_blank" rel="noreferrer">painel Z-API</a>. O assistente não abre essas páginas automaticamente.</p>
-  <p>Em 13/10/2026, o painel da instância mostrou <strong>Ao receber vazio</strong>, mensagens próprias desligadas e filtros globais de grupos, chats privados e documentos desligados. Reconfira esse estado apenas na janela de ativação. Se houver outro receptor, preserve-o por encaminhamento. O telefone conectado deve ser confirmado sem expor token ou credenciais.</p>
+  <p>Em 13/10/2026, o painel da instância mostrou <strong>Ao receber vazio</strong>, mensagens próprias desligadas e filtros globais de grupos, chats privados e documentos desligados. Reconfira esse estado apenas na janela de ativação. Se houver outro receptor, preserve-o por encaminhamento. O callback deve continuar vazio até a ativação consciente; não exponha token ou credenciais.</p>
 
   <label for="instance">ID exato da instância Z-API</label>
   <input id="instance" autocomplete="off" spellcheck="false" value="3EDD0D599BB271AB83F53EBEF7B316F4">
-  <label for="phone">Telefone conectado em connectedPhone (somente dígitos, com país e DDD)</label>
-  <input id="phone" autocomplete="off" spellcheck="false" inputmode="numeric" placeholder="Ex.: 55 + DDD + número">
-  <p class="small notice">As páginas oficiais da Z-API mostram <code>documentUrl</code>, mas não informam um hostname contratual de mídia. A variável <code>ATENDIMENTO_RECEBIMENTO_MEDIA_HOSTS</code> ficará ausente; não tente adivinhá-lo. A ativação com PDF depende de confirmação técnica de uma URL legítima da instância ou do provedor, sem usar conversa pessoal como teste.</p>
+  <p class="small notice">As páginas oficiais da Z-API mostram <code>documentUrl</code>, mas não informam um hostname contratual de mídia. A variável <code>ATENDIMENTO_RECEBIMENTO_MEDIA_HOSTS</code> ficará ausente; não tente adivinhá-lo. No piloto, PDFs recebidos serão apenas sinalizados como pendentes, sem download nem promessa de recuperação posterior. Arquivar PDFs exigirá uma etapa técnica futura de confirmação do host, sem usar conversa pessoal como teste.</p>
   <button id="generate" type="button">Gerar capacidade local de 32 bytes</button>
   <p id="error" role="alert" hidden></p>
 
   <section id="output" hidden>
     <h2>Valores para cadastrar pessoalmente no Supabase</h2>
-    <p>Na configuração de segredos da função/projeto acima, use os nomes abaixo. Deixe <strong>ATENDIMENTO_RECEBIMENTO_ENABLED=false</strong>. Telefone e host de mídia faltantes impedem a ativação.</p>
+    <p>Na configuração de segredos da função/projeto acima, use os nomes abaixo. Deixe <strong>ATENDIMENTO_RECEBIMENTO_ENABLED=false</strong>. O piloto pode receber texto; PDF não será arquivado.</p>
     <label for="fixed">Variáveis sem segredo</label>
     <textarea id="fixed" class="mono" readonly></textarea>
     <button type="button" class="secondary" data-copy="fixed">Copiar variáveis sem segredo</button>
@@ -51,7 +49,7 @@
   <ol>
     <li>Com o callback Z-API ainda intacto, cadastrar pessoalmente os valores acima no projeto Supabase confirmado. A função já está publicada com <code>verify_jwt=false</code> somente para este webhook. Manter <code>ATENDIMENTO_RECEBIMENTO_ENABLED=false</code> e conferir que ela continua respondendo 503.</li>
     <li>Confirmar no painel Z-API se “Ao receber” continua vazio (ou documentar a URL anterior), se mensagens próprias e filtros globais continuam desligados. O backup de banco e arquivos, a migração, o RLS e o bucket privado já foram conferidos; se algo mudou, interrompa e revise.</li>
-    <li>Somente após confirmar tecnicamente o telefone conectado e o host legítimo de PDF, publicar a página de leitura e concluir a revisão do PR, na janela de ativação decidida por você, definir <code>ATENDIMENTO_RECEBIMENTO_ENABLED=true</code> e cadastrar a URL gerada em <strong>Ao receber</strong>. A combinação da flag ligada com essa URL ativa a entrada de futuras mensagens privadas. Não há importação de histórico antigo.</li>
+    <li>Somente após publicar a página de leitura e concluir a revisão do PR, na janela de ativação decidida por você, definir <code>ATENDIMENTO_RECEBIMENTO_ENABLED=true</code> e cadastrar a URL gerada em <strong>Ao receber</strong>. A combinação da flag ligada com essa URL ativa a entrada de futuras mensagens privadas em modo somente texto. Anexos ficam sinalizados como pendentes, sem download. Não há importação de histórico antigo.</li>
     <li>Se precisar parar, remover/restaurar a URL anterior de “Ao receber” e voltar <code>ATENDIMENTO_RECEBIMENTO_ENABLED=false</code>. Preservar tabelas e PDFs para conciliação; não apagar dados.</li>
   </ol>
 </main>
@@ -64,15 +62,15 @@
   const clear=()=>{$('capability').value='';$('callback').value='';$('fixed').value='';$('output').hidden=true;};
   $('generate').addEventListener('click',()=>{
     clear();$('error').hidden=true;
-    const instance=$('instance').value.trim(),phone=$('phone').value.trim();
-    if(!/^[A-Za-z0-9_-]{1,160}$/.test(instance)||!/^[0-9]{10,15}$/.test(phone)){
-      $('error').textContent='Confira o ID da instância e o telefone conectado; não use token.';$('error').hidden=false;return;
+    const instance=$('instance').value.trim();
+    if(!/^[A-Za-z0-9_-]{1,160}$/.test(instance)){
+      $('error').textContent='Confira o ID da instância; não use token.';$('error').hidden=false;return;
     }
     if(!globalThis.crypto?.getRandomValues){$('error').textContent='Gerador criptográfico indisponível neste navegador. Não use esta página.';$('error').hidden=false;return;}
     const bytes=crypto.getRandomValues(new Uint8Array(32));
     const capability=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
     bytes.fill(0);
-    $('fixed').value=`ATENDIMENTO_RECEBIMENTO_ENABLED=false\nATENDIMENTO_RECEBIMENTO_OWNER_ID=${owner}\nATENDIMENTO_RECEBIMENTO_INSTANCE_ID=${instance}\nATENDIMENTO_RECEBIMENTO_CONNECTED_PHONE=${phone}`;
+    $('fixed').value=`ATENDIMENTO_RECEBIMENTO_ENABLED=false\nATENDIMENTO_RECEBIMENTO_OWNER_ID=${owner}\nATENDIMENTO_RECEBIMENTO_INSTANCE_ID=${instance}\nATENDIMENTO_RECEBIMENTO_ARCHIVE_PDF=false`;
     $('capability').value=capability;
     $('callback').value=`https://${project}.supabase.co/functions/v1/atendimento-recebimento/${capability}`;
     $('output').hidden=false;

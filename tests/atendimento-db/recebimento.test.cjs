@@ -34,3 +34,18 @@ test('PDF exige manifesto privado e falha deixa banco sem mensagem; duplicata n�
   assert.equal((await call({...a,p_arquivo:null})).duplicate,true);
   assert.equal((await pool.query('select count(*) n from public.atendimento_recepcao_arquivos where user_id=$1',[owner])).rows[0].n,'1');
 });
+
+test('gestão manual mantém RLS por dono e exige conversa existente',async()=>{
+  const owner=randomUUID(),other=randomUUID();await pool.query('insert into auth.users(id) values($1),($2)',[owner,other]);
+  const saved=await call(args(owner,'crm-1'));const cid=saved.chatId;
+  const insert='insert into public.atendimento_recepcao_gestao(user_id,instancia,conversa_id,etapa,etiquetas,origem,anotacao,proxima_acao) values($1,$2,$3,$4,$5,$6,$7,$8)';
+  const values=[owner,'INSTANCE_SYNTHETIC',cid,'cotacao',['Indicação'],'Indicação confirmada manualmente','Ligar à tarde','Ligar'];
+  await session('authenticated',owner,c=>c.query(insert,values));
+  const mine=await session('authenticated',owner,c=>c.query('select etapa,origem,etiquetas from public.atendimento_recepcao_gestao'));
+  assert.equal(mine.rows[0].etapa,'cotacao');assert.deepEqual(mine.rows[0].etiquetas,['Indicação']);
+  assert.equal((await session('authenticated',other,c=>c.query('select count(*) n from public.atendimento_recepcao_gestao'))).rows[0].n,'0');
+  await assert.rejects(session('authenticated',other,c=>c.query(insert,values)),{code:'42501'});
+  await assert.rejects(session('anon',null,c=>c.query('select * from public.atendimento_recepcao_gestao')),{code:'42501'});
+  await assert.rejects(session('authenticated',owner,c=>c.query(insert,[owner,'INSTANCE_SYNTHETIC',randomUUID(),'novo',[],'','',''])),{code:'23503'});
+  assert.equal((await session('authenticated',owner,c=>c.query("update public.atendimento_recepcao_gestao set etapa='emissao' where conversa_id=$1 returning etapa",[cid]))).rows[0].etapa,'emissao');
+});

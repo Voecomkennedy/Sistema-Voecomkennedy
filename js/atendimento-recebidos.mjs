@@ -6,14 +6,23 @@ export async function startReceivedPage(client=getSupabaseClient(),auth=Auth){
   const gate=$('rec-gate'),error=$('rec-error'),workspace=$('rec-workspace');
   const user=await auth.getUser();if(!user){gate.textContent='Entre no sistema para consultar mensagens recebidas.';return;}
   const read=async query=>{const result=await query;if(result.error)throw new Error('Não foi possível consultar as mensagens.');return result.data||[];};
-  const chats=await read(client.from('atendimento_recepcao_conversas').select('id,nome,criado_em').eq('user_id',user.id));
-  const ids=await read(client.from('atendimento_recepcao_identidades').select('conversa_id,tipo,valor').eq('user_id',user.id));
-  const messages=await read(client.from('atendimento_recepcao_mensagens').select('id,conversa_id,texto,tipo,nome_arquivo,ocorrido_em,lida_em').eq('user_id',user.id).order('ocorrido_em',{ascending:true}));
-  const files=await read(client.from('atendimento_recepcao_arquivos').select('id,mensagem_id,nome,caminho,tamanho,sha256').eq('user_id',user.id));
+  let closed=false;
+  client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||(event==='SIGNED_IN'&&session?.user?.id!==user.id)){closed=true;workspace.hidden=true;gate.hidden=false;gate.textContent='Sessão encerrada. Entre novamente no sistema.';}});
+  const all=async(table,columns,order)=>{const rows=[];for(let start=0;;start+=500){
+    let query=client.from(table).select(columns).eq('user_id',user.id).range(start,start+499);
+    for(const key of order)query=query.order(key,{ascending:true});
+    const batch=await read(query);rows.push(...batch);if(batch.length<500)return rows;
+  }};
+  const chats=await all('atendimento_recepcao_conversas','id,nome,criado_em',['id']);
+  const ids=await all('atendimento_recepcao_identidades','conversa_id,tipo,valor',['conversa_id','tipo','valor']);
+  const messages=await all('atendimento_recepcao_mensagens','id,conversa_id,texto,tipo,nome_arquivo,ocorrido_em,lida_em',['ocorrido_em','id']);
+  const files=await all('atendimento_recepcao_arquivos','id,mensagem_id,nome,caminho,tamanho,sha256',['id']);
+  if(closed||(await auth.getUser())?.id!==user.id)throw new Error('Sessão encerrada. Entre novamente no sistema.');
   let selected=chats[0]?.id||'';
   async function download(file){
     const result=await client.storage.from('atendimento-arquivos').download(file.caminho);
     if(result.error||!result.data)throw new Error('PDF indisponível.');
+    if(result.data.size>5242880)throw new Error('PDF excede o limite permitido.');
     const bytes=new Uint8Array(await result.data.arrayBuffer());
     if(bytes.length!==Number(file.tamanho)||await sha(bytes)!==file.sha256)throw new Error('PDF não passou na conferência de integridade.');
     const url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
@@ -41,6 +50,5 @@ export async function startReceivedPage(client=getSupabaseClient(),auth=Auth){
     }
   }
   $('rec-search').addEventListener('input',render);render();gate.hidden=true;workspace.hidden=false;
-  client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||(event==='SIGNED_IN'&&session?.user?.id!==user.id)){workspace.hidden=true;gate.hidden=false;gate.textContent='Sessão encerrada. Entre novamente no sistema.';}});
 }
 if(typeof document!=='undefined')startReceivedPage().catch(e=>{$('rec-error').textContent=e.message;$('rec-error').hidden=false;$('rec-gate').textContent='Área indisponível.';});

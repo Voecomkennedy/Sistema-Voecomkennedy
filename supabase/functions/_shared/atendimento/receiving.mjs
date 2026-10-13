@@ -6,6 +6,7 @@ const json=(status,data)=>new Response(JSON.stringify(data),{status,headers:{'co
 const hex=bytes=>[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('');
 const digest=async bytes=>hex(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)));
 const id=value=>typeof value==='string'&&/^[A-Za-z0-9_:@.+-]{1,160}$/.test(value);
+const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const uuidFrom=async value=>{const b=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)));b[6]=(b[6]&15)|80;b[8]=(b[8]&63)|128;const h=hex(b);return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20,32)}`;};
 const fail=(message,status=422)=>{throw Object.assign(new Error(message),{status});};
 
@@ -36,11 +37,20 @@ export function normalizePrivateReceived(payload,{instance,connectedPhone}){
   return {instance,messageId:payload.messageId,...address,at:at.toISOString(),kind,text,document,name:typeof payload.chatName==='string'?payload.chatName.slice(0,200):''};
 }
 
-export async function downloadPdf(url,{allowedHosts,fetcher=fetch}){
+export function validateMediaUrl(url,allowedHosts){
   let source;try{source=new URL(url);}catch{fail('Origem de mídia inválida.');}
-  if(source.protocol!=='https:'||source.username||source.password||source.port||source.hash||!allowedHosts.includes(source.hostname))fail('Origem de mídia não autorizada.');
+  const host=source.hostname;
+  if(source.protocol!=='https:'||source.username||source.password||source.port||source.hash||
+     !/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(host)||/\.(?:local|localhost|internal|test|invalid)$/.test(host)||
+     /^\d+(?:\.\d+){3}$/.test(host)||!allowedHosts.includes(host))fail('Origem de mídia não autorizada.');
+  return source;
+}
+export async function downloadPdf(url,{allowedHosts,fetcher=fetch}){
+  const source=validateMediaUrl(url,allowedHosts);
   const response=await fetcher(source.href,{redirect:'error',signal:AbortSignal.timeout(12000)});
   if(!response.ok||!response.body)fail('Mídia indisponível.',503);
+  const mime=(response.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+  if(mime&&!['application/pdf','application/octet-stream','binary/octet-stream'].includes(mime))fail('Tipo de mídia inesperado.');
   const length=Number(response.headers.get('content-length'));
   if(Number.isFinite(length)&&length>PDF_LIMIT)fail('PDF excede o limite.',413);
   const bytes=await readBounded(response.body,PDF_LIMIT);
@@ -49,6 +59,7 @@ export async function downloadPdf(url,{allowedHosts,fetcher=fetch}){
 }
 
 export async function copyReceivedPdf(event,{owner,db,allowedHosts,fetcher=fetch}){
+  validateMediaUrl(event.document.url,allowedHosts);
   const bucket=await db.storage.getBucket(BUCKET);
   if(bucket.error||bucket.data?.id!==BUCKET||bucket.data?.public!==false)fail('Bucket privado indisponível.',503);
   const fileId=await uuidFrom(`${owner}:${event.instance}:${event.messageId}`);
@@ -56,6 +67,7 @@ export async function copyReceivedPdf(event,{owner,db,allowedHosts,fetcher=fetch
   // Uma falha de banco após upload deixa um órfão recuperável por esta chave estável.
   const prior=await db.storage.from(BUCKET).download(path);
   if(!prior.error&&prior.data){
+    if(prior.data.size>PDF_LIMIT)fail('PDF preexistente excede o limite.',409);
     const saved=new Uint8Array(await prior.data.arrayBuffer());
     if(saved.length<5||saved.length>PDF_LIMIT||new TextDecoder().decode(saved.slice(0,5))!=='%PDF-')fail('PDF preexistente inválido.',409);
     return {id:fileId,path,sha256:await digest(saved),size:saved.length};
@@ -67,6 +79,7 @@ export async function copyReceivedPdf(event,{owner,db,allowedHosts,fetcher=fetch
     // Retry após commit ambíguo: somente um objeto byte a byte idêntico é aceito.
     const saved=await db.storage.from(BUCKET).download(path);
     if(saved.error||!saved.data)fail('Cópia do PDF não confirmada.',503);
+    if(saved.data.size>PDF_LIMIT)fail('PDF preexistente excede o limite.',409);
     const previous=new Uint8Array(await saved.data.arrayBuffer());
     if(previous.length!==bytes.length||await digest(previous)!==sha256)fail('PDF preexistente divergente.',409);
   }
@@ -74,7 +87,7 @@ export async function copyReceivedPdf(event,{owner,db,allowedHosts,fetcher=fetch
 }
 
 export function createRealWebhookIngress({enabled=false,capability,owner,instance,connectedPhone,db,allowedHosts=/** @type {string[]} */([]),fetcher=fetch}){
-  const ready=enabled===true&&/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(owner||'')&&instance&&connectedPhone&&db&&Array.isArray(allowedHosts);
+  const ready=enabled===true&&uuid(owner)&&/^[A-Za-z0-9_-]{1,160}$/.test(instance||'')&&/^\d{10,15}$/.test(connectedPhone||'')&&db&&Array.isArray(allowedHosts);
   let verify=null;
   if(ready)try{verify=createCapabilityVerifier({capability,owner,instance,pathPrefix:'/functions/v1/atendimento-recebimento'});}catch{/* Configuração incompleta: fechado. */}
   return async request=>{

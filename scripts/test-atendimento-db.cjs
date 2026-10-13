@@ -79,7 +79,7 @@ async function freePort() {
         process.stdout.write(phase('verify'));
         if (process.argv.includes('--serve')) {
             const { Pool } = require('pg');
-            const { randomUUID } = require('node:crypto');
+            const { randomUUID, randomBytes } = require('node:crypto');
             const [{createPgRepository},{createLocalObjectStore},{DEMO_SOURCE},{createLocalAtendimentoHttpServer}] = await Promise.all([
                 import('../supabase/functions/_shared/atendimento/repository.mjs'),
                 import('../supabase/functions/_shared/atendimento/local-object-store.mjs'),
@@ -101,10 +101,10 @@ async function freePort() {
                 const chats=await atendimentoRepo.list(owner);
                 await atendimentoRepo.link(owner,chats.find(c=>c.phone.endsWith('0001')).id,{clienteId:'p-ana',cotacaoId:'q-ana',vendaId:'v-ana',origemContato:'Indicação informada pelo contato (exemplo)',etiquetas:['Proposta','Bagagem']});
                 await atendimentoRepo.link(owner,chats.find(c=>c.phone.endsWith('0002')).id,{clienteId:'p-bruno',cotacaoId:'q-bruno',etiquetas:['Novo contato']});
-                const httpPort=await freePort();
-                server=createLocalAtendimentoHttpServer({root:repo,repository:atendimentoRepo,enabled:true,allowedOrigin:`http://127.0.0.1:${httpPort}`});
+                const httpPort=await freePort(),accessCode=randomBytes(18).toString('base64url');
+                server=createLocalAtendimentoHttpServer({root:repo,repository:atendimentoRepo,enabled:true,allowedOrigin:`http://127.0.0.1:${httpPort}`,accessCode});
                 await new Promise((resolve,reject)=>server.once('error',reject).listen(httpPort,'127.0.0.1',resolve));
-                process.stdout.write(`DEMO_LOCAL=http://127.0.0.1:${httpPort}/atendimento.html?demo=persistente\n`);
+                process.stdout.write(`DEMO_LOCAL=http://127.0.0.1:${httpPort}/atendimento.html?demo=persistente\nDEMO_CODIGO=${accessCode}\n`);
                 await new Promise(resolve=>{ stopServe = resolve; if (stopRequested) resolve(); });
             } finally { if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}await pool.end(); }
         }

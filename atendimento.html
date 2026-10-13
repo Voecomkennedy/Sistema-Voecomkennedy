@@ -10,6 +10,13 @@
     <main>
         <header><div><p class="eyebrow">Conversas e contexto comercial</p><h1>Atendimento</h1></div><span class="pill">MVP • desativado na operação</span></header>
         <p id="at-gate" class="notice">Este módulo está desativado. As demonstrações sintéticas ficam em localhost: <code>?demo=1</code> (memória) ou <code>?demo=persistente</code> com o runner local descartável.</p>
+        <form id="at-local-access" class="local-access" hidden>
+            <h2>Acesso à demonstração local</h2>
+            <p>Digite o código temporário mostrado no terminal do runner. Esta é uma identidade fictícia; o login do sistema ainda não está integrado.</p>
+            <label for="at-access-code">Código temporário</label><input id="at-access-code" type="password" inputmode="text" autocomplete="off" required>
+            <button class="primary" type="submit">Entrar na demonstração</button>
+            <p id="at-access-error" role="alert" hidden></p>
+        </form>
         <div id="at-workspace" hidden>
             <div class="notice"><strong>Demonstração com dados fictícios.</strong> As mensagens e arquivos ficam na memória desta aba. Recarregar reinicia a demonstração. Nenhuma mensagem é enviada ao WhatsApp.</div>
             <p id="at-status" role="status" aria-live="polite"></p><p id="at-error" role="alert" hidden></p>

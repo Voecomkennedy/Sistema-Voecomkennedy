@@ -1,5 +1,6 @@
 // Entrypoint exclusivamente local e injetável. Desativado por padrão, sem serviço externo.
 import { createServer } from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createDurableHandler } from '../supabase/functions/_shared/atendimento/durable-handler.mjs';
@@ -17,10 +18,12 @@ const staticFiles=new Map([
     ['/js/storage.js','text/javascript; charset=utf-8'],
     ['/favicon-32.png','image/png']
 ]);
-export function createLocalAtendimentoHttpServer({root,repository,enabled=false,allowedOrigin,transport}){
+export function createLocalAtendimentoHttpServer({root,repository,enabled=false,allowedOrigin,transport,accessCode}){
     if(!path.isAbsolute(root)||!allowedOrigin||new URL(allowedOrigin).hostname!=='127.0.0.1')throw new Error('Servidor sintético exige origem de loopback explícita.');
+    if(enabled&&!/^[A-Za-z0-9_-]{24}$/.test(accessCode||''))throw new Error('Código temporário da demonstração inválido.');
+    const expected=Buffer.from('Demo '+accessCode);
     const handler=createDurableHandler({enabled,allowedOrigin,
-        verifyUser:authorization=>authorization==='Synthetic local' ? {id:repository.owner}:null,
+        verifyUser:authorization=>{const supplied=Buffer.from(authorization||'');return supplied.length===expected.length&&timingSafeEqual(supplied,expected)?{id:repository.owner}:null;},
         repositoryFor:()=>repository,backupFor:createDurableBackup,
         transport:transport||{mode:'sintetico',send:(_payload,{outcome})=>outcome==='failure'?{definitelyNotSent:true}:outcome==='uncertain'?{}:{providerId:crypto.randomUUID()}}
     });

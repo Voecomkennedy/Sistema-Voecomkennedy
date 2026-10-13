@@ -1,7 +1,8 @@
 // Interface local para PostgreSQL descartável. Auth é simulado por loopback e marcado na tela.
 import { createAtendimentoHttpClient } from './atendimento-http-client.mjs';
 import { DEMO_SOURCE,demoPdf } from './atendimento-demo.mjs';
-export function mountAtendimentoPersistente({root=document,api=createAtendimentoHttpClient()}={}){
+export function mountAtendimentoPersistente({root=document,api}={}){
+    if(!api)throw new Error('Acesso local não validado.');
     const $=id=>root.getElementById(id),node=(tag,value,cls)=>{const x=root.createElement(tag);if(value!==undefined)x.textContent=value;if(cls)x.className=cls;return x;};
     const drafts=new Map(),attachments=new Map();let selected='',chats=[],sequence=0,busy=false;
     const status=value=>{$('at-status').textContent=value;};
@@ -55,4 +56,31 @@ export function mountAtendimentoPersistente({root=document,api=createAtendimento
     $('at-workspace').querySelector('.archive p').textContent='Exporta mensagens e bytes dos PDFs do banco local. Restauração requer destino vazio do mesmo proprietário sintético.';
     const refresh=node('button','Atualizar');refresh.type='button';refresh.addEventListener('click',guard(render));$('at-receive').after(refresh);
     return render().then(()=>{status('Conversas fictícias gravadas no PostgreSQL local; autenticação simulada.');return {render,api};});
+}
+
+// Código válido apenas durante a execução do runner; não cria usuário ou sessão no Supabase.
+export function startAtendimentoPersistente({root=document,session=globalThis.sessionStorage,clientForCode=code=>createAtendimentoHttpClient({accessCode:code})}={}){
+    const form=root.getElementById('at-local-access'),input=root.getElementById('at-access-code'),error=root.getElementById('at-access-error');
+    const key='vck-atendimento-demo-access';let entering=false;
+    root.getElementById('at-gate').textContent='Demonstração local com PostgreSQL descartável. Digite o código temporário mostrado no terminal do runner. Nenhum WhatsApp será usado.';
+    form.hidden=false;
+    const login=async code=>{
+        if(entering)return;entering=true;form.querySelector('button').disabled=true;error.hidden=true;
+        try{
+            const api=clientForCode(code);await api.list();
+            session.setItem(key,code);form.hidden=true;input.value='';
+            const result=await mountAtendimentoPersistente({root,api});
+            const logout=root.createElement('button');logout.type='button';logout.textContent='Sair da demonstração';logout.className='local-logout';
+            logout.addEventListener('click',()=>{session.removeItem(key);root.defaultView.location.reload();});
+            root.querySelector('#at-workspace > .notice').after(logout);
+            return result;
+        }catch(cause){
+            session.removeItem(key);form.hidden=false;
+            error.textContent='Código inválido ou expirado. Confira o terminal desta execução local.';error.hidden=false;
+            throw cause;
+        }finally{form.querySelector('button').disabled=false;entering=false;}
+    };
+    form.addEventListener('submit',event=>{event.preventDefault();void login(input.value.trim()).catch(()=>{});});
+    const saved=session.getItem(key);if(saved)void login(saved).catch(()=>{});
+    return {login};
 }

@@ -1,9 +1,10 @@
 // Cliente da demo local; nunca recebe credenciais Supabase/Z-API.
-export function createAtendimentoHttpClient({baseUrl=globalThis.location?.origin,fetchImpl=globalThis.fetch}={}){
+export function createAtendimentoHttpClient({baseUrl=globalThis.location?.origin,fetchImpl=globalThis.fetch,accessCode}={}){
     const url=new URL('/atendimento-api',baseUrl);
-    if(url.hostname!=='127.0.0.1'||!['http:'].includes(url.protocol))throw new Error('API sintética aceita somente 127.0.0.1 em HTTP local.');
+    if(url.hostname!=='127.0.0.1'||url.protocol!=='http:')throw new Error('API sintética aceita somente 127.0.0.1 em HTTP local.');
+    if(!/^[A-Za-z0-9_-]{24}$/.test(accessCode||''))throw new Error('Digite o código temporário mostrado no terminal.');
     async function request(acao,fields={}){
-        const response=await fetchImpl(url,{method:'POST',headers:{'content-type':'application/json',authorization:'Synthetic local'},body:JSON.stringify({acao,...fields})});
+        const response=await fetchImpl(url,{method:'POST',headers:{'content-type':'application/json',authorization:'Demo '+accessCode},body:JSON.stringify({acao,...fields})});
         const result=await response.json();
         if(!response.ok)throw new Error(`${result.erro||'Operação indisponível.'} (HTTP ${response.status})`);
         return result.data;

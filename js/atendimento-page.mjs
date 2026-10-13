@@ -102,7 +102,7 @@ export function mountAtendimentoPage({ service, root = document, owner = DEMO_OW
 if (typeof document !== 'undefined' && demoAllowed(globalThis.location)) {
     mountAtendimentoPage({ service:createDemo({ financialSummary:sale => StorageManager.obterResumoFinanceiroVenda(sale) }) });
 } else if (typeof document !== 'undefined' && globalThis.location.hostname === '127.0.0.1' && new URLSearchParams(globalThis.location.search).get('demo') === 'persistente') {
-    import('./atendimento-persistente.mjs').then(({mountAtendimentoPersistente})=>mountAtendimentoPersistente()).catch(error=>{
+    import('./atendimento-persistente.mjs').then(({startAtendimentoPersistente})=>startAtendimentoPersistente()).catch(error=>{
         document.getElementById('at-gate').textContent='Demonstração persistente indisponível: '+error.message;
     });
 }

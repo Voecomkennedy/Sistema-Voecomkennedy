@@ -28,7 +28,7 @@ Esta fatia entrega uma página funcional com duas conversas fictícias, busca em
 
 ## Estrutura preparada para nuvem
 
-A migration `supabase/migrations/20261013121547_atendimento_mvp.sql` foi criada pela CLI e aplicada **somente no cluster local descartável**. Nenhuma migration foi aplicada em produção ou no projeto Supabase existente.
+A migração `supabase/migrations/20261013164231_atendimento_mvp.sql` foi ensaiada em cluster local descartável e instalada de forma inerte no projeto Supabase principal em 13/10/2026, após backup e restauração isolada. Não há interface operacional, callback ou envio real ativado; veja `ATENDIMENTO_BACKUP_OPERACIONAL.md`.
 
 Tabelas próprias: `atendimento_conversas`, `atendimento_identidades`, `atendimento_mensagens`, `atendimento_eventos`, `atendimento_anexos`, `atendimento_outbox`. RLS e privilégios mínimos: navegador lê somente linhas próprias, sem escrita/RPC; serviço escreve no servidor. Eventos são append-only; FKs compostas impedem cruzar contas/conversas/instâncias. SQL e outbox aceitam exclusivamente modo `sintetico`. O banco não altera `dados_app` nem objetos da Central.
 

@@ -1,4 +1,4 @@
--- Incremento 2: aditivo, sintético e sem publicação. Aplicar somente em teste/homologação autorizada.
+-- Incremento 2: aditivo, sintético e sem publicação. Instalada inerte em 13/10/2026; sem endpoint ou envio.
 begin;
 alter table public.atendimento_eventos add column detalhes jsonb not null default '{}'::jsonb;
 alter table public.atendimento_mensagens add column anexo_id uuid;

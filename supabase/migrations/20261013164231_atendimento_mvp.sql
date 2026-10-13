@@ -1,4 +1,4 @@
--- PREPARADA, NÃO APLICADA. MVP sintético; não modifica dados_app, Central, pos-venda ou cron.
+-- INSTALADA INERTE EM 13/10/2026. MVP sintético; não modifica dados_app, Central, pos-venda ou cron.
 begin;
 create table public.atendimento_conversas (
     id uuid primary key default gen_random_uuid(),

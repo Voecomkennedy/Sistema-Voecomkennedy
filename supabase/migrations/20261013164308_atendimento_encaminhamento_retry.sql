@@ -1,4 +1,4 @@
--- PREPARADA, NÃO APLICADA REMOTAMENTE. Somente fila sintética do Atendimento.
+-- INSTALADA INERTE EM 13/10/2026. Somente fila sintética do Atendimento.
 begin;
 alter table public.atendimento_encaminhamentos
     add column disponivel_em timestamptz not null default now();

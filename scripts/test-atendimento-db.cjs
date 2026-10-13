@@ -41,15 +41,37 @@ async function freePort() {
         const atendimento = fs.readdirSync(path.join(repo, 'supabase/migrations')).filter(name => name.endsWith('_atendimento_mvp.sql'));
         if (atendimento.length !== 1) throw new Error('Migration de Atendimento ambígua.');
         run('psql', [...sqlArgs, '-f', `supabase/migrations/${atendimento[0]}`]);
+        const durable = fs.readdirSync(path.join(repo, 'supabase/migrations')).filter(name => name.endsWith('_atendimento_duravel.sql'));
+        if (durable.length !== 1) throw new Error('Migration durável ambígua.');
+        run('psql', [...sqlArgs, '-f', `supabase/migrations/${durable[0]}`]);
+        run('createdb', ['-h', '127.0.0.1', '-p', String(port), '-U', username, 'vck_atendimento_restore_test']);
+        const restoreArgs = sqlArgs.map(value => value === 'vck_central_test' ? 'vck_atendimento_restore_test' : value);
+        const restoreBootstrap = path.join(dir, 'restore-bootstrap.sql');
+        fs.writeFileSync(restoreBootstrap, fs.readFileSync(path.join(repo, 'tests/db/bootstrap.sql'), 'utf8').replaceAll('vck_central_test', 'vck_atendimento_restore_test'));
+        run('psql', [...restoreArgs, '-f', restoreBootstrap]);
+        run('psql', [...restoreArgs, '-f', 'tests/atendimento-db/storage-bootstrap.sql']);
+        run('psql', [...restoreArgs, '-f', `supabase/migrations/${atendimento[0]}`]);
+        run('psql', [...restoreArgs, '-f', `supabase/migrations/${durable[0]}`]);
         const sqlTest = path.join(repo, 'supabase/tests/central-mensagens.sql');
         if (fs.existsSync(sqlTest)) process.stdout.write(run('psql', [...sqlArgs, '-f', sqlTest]));
         const tests = fs.readdirSync(path.join(repo, 'tests/atendimento-db')).filter(name => name.endsWith('.test.cjs')).map(name => path.join('tests/atendimento-db', name));
         const url = `postgresql://${encodeURIComponent(username)}@127.0.0.1:${port}/vck_central_test`;
         const child = spawn(process.execPath, ['--test', '--test-concurrency=1', ...tests], {
-            cwd: repo, stdio: 'inherit', env: { ...process.env, VCK_TEST_DATABASE_URL: url }
+            cwd: repo, stdio: 'inherit', env: { ...process.env, VCK_TEST_DATABASE_URL: url, VCK_TEST_RESTORE_URL: url.replace('/vck_central_test', '/vck_atendimento_restore_test'), VCK_TEST_OBJECTS_DIR: path.join(dir,'objects') }
         });
         const code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('exit', resolve); });
         if (code !== 0) throw new Error(`Testes PostgreSQL falharam (${code}).`);
+        const proof = path.join(dir, 'restart-proof.json');
+        const worker = path.join('tests', 'atendimento-db', 'restart-worker.cjs');
+        const workerEnv = { ...process.env, VCK_TEST_DATABASE_URL: url, VCK_TEST_RESTORE_URL: url.replace('/vck_central_test', '/vck_atendimento_restore_test'), VCK_TEST_OBJECTS_DIR: path.join(dir,'objects'), VCK_TEST_PROOF_FILE: proof };
+        const phase = name => execFileSync(process.execPath, [worker, name], { cwd: repo, env: workerEnv, encoding: 'utf8', stdio: 'pipe' });
+        process.stdout.write(phase('seed'));
+        try { phase('crash'); throw new Error('O worker deveria ter terminado no limite sintético de envio.'); }
+        catch (error) { if (error.status !== 41) throw error; process.stdout.write(String(error.stdout)); }
+        run('pg_ctl', ['-D', cluster, '-m', 'immediate', '-w', 'stop']); started = false;
+        run('pg_ctl', ['-D', cluster, '-l', path.join(dir, 'postgres-restart.log'), '-o', `-h 127.0.0.1 -p ${port} -k ''`, '-w', 'start']); started = true;
+        process.stdout.write('restart: PostgreSQL local descartável encerrado e iniciado de novo\n');
+        process.stdout.write(phase('verify'));
     } finally {
         if (started) run('pg_ctl', ['-D', cluster, '-m', 'immediate', '-w', 'stop']);
         // Only the randomly-created directory from this run is removed.

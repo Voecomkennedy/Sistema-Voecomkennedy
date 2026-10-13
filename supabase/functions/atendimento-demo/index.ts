@@ -1,0 +1,12 @@
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createDemoHandler } from '../_shared/atendimento/demo-api.mjs';
+import { createDemoRepository } from '../_shared/atendimento/demo-repository.mjs';
+import { verifyWithExistingAuth } from '../_shared/atendimento/handler.mjs';
+const url=Deno.env.get('SUPABASE_URL') || '';
+const anon=Deno.env.get('SUPABASE_ANON_KEY') || '';
+const serviceKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const allowedOrigin=Deno.env.get('ATENDIMENTO_DEMO_ORIGIN') || '';
+const ownerId=Deno.env.get('ATENDIMENTO_DEMO_OWNER_ID') || '';
+const auth=createClient(url,anon,{auth:{persistSession:false,autoRefreshToken:false}});
+const db=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
+Deno.serve(createDemoHandler({verifyUser:verifyWithExistingAuth(auth),repositoryFor:(owner:string)=>createDemoRepository(db,owner),allowedOrigin,ownerId}));

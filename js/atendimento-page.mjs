@@ -106,3 +106,22 @@ if (typeof document !== 'undefined' && demoAllowed(globalThis.location)) {
         document.getElementById('at-gate').textContent='Demonstração persistente indisponível: '+error.message;
     });
 }
+
+else if (typeof document !== 'undefined' && new URLSearchParams(globalThis.location.search).get('demo') === 'autenticado') {
+    const gate=document.getElementById('at-gate');
+    const load=src=>new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=()=>reject(new Error('Biblioteca de autenticação indisponível.'));document.head.append(script);});
+    (async()=>{
+        await load('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+        await load('js/supabase-config.js');
+        await load('js/auth.js');
+        const user=await Auth.getUser();
+        if(!user){gate.textContent='Entre no sistema para abrir a demonstração restrita.';return;}
+        const {createAtendimentoAuthClient}=await import('./atendimento-auth-client.mjs');
+        const {mountAtendimentoPersistente}=await import('./atendimento-persistente.mjs');
+        const client=getSupabaseClient();
+        const api=createAtendimentoAuthClient({client,endpoint:`${SUPABASE_CONFIG.url}/functions/v1/atendimento-demo`});
+        await api.list();
+        await mountAtendimentoPersistente({root:document,api,authenticated:true});
+        client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'||(event==='SIGNED_IN'&&session?.user?.id!==user.id)){document.getElementById('at-workspace').hidden=true;gate.hidden=false;gate.textContent='Sessão encerrada. Entre novamente no sistema.';}});
+    })().catch(error=>{gate.textContent='Demonstração restrita indisponível: '+error.message;});
+}

@@ -1,7 +1,7 @@
 // Interface local para PostgreSQL descartável. Auth é simulado por loopback e marcado na tela.
 import { createAtendimentoHttpClient } from './atendimento-http-client.mjs';
 import { DEMO_SOURCE,demoPdf } from './atendimento-demo.mjs';
-export function mountAtendimentoPersistente({root=document,api}={}){
+export function mountAtendimentoPersistente({root=document,api,authenticated=false}={}){
     if(!api)throw new Error('Acesso local não validado.');
     const $=id=>root.getElementById(id),node=(tag,value,cls)=>{const x=root.createElement(tag);if(value!==undefined)x.textContent=value;if(cls)x.className=cls;return x;};
     const drafts=new Map(),attachments=new Map();let selected='',chats=[],sequence=0,busy=false;
@@ -40,22 +40,23 @@ export function mountAtendimentoPersistente({root=document,api}={}){
     $('at-search').addEventListener('input',()=>render().catch(error=>{$('at-error').textContent=error.message;$('at-error').hidden=false;}));
     $('at-unread').addEventListener('change',()=>render());$('at-label').addEventListener('change',()=>render());$('at-client').addEventListener('change',related);
     $('at-text').addEventListener('input',()=>drafts.set(selected,$('at-text').value));
-    $('at-read').addEventListener('click',guard(async()=>{await api.read(selected);await render();status('Leitura gravada no PostgreSQL descartável.');}));
+    $('at-read').addEventListener('click',guard(async()=>{await api.read(selected);await render();status(authenticated?'Leitura demonstrativa salva.':'Leitura gravada no PostgreSQL descartável.');}));
     $('at-receive').addEventListener('click',guard(async()=>{const c=active();if(!c?.phone)throw new Error('Contato sem telefone confirmado.');await api.ingest({type:'message',instance:'mock',messageId:crypto.randomUUID(),phone:'+'+c.phone,fromMe:false,text:'Nova resposta fictícia para teste local.',at:new Date().toISOString(),status:'entregue'});await render();status('Entrada fictícia gravada.');}));
-    $('at-link').addEventListener('submit',guard(async()=>{await api.link(selected,{clienteId:$('at-client').value||null,cotacaoId:$('at-quote').value||null,vendaId:$('at-sale').value||null,origemContato:$('at-origin').value,etiquetas:$('at-tags').value.split(',').map(x=>x.trim()).filter(Boolean)});await render();status('Vínculo fictício gravado no teste local.');}));
-    async function attach(name,bytes){const cid=selected,file=await api.archive(cid,name,new Uint8Array(bytes),crypto.randomUUID());attachments.set(cid,file);if(selected===cid)await detail();status('PDF fictício arquivado com checksum no teste local.');}
+    $('at-link').addEventListener('submit',guard(async()=>{await api.link(selected,{clienteId:$('at-client').value||null,cotacaoId:$('at-quote').value||null,vendaId:$('at-sale').value||null,origemContato:$('at-origin').value,etiquetas:$('at-tags').value.split(',').map(x=>x.trim()).filter(Boolean)});await render();status(authenticated?'Vínculo fictício salvo na sua sessão.':'Vínculo fictício gravado no teste local.');}));
+    async function attach(name,bytes){const cid=selected,file=await api.archive(cid,name,new Uint8Array(bytes),crypto.randomUUID());attachments.set(cid,file);if(selected===cid)await detail();status(authenticated?'PDF demonstrativo arquivado na nuvem privada.':'PDF fictício arquivado com checksum no teste local.');}
     $('at-sample-pdf').addEventListener('click',guard(()=>attach('proposta-exemplo.pdf',demoPdf())));
     $('at-pdf').addEventListener('change',guard(async e=>{const file=e.target.files[0];if(file)await attach(file.name,await file.arrayBuffer());e.target.value='';}));
-    $('at-compose').addEventListener('submit',guard(async()=>{const cid=selected;const composed=await api.compose(cid,$('at-text').value,attachments.get(cid)?.id||null,crypto.randomUUID());const sent=await api.dispatch($('at-outcome').value);if(!sent)throw new Error('Envio sintético ainda em espera.');drafts.delete(cid);attachments.delete(cid);$('at-pdf').value='';await render();status(sent.messageId===composed.id?'Tentativa registrada no PostgreSQL local; nenhum WhatsApp usado.':'Mensagem na fila; outro item pendente anterior foi simulado.');}));
+    $('at-compose').addEventListener('submit',guard(async()=>{const cid=selected;const composed=await api.compose(cid,$('at-text').value,attachments.get(cid)?.id||null,crypto.randomUUID());const sent=authenticated?null:await api.dispatch($('at-outcome').value);if(!authenticated&&!sent)throw new Error('Envio sintético ainda em espera.');drafts.delete(cid);attachments.delete(cid);$('at-pdf').value='';await render();status(authenticated?'Rascunho demonstrativo salvo na nuvem. Nenhuma mensagem foi enviada.':sent.messageId===composed.id?'Tentativa registrada no PostgreSQL local; nenhum WhatsApp usado.':'Mensagem na fila; outro item pendente anterior foi simulado.');}));
     $('at-export').addEventListener('click',guard(async()=>{download(JSON.stringify(await api.export(),null,2),'application/json','atendimento-local-sintetico.json');status('Pacote local com mensagens e bytes exportado.');}));
     $('at-import').addEventListener('change',guard(async e=>{const file=e.target.files[0];if(!file)return;if(file.size>20*1024*1024)throw new Error('Pacote excede 20 MB.');await api.restore(JSON.parse(await file.text()));selected='';drafts.clear();attachments.clear();e.target.value='';await render();status('Pacote restaurado no destino vazio.');}));
     $('at-workspace').hidden=false;$('at-gate').hidden=true;
-    root.querySelectorAll('nav a').forEach(a=>{a.removeAttribute('href');a.title='Navegação operacional indisponível na demo local.';});
-    root.querySelector('.context > .help').textContent='Vínculos e valor recebido são apenas exemplos sintéticos locais. A origem não é inferida; a integração comercial real exige Auth e o resumo financeiro do sistema.';
-    const notice=$('at-workspace').querySelector('.notice');notice.textContent='Demonstração persistente local com dados fictícios e Auth simulado por loopback. PostgreSQL e PDFs vivem apenas no cluster descartável; nenhum WhatsApp ou Supabase remoto.';
+    if(!authenticated)root.querySelectorAll('nav a').forEach(a=>{a.removeAttribute('href');a.title='Navegação operacional indisponível na demo local.';});
+    root.querySelector('.context > .help').textContent=authenticated?'Vínculos, cotações, vendas e valor recebido desta página são exemplos sintéticos. Nenhuma atribuição comercial real é inferida.':'Vínculos e valor recebido são apenas exemplos sintéticos locais. A origem não é inferida; a integração comercial real exige Auth e o resumo financeiro do sistema.';
+    const notice=$('at-workspace').querySelector('.notice');notice.textContent=authenticated?'Demonstração restrita com login do sistema. Conversas e negócios são fictícios; mensagens e PDFs demonstrativos ficam na nuvem privada. Nenhum WhatsApp é usado.':'Demonstração persistente local com dados fictícios e Auth simulado por loopback. PostgreSQL e PDFs vivem apenas no cluster descartável; nenhum WhatsApp ou Supabase remoto.';
     $('at-workspace').querySelector('.archive p').textContent='Exporta mensagens e bytes dos PDFs do banco local. Restauração requer destino vazio do mesmo proprietário sintético.';
+    if(authenticated){$('at-receive').hidden=true;root.querySelector('label[for=at-outcome]').hidden=true;$('at-outcome').hidden=true;$('at-compose').querySelector('button.primary').textContent='Salvar mensagem demonstrativa';$('at-workspace').querySelector('.archive').hidden=true;}
     const refresh=node('button','Atualizar');refresh.type='button';refresh.addEventListener('click',guard(render));$('at-receive').after(refresh);
-    return render().then(()=>{status('Conversas fictícias gravadas no PostgreSQL local; autenticação simulada.');return {render,api};});
+    return render().then(()=>{status(authenticated?'Conversas fictícias isoladas na sua sessão; nenhum WhatsApp usado.':'Conversas fictícias gravadas no PostgreSQL local; autenticação simulada.');return {render,api};});
 }
 
 // Código válido apenas durante a execução do runner; não cria usuário ou sessão no Supabase.

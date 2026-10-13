@@ -104,13 +104,33 @@ test('RLS real nas filas novas e fonte comercial só do dono; HTTP rejeita forja
     assert.equal((await handler(makeBody({acao:'listar'}))).status,200);assert.equal((await handler(makeBody({acao:'compor',chatId:f.cid,text:'HTTP',requestId:'http1'}))).status,200);
 });
 test('filas duráveis preservam legado e grupos; erro/receipt de cada consumidor é independente',async()=>{
-    const f=await fixture(),fanout=f.f.createDurableFanout(f.repo),group={isGroup:true,phone:'synthetic@g.us',text:{message:'Grupo fictício'}};
+    const f=await fixture(),privateConfig={instance:'mock',connectedPhone:'5562999990999'},fanout=f.f.createDurableFanout(f.repo,{privateEnabled:true,privateConfig}),group={instanceId:'mock',connectedPhone:privateConfig.connectedPhone,type:'ReceivedCallback',isGroup:true,phone:'synthetic@g.us',text:{message:'Grupo fictício'},messageId:'group1',fromMe:false,momment:Date.now(),status:'RECEIVED',unknownField:{keep:'intact'}};
     await fanout.enqueue(f.owner,{key:'group1',payload:group});await fanout.enqueue(f.owner,{key:'group1',payload:group});
     await assert.rejects(fanout.enqueue(f.owner,{key:'group1',payload:{...group,text:{message:'Mudança'}}}),{status:409});
-    await fanout.enqueue(f.owner,{key:'private1',payload:{isGroup:false,phone:'5562999990001',text:{message:'Privada fictícia'}}});
-    assert.equal((await pool.query('select count(*) n from public.atendimento_encaminhamentos where user_id=$1',[f.owner])).rows[0].n,'3');
+    const privatePayload={...group,isGroup:false,phone:'5562999990001',messageId:'private1'};
+    await fanout.enqueue(f.owner,{key:'private1',payload:privatePayload});
+    const offPayload={...privatePayload,messageId:'private2'};
+    await f.f.createDurableFanout(f.repo).enqueue(f.owner,{key:'default-off',payload:offPayload});
+    const repeated=await fanout.enqueue(f.owner,{key:'default-off',payload:offPayload});assert.deepEqual(repeated.consumers,['legado']);assert.equal(repeated.duplicate,true);
+    assert.equal((await pool.query('select count(*) n from public.atendimento_encaminhamentos where user_id=$1',[f.owner])).rows[0].n,'4');
     const deliveries=[];const r=await fanout.dispatch(f.owner,'legado',{mode:'sintetico',send:receipt=>{deliveries.push(receipt);return {durablyAccepted:true};}});assert.equal(r.result,'concluido');assert.deepEqual(deliveries[0].payload,group);
     assert.equal((await fanout.dispatch(f.owner,'atendimento',{mode:'sintetico',send(){throw new Error('timeout novo');}})).result,'incerto');
     assert.equal(await fanout.dispatch(f.owner,'atendimento',{mode:'sintetico',send(){throw new Error('não deve repetir');}}),null);
     assert.equal((await fanout.dispatch(f.owner,'legado',{mode:'sintetico',send:()=>({durablyAccepted:true})})).result,'concluido');
+    assert.equal((await fanout.dispatch(f.owner,'legado',{mode:'sintetico',send:()=>({durablyAccepted:true})})).result,'concluido');
+});
+test('rejeição comprovada do legado aguarda retry; resultado incerto exige revisão e não repete',async()=>{
+    const f=await fixture(),fanout=f.f.createDurableFanout(f.repo);
+    await fanout.enqueue(f.owner,{key:'legacy-safe-fail',payload:{isGroup:true,phone:'synthetic@g.us',messageId:'safe-fail'}});
+    let attempts=0;
+    const refused={mode:'sintetico',send:()=>{attempts++;return {definitelyNotAccepted:true};}};
+    assert.equal((await fanout.dispatch(f.owner,'legado',refused)).result,'pendente');
+    assert.equal(await fanout.dispatch(f.owner,'legado',refused),null);assert.equal(attempts,1);
+    const row=(await pool.query("select id,estado,disponivel_em>clock_timestamp() as waiting from public.atendimento_encaminhamentos where user_id=$1 and dedupe='legacy-safe-fail'",[f.owner])).rows[0];
+    assert.equal(row.estado,'pendente');assert.equal(row.waiting,true);
+    await pool.query("update public.atendimento_encaminhamentos set disponivel_em=clock_timestamp()-interval '1 second' where id=$1",[row.id]);
+    assert.equal((await fanout.dispatch(f.owner,'legado',{mode:'sintetico',send:()=>{attempts++;return {durablyAccepted:true};}})).result,'concluido');assert.equal(attempts,2);
+    await fanout.enqueue(f.owner,{key:'legacy-uncertain',payload:{isGroup:true,phone:'synthetic@g.us',messageId:'uncertain'}});
+    assert.equal((await fanout.dispatch(f.owner,'legado',{mode:'sintetico',send:()=>{throw Error('timeout');}})).result,'incerto');
+    assert.equal(await fanout.dispatch(f.owner,'legado',refused),null);assert.equal(attempts,2);
 });

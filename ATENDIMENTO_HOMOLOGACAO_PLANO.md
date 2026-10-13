@@ -1,5 +1,7 @@
 # Atendimento — decisão de homologação local e integração futura
 
+Atualização: a homologação local foi concluída em [ATENDIMENTO_SUPABASE_LOCAL.md](ATENDIMENTO_SUPABASE_LOCAL.md). A leitura do receptor e as condições de ativação estão em [ATENDIMENTO_RECEPTOR_PLANO.md](ATENDIMENTO_RECEPTOR_PLANO.md). O restante desta página preserva a análise anterior à criação da VM.
+
 Estado em 13/10/2026. **Nenhuma VM, contêiner, projeto remoto ou função foi criado/iniciado nesta análise.** `vck-agendamentos` e o projeto principal permanecem ativos. Esta página registra a condição para testar Auth, Storage e HTTP reais localmente antes de qualquer integração remota.
 
 ## Capacidade e ajuste necessário

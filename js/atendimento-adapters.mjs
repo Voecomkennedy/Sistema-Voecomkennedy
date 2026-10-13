@@ -19,6 +19,12 @@ export function normalizeZapi(payload, { instance, connectedPhone }) {
     const address = identity({ phone: payload.phone, lid: payload.fromMe ? null : payload.senderLid });
     return [{ type: 'message', instance, messageId: payload.messageId, ...address, fromMe: payload.fromMe, text: payload.text.message, at, status }];
 }
+// Roteamento conservador do consumidor NOVO. O legado nunca depende desta classificação.
+// Uma configuração ausente, evento desconhecido ou identidade ambígua deixa a cópia nova desligada.
+export function privateCallbackEvents(payload, config) {
+    if (!config?.instance || !config?.connectedPhone) return [];
+    try { return normalizeZapi(payload, config); } catch { return []; }
+}
 export function mockTransport({ outcome = 'success' } = {}) {
     return { mode: 'sintetico', send(message) {
         if (outcome === 'uncertain') throw new Error('Timeout sintético.');

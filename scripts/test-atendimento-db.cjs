@@ -47,6 +47,7 @@ async function freePort() {
         const durable = fs.readdirSync(path.join(repo, 'supabase/migrations')).filter(name => name.endsWith('_atendimento_duravel.sql'));
         if (durable.length !== 1) throw new Error('Migration durável ambígua.');
         run('psql', [...sqlArgs, '-f', `supabase/migrations/${durable[0]}`]);
+        run('psql', [...sqlArgs, '-f', 'supabase/migrations/20261013140000_atendimento_encaminhamento_retry.sql']);
         run('createdb', ['-h', '127.0.0.1', '-p', String(port), '-U', username, 'vck_atendimento_restore_test']);
         const restoreArgs = sqlArgs.map(value => value === 'vck_central_test' ? 'vck_atendimento_restore_test' : value);
         const restoreBootstrap = path.join(dir, 'restore-bootstrap.sql');
@@ -55,6 +56,7 @@ async function freePort() {
         run('psql', [...restoreArgs, '-f', 'tests/atendimento-db/storage-bootstrap.sql']);
         run('psql', [...restoreArgs, '-f', `supabase/migrations/${atendimento[0]}`]);
         run('psql', [...restoreArgs, '-f', `supabase/migrations/${durable[0]}`]);
+        run('psql', [...restoreArgs, '-f', 'supabase/migrations/20261013140000_atendimento_encaminhamento_retry.sql']);
         const sqlTest = path.join(repo, 'supabase/tests/central-mensagens.sql');
         if (fs.existsSync(sqlTest)) process.stdout.write(run('psql', [...sqlArgs, '-f', sqlTest]));
         const tests = fs.readdirSync(path.join(repo, 'tests/atendimento-db')).filter(name => name.endsWith('.test.cjs')).map(name => path.join('tests/atendimento-db', name));

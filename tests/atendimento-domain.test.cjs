@@ -126,12 +126,21 @@ test('cópia de PDF valida origem, bytes e bucket privado; falha não produz met
 });
 test('encaminhamento candidato preserva consumidor antigo; grupos são filtrados só no novo e falhas são independentes',async()=>{
     const {fanoutCandidate}=await import('../supabase/functions/_shared/atendimento/fanout.mjs');let legacy=[],fresh=[];
-    const consumers={enqueueLegacy:p=>legacy.push(p),enqueuePrivate:p=>fresh.push(p)};
-    const payload={isGroup:true,phone:'test@g.us',text:{message:'Grupo fictício'}};
-    const first=await fanoutCandidate(payload,consumers);assert.equal(first.atendimento,'ignorado');assert.deepEqual(legacy[0],payload);assert.equal(fresh.length,0);
-    const privatePayload={...payload,isGroup:false,phone:'5562999990001'};
+    const privateConfig={instance:'mock',connectedPhone:'5562999990999'};
+    const consumers={enqueueLegacy:p=>legacy.push(p),enqueuePrivate:p=>fresh.push(p),privateConfig};
+    const payload={instanceId:'mock',connectedPhone:privateConfig.connectedPhone,type:'ReceivedCallback',isGroup:true,phone:'test@g.us',messageId:'group1',fromMe:false,momment:Date.now(),status:'RECEIVED',text:{message:'Grupo fictício'},unknownField:{keep:'intact'}};
+    const first=await fanoutCandidate(payload,{...consumers,privateEnabled:true});assert.equal(first.atendimento,'ignorado');assert.deepEqual(legacy[0],payload);assert.equal(fresh.length,0);
+    const privatePayload={...payload,isGroup:false,phone:'5562999990001',messageId:'private1'};
+    const off=await fanoutCandidate(privatePayload,consumers);assert.equal(off.atendimento,'ignorado');assert.equal(fresh.length,0);
     const result=await fanoutCandidate(privatePayload,{...consumers,enqueuePrivate:()=>{throw new Error('falha do novo consumidor');}});
-    assert.equal(result.legacy,'fulfilled');assert.equal(result.retryAtendimento,true);assert.equal(result.retryLegacy,false);assert.equal(legacy.length,2);assert.deepEqual(legacy[1],privatePayload);
+    assert.equal(result.atendimento,'ignorado');
+    const enabled=await fanoutCandidate(privatePayload,{...consumers,privateEnabled:true,enqueuePrivate:()=>{throw new Error('falha do novo consumidor');}});
+    assert.equal(enabled.legacy,'fulfilled');assert.equal(enabled.retryAtendimento,true);assert.equal(enabled.retryLegacy,false);assert.deepEqual(legacy.at(-1),privatePayload);
+    const unknown=await fanoutCandidate({...privatePayload,type:'UnknownCallback'},{...consumers,privateEnabled:true});assert.equal(unknown.atendimento,'ignorado');assert.deepEqual(legacy.at(-1).type,'UnknownCallback');
+    const failed=await fanoutCandidate(privatePayload,{...consumers,privateEnabled:true,enqueueLegacy:()=>{throw new Error('falha legado');}});assert.equal(failed.legacy,'rejected');assert.equal(failed.retryLegacy,true);
+    const {privateCallbackEvents}=await import('../js/atendimento-adapters.mjs');const own={...privatePayload,fromMe:true,senderLid:'123456789@lid'};
+    assert.equal(privateCallbackEvents(own,privateConfig)[0].lid,null);
+    assert.equal(privateCallbackEvents({...own,isGroup:undefined},privateConfig).length,0);
 });
 
 test('validador reutiliza getUser com token existente; ignora owner e user_metadata',async()=>{

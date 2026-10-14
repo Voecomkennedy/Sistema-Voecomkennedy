@@ -67,3 +67,58 @@ test('failure of the first sale write leaves both collections unchanged and perm
     assert.equal(result.retomada,true);assert.equal(w.StorageManager.getTodasVendas().length,1);
   }finally{a.dom.window.close();}
 });
+
+test('legacy quote without client ID converts using the explicitly selected contact, never a matching name',async()=>{
+  const legacy={...quote,clienteId:null,nomeCliente:'Outro cliente sintético'};
+  const a=await fixture({storedQuote:legacy,transfer:legacy});
+  try{
+    const w=a.w;await a.waitFor(()=>w.document.getElementById('origem').value==='BSB');
+    assert.equal(w.document.getElementById('clienteId').value,'');
+    completeSale(w,person.id);w.salvarVenda();
+    assert.equal(w.StorageManager.getTodasVendas().length,1);
+    const sale=w.StorageManager.getTodasVendas()[0],saved=w.StorageManager.getCotacaoById(legacy.id);
+    assert.equal(sale.clienteId,person.id);assert.equal(sale.cotacaoOrigemId,legacy.id);
+    assert.equal(saved.clienteId,person.id);assert.equal(saved.vendaId,sale.id);
+    assert.equal(saved.nomeCliente,legacy.nomeCliente);assert.equal(saved.status,'convertida');
+  }finally{a.dom.window.close();}
+});
+
+test('legacy conversion requires a registered selected client and rejects an existing divergent quote link',async()=>{
+  const legacy={...quote,clienteId:null};const a=await fixture({storedQuote:legacy,transfer:legacy});
+  try{
+    const store=a.w.StorageManager;
+    assert.throws(()=>store.salvarConversaoCotacao(legacy.id,{clienteId:'missing-contact'}),/cliente cadastrado/);
+    assert.equal(store.getTodasVendas().length,0);assert.equal(store.getCotacaoById(legacy.id).clienteId,null);
+    store.updateCotacao(legacy.id,{clienteId:'client-independent'});
+    assert.throws(()=>store.salvarConversaoCotacao(legacy.id,{clienteId:person.id}),/vinculado à cotação/);
+    assert.equal(store.getTodasVendas().length,0);assert.equal(store.getCotacaoById(legacy.id).clienteId,'client-independent');
+  }finally{a.dom.window.close();}
+});
+
+test('partial legacy conversion keeps its chosen client, rejects another client on retry and finishes without duplicates',async()=>{
+  const legacy={...quote};delete legacy.clienteId;
+  const a=await fixture({storedQuote:legacy,transfer:legacy});
+  try{
+    const store=a.w.StorageManager,finish=store.concluirConversaoCotacao;
+    store.concluirConversaoCotacao=()=>{throw new Error('synthetic quote write failure');};
+    assert.throws(()=>store.salvarConversaoCotacao(legacy.id,{clienteId:person.id,valorVenda:1500}),/sem criar outra venda/);
+    assert.equal(store.getTodasVendas().length,1);assert.equal(store.getCotacaoById(legacy.id).clienteId,undefined);
+    const saleId=store.getTodasVendas()[0].id;store.concluirConversaoCotacao=finish;
+    assert.throws(()=>store.salvarConversaoCotacao(legacy.id,{clienteId:'client-independent',valorVenda:9000}),/já vinculada/);
+    const result=store.salvarConversaoCotacao(legacy.id,{clienteId:person.id,valorVenda:9000});
+    assert.equal(result.retomada,true);assert.equal(result.venda.id,saleId);assert.equal(result.venda.valorVenda,1500);
+    assert.equal(store.getTodasVendas().length,1);assert.equal(store.getCotacaoById(legacy.id).clienteId,person.id);
+    assert.equal(store.getCotacaoById(legacy.id).vendaId,saleId);
+    store.salvarConversaoCotacao(legacy.id,{clienteId:person.id});assert.equal(store.getTodasVendas().length,1);
+  }finally{a.dom.window.close();}
+});
+
+test('a registered contact with an existing quote link stays valid if its person type changes',async()=>{
+  const a=await fixture();
+  try{
+    const store=a.w.StorageManager;store.updatePessoa(person.id,{tipo:'passageiro'});
+    const result=store.salvarConversaoCotacao(quote.id,{clienteId:person.id,valorVenda:1500});
+    assert.equal(result.venda.clienteId,person.id);assert.equal(store.getCotacaoById(quote.id).vendaId,result.venda.id);
+    assert.equal(store.getPessoaById(person.id).tipo,'passageiro');
+  }finally{a.dom.window.close();}
+});

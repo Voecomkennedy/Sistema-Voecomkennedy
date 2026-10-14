@@ -581,18 +581,21 @@ const StorageManager = {
         return this.getCotacaoById(id) || null;
     },
 
-    concluirConversaoCotacao(id, vendaId) {
+    concluirConversaoCotacao(id, vendaId, clienteId = undefined) {
         return this.updateCotacao(id, {
             status: 'convertida',
             dataConversao: new Date().toISOString(),
-            vendaId
+            vendaId,
+            ...(clienteId === undefined ? {} : { clienteId })
         });
     },
 
     salvarConversaoCotacao(id, dadosVenda) {
         const cotacao = this.getCotacaoById(id);
         if (!cotacao) throw new Error('Cotação não encontrada. Reabra a lista antes de converter.');
-        if (!cotacao.clienteId || String(cotacao.clienteId) !== String(dadosVenda.clienteId)) {
+        const cliente = this.getPessoas().find(item => String(item.id) === String(dadosVenda.clienteId));
+        if (!cliente) throw new Error('Selecione um cliente cadastrado antes de converter a cotação.');
+        if (cotacao.clienteId && String(cotacao.clienteId) !== String(cliente.id)) {
             throw new Error('O cliente da venda deve ser o cliente vinculado à cotação.');
         }
         const vendas = this.getTodasVendas();
@@ -600,14 +603,14 @@ const StorageManager = {
         if (vinculadas.length > 1) throw new Error('Há mais de uma venda vinculada à cotação. Revise os registros antes de continuar.');
         if (cotacao.status === 'convertida') {
             const concluida = vendas.find(venda => venda.id === cotacao.vendaId);
-            if (!concluida || String(concluida.clienteId) !== String(cotacao.clienteId)) {
+            if (!concluida || String(concluida.clienteId) !== String(cliente.id)) {
                 throw new Error('O vínculo da conversão está incompleto. Revise a venda indicada pela cotação.');
             }
             return { venda: concluida, retomada: true };
         }
         let vendaSalva = vinculadas[0];
         const retomada = !!vendaSalva;
-        if (vendaSalva && (vendaSalva.excluidaEm || String(vendaSalva.clienteId) !== String(cotacao.clienteId))) {
+        if (vendaSalva && (vendaSalva.excluidaEm || String(vendaSalva.clienteId) !== String(cliente.id))) {
             throw new Error('A venda já vinculada foi arquivada ou mudou de cliente. Revise o vínculo antes de continuar.');
         }
         if (!vendaSalva) {
@@ -618,14 +621,17 @@ const StorageManager = {
             const agora = new Date().toISOString();
             vendaSalva = {
                 ...JSON.parse(JSON.stringify(dadosVenda)), id: vendaId,
-                cotacaoOrigemId: id, statusVenda: 'emitida',
+                cotacaoOrigemId: id, clienteId: cliente.id, statusVenda: 'emitida',
                 dataCadastro: agora, dataAtualizacao: agora,
                 historicoAlteracoes: [{data: agora, acao: 'criacao_por_cotacao', campos: []}]
             };
             this.saveVendas([...vendas, vendaSalva]);
         }
         try {
-            if (!this.concluirConversaoCotacao(id, vendaSalva.id)) throw new Error('Não foi possível vincular a cotação.');
+            // A legacy quote has a name but no contact identity. Bind only the
+            // registered contact explicitly selected for this sale, in the same
+            // write that completes conversion. Never infer it from the name.
+            if (!this.concluirConversaoCotacao(id, vendaSalva.id, cliente.id)) throw new Error('Não foi possível vincular a cotação.');
         } catch (cause) {
             const erro = new Error(`A venda #${vendaSalva.id} ficou salva neste aparelho, mas o vínculo com a cotação não foi concluído. Tente novamente para concluir sem criar outra venda.`);
             erro.code = 'CONVERSION_PENDING';

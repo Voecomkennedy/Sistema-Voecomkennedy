@@ -5193,7 +5193,6 @@ function onPaxChange() {
 }
 
 function coletarDadosProposta() {
-  if (abrirProposta.busy) return;
   if (!window.TimingUI?.ready) { showToast('O cálculo de fusos não carregou. Atualize a página antes de gerar.'); return; }
   if (!TimingUI.validate('proposta')) return;
   const cliente = document.getElementById('p-cliente').value.trim();
@@ -5396,18 +5395,24 @@ function coletarDadosProposta() {
 }
 
 async function gerarProposta() {
+  if (abrirProposta.busy) { showToast('Aguarde o PDF atual terminar antes de gerar outro. Você pode salvar alterações no painel.'); return; }
   const dados = coletarDadosProposta();
   if (!dados) return;
   if (window.parent !== window && !window.parent.ProposalBridge?.canSave()) {
     showToast('Selecione um cliente cadastrado no painel antes de gerar o PDF.');
     return;
   }
-  if (!(await abrirProposta(dados))) return;
   if (window.parent !== window && window.parent.ProposalBridge) {
-    try { window.parent.ProposalBridge.save(dados); }
-    catch (e) { showToast('PDF baixado, mas a cotação não foi salva no painel: ' + e.message); }
+    // Commit the exact proposal synchronously before PDF generation. Changing
+    // Novo/Limpar/Editar while downloading cannot retarget this saved revision.
+    let saved;
+    try { saved = window.parent.ProposalBridge.save(dados); }
+    catch (e) { showToast('A cotação não foi salva. O PDF não foi gerado: ' + e.message); return; }
+    const snapshot = JSON.parse(JSON.stringify(saved.propostaCompleta));
+    if (!(await abrirProposta(snapshot))) showToast('A cotação ficou salva neste aparelho. Tente baixar o PDF novamente.');
     return;
   }
+  if (!(await abrirProposta(dados))) return;
   try {
     addHist({ tipo: 'proposta', nome: dados.cliente, subtitulo: dados.orig.split('\u2014')[0].trim() + ' \u2192 ' + dados.dest.split('\u2014')[0].trim() + ' \u2014 ' + dados.totalPax + ' pax', url: 'PROPOSTA \u2014 ' + dados.cliente + ' \u2014 ' + dados.orig + ' \u2192 ' + dados.dest + ' (' + dados.dataIda + ')', dados: JSON.parse(JSON.stringify(dados)) });
     updateHistBadge();

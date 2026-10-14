@@ -872,7 +872,7 @@
 
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
-    <script src="js/storage.js?v=14"></script>
+    <script src="js/storage.js?v=15"></script>
     <script src="js/utils.js?v=11"></script>
 
     <script>
@@ -881,6 +881,7 @@
         let modalIntegridade;
         let modalHistoricoVenda;
         let vendaEditandoId = null;
+        let vendaSalvaNoFormularioId = null;
         let cotacaoOrigemId = null;
         let cotacaoCarregamentoTimer = null;
         let aeroportos = AEROPORTOS_IATA; // Usar lista de aeroportos do arquivo JS
@@ -1914,6 +1915,7 @@
         }
 
         function prepararFormularioVendaLimpo() {
+            vendaSalvaNoFormularioId = null;
             limparVinculoCotacao();
             document.getElementById('formVenda').reset();
             document.getElementById('vendaId').value = '';
@@ -2177,6 +2179,7 @@
 
         // Salvar venda
         function salvarVenda() {
+            if (vendaSalvaNoFormularioId) return StorageManager.getVendaById(vendaSalvaNoFormularioId);
             const form = document.getElementById('formVenda');
             if (cotacaoOrigemId !== null) {
                 const cotacao = StorageManager.getCotacaoById(cotacaoOrigemId);
@@ -2297,7 +2300,8 @@
                 horaVenda: horaVenda
             };
 
-            const possiveisDuplicadas = StorageManager.findPossiveisVendasDuplicadas(
+            const conversaoPendente = cotacaoOrigemId === null ? null : StorageManager.getTodasVendas().find(item => String(item.cotacaoOrigemId || '') === String(cotacaoOrigemId));
+            const possiveisDuplicadas = conversaoPendente ? [] : StorageManager.findPossiveisVendasDuplicadas(
                 venda,
                 vendaEditandoId
             );
@@ -2323,22 +2327,31 @@
             }
 
             let vendaSalva;
-            if (vendaEditandoId) {
-                vendaSalva = StorageManager.updateVenda(vendaEditandoId, venda);
-                Utils.showSuccess('Venda atualizada com sucesso!');
-            } else {
-                venda.statusVenda = 'emitida';
-                vendaSalva = StorageManager.addVenda(venda);
-                Utils.showSuccess('Venda cadastrada com sucesso!');
+            let retomada = false;
+            try {
+                if (cotacaoOrigemId !== null) {
+                    const resultado = StorageManager.salvarConversaoCotacao(cotacaoOrigemId, venda);
+                    vendaSalva = resultado.venda;
+                    retomada = resultado.retomada;
+                } else if (vendaEditandoId) {
+                    vendaSalva = StorageManager.updateVenda(vendaEditandoId, venda);
+                } else {
+                    venda.statusVenda = 'emitida';
+                    vendaSalva = StorageManager.addVenda(venda);
+                }
+                if (!vendaSalva) throw new Error('A venda não foi salva. Mantenha o formulário aberto e tente novamente.');
+            } catch (error) {
+                Utils.showError(error.message || 'Não foi possível salvar. Os dados do formulário foram mantidos.');
+                return;
             }
-
-            if (vendaSalva && cotacaoOrigemId) {
-                StorageManager.concluirConversaoCotacao(cotacaoOrigemId, vendaSalva.id);
-                limparVinculoCotacao();
-            }
-
+            vendaSalvaNoFormularioId = vendaSalva.id;
+            if (cotacaoOrigemId !== null) limparVinculoCotacao();
+            Utils.showSuccess(retomada
+                ? `Conversão concluída com a venda #${vendaSalva.id} já salva. O formulário desta tentativa não alterou essa venda.`
+                : 'Venda salva neste aparelho. Confira a confirmação no indicador de nuvem.');
             modalVenda.hide();
             carregarVendas();
+            return vendaSalva;
         }
 
         // Arquivar preserva o registro e todo o histórico.
@@ -3060,7 +3073,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=10"></script>
     <script src="js/auth.js?v=12"></script>
-    <script src="js/cloud-sync.js?v=12"></script>
+    <script src="js/cloud-sync.js?v=13"></script>
     <script src="js/app-bootstrap.js?v=12"></script>
     <script src="js/card-rates.js?v=2"></script>
     <script src="js/card-rates-ui.js?v=1"></script>

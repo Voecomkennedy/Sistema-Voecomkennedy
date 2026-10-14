@@ -589,6 +589,55 @@ const StorageManager = {
         });
     },
 
+    salvarConversaoCotacao(id, dadosVenda) {
+        const cotacao = this.getCotacaoById(id);
+        if (!cotacao) throw new Error('Cotação não encontrada. Reabra a lista antes de converter.');
+        if (!cotacao.clienteId || String(cotacao.clienteId) !== String(dadosVenda.clienteId)) {
+            throw new Error('O cliente da venda deve ser o cliente vinculado à cotação.');
+        }
+        const vendas = this.getTodasVendas();
+        const vinculadas = vendas.filter(venda => String(venda.cotacaoOrigemId || '') === String(id));
+        if (vinculadas.length > 1) throw new Error('Há mais de uma venda vinculada à cotação. Revise os registros antes de continuar.');
+        if (cotacao.status === 'convertida') {
+            const concluida = vendas.find(venda => venda.id === cotacao.vendaId);
+            if (!concluida || String(concluida.clienteId) !== String(cotacao.clienteId)) {
+                throw new Error('O vínculo da conversão está incompleto. Revise a venda indicada pela cotação.');
+            }
+            return { venda: concluida, retomada: true };
+        }
+        let vendaSalva = vinculadas[0];
+        const retomada = !!vendaSalva;
+        if (vendaSalva && (vendaSalva.excluidaEm || String(vendaSalva.clienteId) !== String(cotacao.clienteId))) {
+            throw new Error('A venda já vinculada foi arquivada ou mudou de cliente. Revise o vínculo antes de continuar.');
+        }
+        if (!vendaSalva) {
+            // A quote identifies this conversion, irrespective of retries or the
+            // number of alternative quotes for the same commercial contact.
+            const vendaId = `cotacao-${String(id)}`;
+            if (vendas.some(venda => String(venda.id) === vendaId)) throw new Error('O identificador da conversão já pertence a outra venda.');
+            const agora = new Date().toISOString();
+            vendaSalva = {
+                ...JSON.parse(JSON.stringify(dadosVenda)), id: vendaId,
+                cotacaoOrigemId: id, statusVenda: 'emitida',
+                dataCadastro: agora, dataAtualizacao: agora,
+                historicoAlteracoes: [{data: agora, acao: 'criacao_por_cotacao', campos: []}]
+            };
+            this.saveVendas([...vendas, vendaSalva]);
+        }
+        try {
+            if (!this.concluirConversaoCotacao(id, vendaSalva.id)) throw new Error('Não foi possível vincular a cotação.');
+        } catch (cause) {
+            const erro = new Error(`A venda #${vendaSalva.id} ficou salva neste aparelho, mas o vínculo com a cotação não foi concluído. Tente novamente para concluir sem criar outra venda.`);
+            erro.code = 'CONVERSION_PENDING';
+            erro.vendaId = vendaSalva.id;
+            erro.cause = cause;
+            throw erro;
+        }
+        // A retry finishes the link to the sale already stored. It never silently
+        // replaces that sale with a later form or creates another one.
+        return { venda: vendaSalva, retomada };
+    },
+
     // ========== UTILIDADES ==========
     generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);

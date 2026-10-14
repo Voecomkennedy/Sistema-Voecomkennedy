@@ -2,6 +2,7 @@
 // O iframe usa a mesma origem; somente esta página, depois de app:ready, grava dados.
 (function () {
     let currentId = null;
+    let currentBase = null;
     let selectionVersion = 0;
     let ready = false;
     const $ = id => document.getElementById(id);
@@ -27,6 +28,16 @@
     };
     const client = () => StorageManager.getClienteById($('clienteProposta').value);
     const status = message => { $('propostaEstado').textContent = message; };
+    const fingerprint = value => JSON.stringify(value, function (key, item) {
+        return item && !Array.isArray(item) && typeof item === 'object'
+            ? Object.fromEntries(Object.keys(item).sort().map(k => [k, item[k]])) : item;
+    });
+    const showMode = quote => {
+        const modo = $('propostaModo');
+        if (modo) modo.textContent = quote ? `Editando cotação #${quote.id}, revisão ${quote.propostaRevisao || 1}` : 'Nova cotação';
+        const botao = $('salvarPropostaCompleta');
+        if (botao) botao.textContent = quote ? 'Salvar alterações' : 'Salvar cotação';
+    };
 
     window.ProposalMetrics = {
         monthly(quotes, now = new Date()) {
@@ -61,7 +72,7 @@
         if (input) input.value = client()?.nome || '';
     }
 
-    function mapQuote(d, existing) {
+    function mapQuote(d, existing, contact) {
         const n = Number(d.adultos || 0) + Number(d.criancas || 0) + Number(d.bebes || 0);
         const stops = (prefix, count) => Array.from({ length: Math.min(3, Number(count) || 0) }, (_, i) => ({
             cidade: d[i ? `escalaCidade${i + 1}${prefix}` : `escalaCidade${prefix}`] || '',
@@ -70,9 +81,10 @@
         const now = new Date().toISOString();
         return {
             propostaVersao: 1,
+            propostaRevisao: (Number(existing?.propostaRevisao) || 0) + 1,
             propostaCompleta: JSON.parse(JSON.stringify(d)),
-            clienteId: client().id,
-            nomeCliente: client().nome,
+            clienteId: contact.id,
+            nomeCliente: contact.nome,
             adultos: Number(d.adultos || 0), criancas: Number(d.criancas || 0), bebes: Number(d.bebes || 0),
             totalPassageiros: n || 1,
             totalPagantes: d.totalPagantes ?? null, paxTarifaBase: d.paxTarifaBase ?? null,
@@ -102,6 +114,8 @@
         afterReset() {
             selectionVersion++;
             currentId = null;
+            currentBase = null;
+            showMode(null);
             setClientName();
             status('Novo formulário. Salvar criará uma nova cotação.');
         },
@@ -112,16 +126,21 @@
         },
         save(d) {
             if (!this.canSave()) throw new Error('Selecione um cliente cadastrado.');
-            d.cliente = client().nome;
+            const contact = { ...client() };
+            const snapshot = JSON.parse(JSON.stringify(d));
+            snapshot.cliente = contact.nome;
             const existing = currentId == null ? null : StorageManager.getCotacaoById(currentId);
             if (currentId != null && !existing) throw new Error('Cotação original não encontrada. Reabra a lista antes de salvar.');
             if (existing?.status === 'convertida') throw new Error('Esta cotação já virou venda e não pode ser alterada.');
-            const quote = mapQuote(d, existing);
+            if (existing && currentBase && fingerprint(existing) !== currentBase) throw new Error('A cotação mudou em outra tela. Reabra a versão atual antes de salvar alterações.');
+            const quote = mapQuote(snapshot, existing, contact);
             const saved = existing ? StorageManager.updateCotacao(currentId, quote) : StorageManager.addCotacao(quote);
             if (!saved) throw new Error('Falha ao gravar a cotação.');
             currentId = saved.id;
+            currentBase = fingerprint(saved);
+            showMode(saved);
             CloudSync.agendarBackup();
-            status(`Cotação #${saved.id} salva. Confira o indicador de sincronização antes de trocar de aparelho.`);
+            status(`Cotação #${saved.id}, revisão ${saved.propostaRevisao}, salva neste aparelho. A confirmação na nuvem aparece no indicador de sincronização.`);
             carregarCotacoes();
             return saved;
         }
@@ -143,6 +162,8 @@
         window.reiniciarCadastroContatoProposta?.();
         selectionVersion++;
         currentId = null;
+        currentBase = null;
+        showMode(null);
         refreshClients();
         $('clienteProposta').value = '';
         $('editorProposta').open = true;
@@ -158,6 +179,8 @@
         const quote = StorageManager.getCotacaoById(id);
         if (!quote?.propostaCompleta) { abrirModalCotacao(id); return; }
         currentId = quote.id;
+        currentBase = fingerprint(quote);
+        showMode(quote);
         refreshClients();
         $('clienteProposta').value = quote.clienteId || '';
         $('editorProposta').open = true;
@@ -170,7 +193,9 @@
     };
     window.salvarPropostaCompleta = async function () {
         try {
+            const version = selectionVersion;
             const editor = await whenFrameReady();
+            if (version !== selectionVersion) { status('O formulário mudou. Salve a proposta que está aberta agora.'); return; }
             const d = editor.coletarDadosProposta();
             if (d) bridge.save(d);
         } catch (error) { status(error.message); }
@@ -191,6 +216,7 @@
     });
     document.addEventListener('app:ready', () => {
         ready = true;
+        showMode(null);
         refreshClients();
         $('quadroProposta').addEventListener('load', setClientName);
         $('quadroProposta').src = $('quadroProposta').dataset.src;

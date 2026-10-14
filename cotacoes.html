@@ -83,6 +83,7 @@
                 <details id="editorProposta" class="card">
                     <summary class="card-header" style="cursor:pointer">Proposta completa — voos, conexões, tarifas e PDF</summary>
                     <div class="card-body">
+                        <p id="propostaModo" class="fw-semibold mb-2">Nova cotação</p>
                         <div class="row g-2 align-items-end mb-3">
                             <div class="col-md-7">
                                 <label class="form-label" for="clienteProposta">Cliente da proposta</label>
@@ -92,7 +93,7 @@
                             </div>
                             <div class="col-md-5 d-flex flex-wrap gap-2">
                                 <button class="btn btn-outline-secondary" type="button" onclick="abrirCadastroContatoProposta()" aria-controls="cadastroContatoProposta" aria-expanded="false" id="abrirContatoProposta">Cadastrar contato</button>
-                                <button class="btn btn-primary" type="button" onclick="salvarPropostaCompleta()">Salvar cotação</button>
+                                <button id="salvarPropostaCompleta" class="btn btn-primary" type="button" onclick="salvarPropostaCompleta()">Salvar cotação</button>
                             </div>
                         </div>
                         <form id="cadastroContatoProposta" class="border rounded bg-light p-3 mb-3" hidden>
@@ -120,8 +121,8 @@
                                 <button class="btn btn-outline-secondary" type="button" onclick="fecharCadastroContatoProposta()">Cancelar</button>
                             </div>
                         </form>
-                        <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente, preencha a proposta e salve. O PDF também salva a mesma cotação.</p>
-                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261009-1" style="width:100%;height:1350px;border:1px solid #d7e3ee;border-radius:12px"></iframe>
+                        <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente e salve. O PDF salva esta cotação antes de gerar o arquivo. Use Nova proposta para criar outro orçamento.</p>
+                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261014-integridade1" style="width:100%;height:1350px;border:1px solid #d7e3ee;border-radius:12px"></iframe>
                     </div>
                 </details>
             </div>
@@ -583,7 +584,7 @@
 
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
-    <script src="js/storage.js?v=14"></script>
+    <script src="js/storage.js?v=15"></script>
     <script src="js/utils.js?v=11"></script>
     <script src="cotador/js/passenger-pricing.js?v=1"></script>
     <script src="cotador/js/proposal-pdf.js?v=20261009-1"></script>
@@ -1902,7 +1903,7 @@
     <script src="js/app-bootstrap.js?v=12"></script>
     <script src="js/card-rates.js?v=2"></script>
     <script src="js/card-rates-ui.js?v=1"></script>
-    <script src="js/proposal-integration.js?v=3"></script>
+    <script src="js/proposal-integration.js?v=4"></script>
     <script src="js/proposal-contact.js?v=1"></script>
     <script>AppBootstrap.iniciar();</script>
 </body>

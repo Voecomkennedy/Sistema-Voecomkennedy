@@ -6,10 +6,12 @@
     "test:db": "node scripts/test-messages-db.cjs",
     "test:atendimento:db": "node scripts/test-atendimento-db.cjs",
     "test:integrity:browser": "node scripts/test-integrity-browser.cjs",
-    "test:integrity:db": "node scripts/test-integrity-db.cjs"
+    "test:integrity:db": "node scripts/test-integrity-db.cjs",
+    "test:integrity:compact:db": "node scripts/test-integrity-compact-db.cjs",
+    "test:integrity:compact:sdk": "node scripts/test-integrity-compact-sdk.cjs"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.117.3",
+    "@supabase/supabase-js": "2.117.3",
     "pg": "8.23.1",
     "playwright": "1.55.1"
   },

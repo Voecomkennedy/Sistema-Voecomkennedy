@@ -14,17 +14,23 @@ const empty = () => Object.fromEntries(['emissao_vendas','emissao_pessoas','emis
 const pageSource = `<!doctype html><html><body><script src="/js/integrity-store.js"></script><script src="/js/storage.js"></script><script src="/js/cloud-sync.js"></script><script>
 window.boot=async owner=>{CloudSync._userId=owner;CloudSync._prepararCacheDoUsuario();CloudSync.agendarBackup=()=>{};await IntegrityStore.init(owner);};
 </script></body></html>`;
-let rows = new Map(), histories = new Map(), forbidden = [], commits = 0, failNext = false, lostAckNext = false, holdNext = false, held = [];
-const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kind:'read',filters:{}};const send=()=>fetch('/__mock_cas',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(op)}).then(r=>r.json());const c={select(){return c},eq(k,v){op.filters[k]=v;return c},order(){return c},range(a,b){op.range=[a,b];return send()},update(v){op.kind='update';op.payload=v;return c},insert(v){op.kind='insert';op.payload=v;return c},maybeSingle:send};return c}});`;
+let rows = new Map(), histories = new Map(), forbidden = [], commits = 0, failNext = false, lostAckNext = false, holdNext = false, held = [], rpcCalls = [], holdState = false, rpcMissing = false, badFormat = false;
+const mockSource = `window.getSupabaseClient=()=>({rpc(name,args){return fetch('/__mock_cas',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'rpc',name,args})}).then(r=>r.json())},from(table){let op={table,kind:'read',filters:{}};const send=()=>fetch('/__mock_cas',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(op)}).then(r=>r.json());const c={select(){return c},eq(k,v){op.filters[k]=v;return c},order(){return c},range(a,b){op.range=[a,b];return send()},update(v){op.kind='update';op.payload=v;return c},insert(v){op.kind='insert';op.payload=v;return c},maybeSingle:send};return c}});`;
 
 (async()=>{
  const server=http.createServer(async(req,res)=>{
   if(req.url==='/__fixture'){res.setHeader('content-type','text/html');res.end(pageSource);return;}
   if(req.url==='/__mock_cas'){
    let data='';for await(const part of req)data+=part;
-   const op=JSON.parse(data),owner=op.filters.user_id||op.payload?.user_id;
+   const op=JSON.parse(data),owner=op.filters?.user_id||op.payload?.user_id||op.args?.p_user_id;
    let row=rows.get(owner),result;
-   if(op.table==='dados_app_historico')result={data:(histories.get(owner)||[]).slice().reverse().slice(op.range?.[0]||0,(op.range?.[1]||49)+1),error:null};
+   if(op.kind==='rpc'){
+    rpcCalls.push(op);const all=(histories.get(owner)||[]).slice().reverse();
+    if(rpcMissing)result={data:null,error:{code:'PGRST202'}};
+    else if(op.name==='integridade_listar_versoes')result={data:all.slice(op.args.p_offset,op.args.p_offset+op.args.p_limite).map(({conteudo_antes,conteudo_depois,...metadata})=>({...metadata,formato:badFormat?99:2})),error:null};
+    else {const record=all.find(x=>x.operacao_id===op.args.p_operacao_id);result=record?{data:record['conteudo_'+op.args.p_lado],error:null}:{data:null,error:{code:'PT404'}};}
+   }
+   else if(op.table==='dados_app_historico')result={data:(histories.get(owner)||[]).slice().reverse().slice(op.range?.[0]||0,(op.range?.[1]||49)+1),error:null};
    else if(op.kind==='read')result={data:row||null,error:null};
    else if(failNext){failNext=false;result={data:null,error:{message:'synthetic transport failure'}};}
    else if(op.kind==='insert' && row)result={data:null,error:{code:'23505',message:'synthetic unique owner'}};
@@ -34,7 +40,7 @@ const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kin
     result=lostAckNext?{data:null,error:{message:'synthetic lost reply'}}:{data:{versao:op.payload.versao,atualizado_em:op.payload.atualizado_em},error:null};lostAckNext=false;
    }
    const reply=()=>{res.setHeader('content-type','application/json');res.end(JSON.stringify(result))};
-   if(holdNext && op.kind!=='read'){holdNext=false;held.push(reply);}else reply();return;
+   if(holdState && op.name==='integridade_obter_estado'){holdState=false;held.push(reply);}else if(holdNext && op.kind!=='read' && op.kind!=='rpc'){holdNext=false;held.push(reply);}else reply();return;
   }
   const file=path.resolve(root,'.'+new URL(req.url,'http://127.0.0.1').pathname);
   if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -51,7 +57,7 @@ const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kin
   async function test(name,fn){
    const filters=process.argv.filter(arg=>arg.startsWith('--case=')).map(arg=>arg.slice(7));
    if(filters.length && !filters.some(filter=>name.includes(filter)))return;
-   rows=new Map();histories=new Map();commits=0;failNext=false;lostAckNext=false;holdNext=false;held=[];
+   rows=new Map();histories=new Map();commits=0;failNext=false;lostAckNext=false;holdNext=false;held=[];rpcCalls=[];holdState=false;rpcMissing=false;badFormat=false;
    const context=await browser.newContext();
    await context.route('**/*',route=>{
     const u=new URL(route.request().url());
@@ -369,6 +375,54 @@ const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kin
    p.once('dialog',d=>d.accept());await p.click('#applyRecovery');await p.waitForFunction(()=>document.getElementById('historyStatus').textContent.includes('recuperada neste aparelho'));
    assert.equal(await p.evaluate(id=>StorageManager.getCotacaoById(id).observacao,quote.id),quote.observacao);
    assert.equal(await p.evaluate(()=>IntegrityStore.state.revision),revision+1);
+  });
+  async function remoteHistory(c) {
+   const old={...empty(),emissao_pessoas:[{id:'client-1',tipo:'cliente',nome:'Sintético'}],emissao_cotacoes:[{id:'remote-q',clienteId:'client-1',observacao:'Antiga'},{id:'other-q',clienteId:'client-1',observacao:'Independente'}]};
+   const current=structuredClone(old);current.emissao_cotacoes[0].observacao='Atual';
+   rows.set(A,{user_id:A,versao:2,conteudo:current});
+   histories.set(A,[{operacao_id:'remote-op',versao_antes:1,versao_depois:2,conteudo_antes:old,conteudo_depois:current}]);
+   await appContext(c);const p=await appPage(c,'integridade');await p.waitForFunction(()=>[...document.querySelectorAll('#historyVersion option')].some(o=>o.textContent.includes('Nuvem:')));return p;
+  }
+  const remoteOption=(p,side)=>p.evaluate(side=>[...document.querySelectorAll('#historyVersion option')].find(o=>o.textContent.includes(side==='antes'?'Nuvem: anterior':'Nuvem: versão')).value,side);
+  await test('compact remote metadata loads without bodies and selected state restores only one proposal',async c=>{
+   const p=await remoteHistory(c);assert.equal(rpcCalls.filter(x=>x.name==='integridade_obter_estado').length,0);
+   await p.selectOption('#historyVersion',await remoteOption(p,'antes'));await p.selectOption('#historyQuote','remote-q');
+   assert.equal(rpcCalls.filter(x=>x.name==='integridade_obter_estado').length,1);
+   const revision=await p.evaluate(()=>IntegrityStore.state.revision);await p.click('#previewRecovery');await p.waitForFunction(()=>!document.getElementById('recoveryPreview').hidden);
+   assert.equal(await p.evaluate(()=>IntegrityStore.state.revision),revision);assert.match(await p.textContent('#recoveryAfter'),/Antiga/);
+   p.once('dialog',d=>d.accept());await p.click('#applyRecovery');await p.waitForFunction(()=>document.getElementById('historyStatus').textContent.includes('recuperada neste aparelho'));
+   assert.deepEqual(await p.evaluate(()=>StorageManager.getCotacoes().map(q=>q.observacao)),['Antiga','Independente']);
+  });
+  await test('compact delayed state cannot overwrite a newer selection',async c=>{
+   const p=await remoteHistory(c);holdState=true;await p.selectOption('#historyVersion',await remoteOption(p,'antes'));
+   await p.waitForFunction(()=>document.getElementById('historyQuote').disabled);
+   await p.selectOption('#historyVersion',await remoteOption(p,'depois'));await p.selectOption('#historyQuote','remote-q');
+   held.shift()();await p.waitForTimeout(50);await p.click('#previewRecovery');await p.waitForFunction(()=>!document.getElementById('recoveryPreview').hidden);
+   assert.match(await p.textContent('#recoveryAfter'),/Atual/);
+  });
+  await test('compact delayed state is rejected after account switch',async c=>{
+   const p=await remoteHistory(c);holdState=true;await p.selectOption('#historyVersion',await remoteOption(p,'antes'));
+   await p.waitForFunction(()=>document.getElementById('historyQuote').disabled);
+   await p.evaluate(async owner=>{IntegrityStore.suspend();CloudSync._userId=owner;CloudSync._prepararCacheDoUsuario();await IntegrityStore.init(owner)},B);held.shift()();
+   await p.waitForFunction(()=>document.querySelectorAll('#historyQuote option').length===1 && document.getElementById('previewRecovery').disabled);
+   assert.equal(await p.evaluate(()=>document.getElementById('recoveryPreview').hidden),true);
+  });
+  await test('compact reader falls back only for missing RPC and keeps old snapshots readable',async c=>{
+   rpcMissing=true;const p=await remoteHistory(c);assert.match(await p.textContent('#historyStatus'),/Backend anterior/);
+   await p.selectOption('#historyVersion',await remoteOption(p,'antes'));await p.selectOption('#historyQuote','remote-q');
+   await p.click('#previewRecovery');await p.waitForFunction(()=>!document.getElementById('recoveryPreview').hidden);assert.match(await p.textContent('#recoveryAfter'),/Antiga/);
+  });
+  await test('compact reader rejects unsupported format without enabling recovery',async c=>{
+   badFormat=true;rows.set(A,{user_id:A,versao:1,conteudo:empty()});histories.set(A,[{operacao_id:'future',versao_depois:1}]);await appContext(c);
+   const p=await appPage(c,'integridade');await p.waitForFunction(()=>document.getElementById('historyStatus').textContent.includes('Formato de histórico'));
+   assert.equal(await p.evaluate(()=>document.getElementById('previewRecovery').disabled),true);assert.equal(rpcCalls.filter(x=>x.name==='integridade_obter_estado').length,0);
+  });
+  await test('compact reader preserves typed records but blocks ambiguous selective recovery',async c=>{
+   const body={...empty(),emissao_cotacoes:[{id:42,observacao:'Número'},{id:'42',observacao:'Texto'}]};
+   rows.set(A,{user_id:A,versao:1,conteudo:empty()});histories.set(A,[{operacao_id:'typed-op',versao_depois:1,conteudo_depois:body}]);await appContext(c);
+   const p=await appPage(c,'integridade');await p.waitForFunction(()=>[...document.querySelectorAll('#historyVersion option')].some(o=>o.textContent.includes('Nuvem:')));
+   await p.selectOption('#historyVersion',await remoteOption(p,'depois'));await p.waitForFunction(()=>document.getElementById('historyStatus').textContent.includes('ambíguas'));
+   assert.equal(await p.evaluate(()=>document.getElementById('previewRecovery').disabled),true);assert.equal(await p.evaluate(()=>document.querySelectorAll('#historyQuote option').length),1);
   });
   await test('native sales page restores archived sale through the transaction and reports quota errors',async c=>{
    rows.set(A,{user_id:A,versao:1,conteudo:{...empty(),emissao_pessoas:[{id:'client-1',tipo:'cliente',nome:'Contato sintético'}],emissao_vendas:[{id:'archived-sale',clienteId:'client-1',valorVenda:100,excluidaEm:'2026-10-14T00:00:00Z'}]}});

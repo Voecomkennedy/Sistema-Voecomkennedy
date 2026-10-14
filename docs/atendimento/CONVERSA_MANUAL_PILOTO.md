@@ -19,7 +19,7 @@ Estados: reservado (aguardando confirmação, não repetir), aceito (API confirm
 ## Publicação e liberação pendentes
 
 1. Aplicar somente a migration nova ao projeto existente. Fazer backup/esquema antes conforme procedimento atual; nenhum arquivo de mídia é criado nesta etapa.
-2. Publicar somente atendimento-envio-manual com verify_jwt true e os dois arquivos do pacote (index.ts e manual-send.mjs), mantendo ATENDIMENTO_ENVIO_MANUAL_ENABLED ausente/false. Usa as credenciais Z-API existentes somente no servidor; não cria ou rota tokens.
+2. Publicar somente atendimento-envio-manual com verify_jwt true e os dois arquivos do pacote (index.ts e manual-send.mjs), mantendo ATENDIMENTO_ENVIO_MANUAL_ENABLED ausente/false. O número da agência para bloquear autoenvio fica em ATENDIMENTO_ENVIO_MANUAL_CONNECTED_PHONE (alternativa: configuração já existente da recepção), sem modificar o receptor. Usa as credenciais Z-API existentes somente no servidor; não cria ou rota tokens.
 3. Mesclar/publicar apenas este PR da tela nova e seus arquivos aditivos. Não mesclar PR 21. Conferir login, leitura e estado desligado.
 4. Com aprovação explícita do alcance, salvar apenas ATENDIMENTO_ENVIO_MANUAL_ENABLED=true para permitir a Kennedy enviar manualmente textos aos contatos privados já recebidos na sua própria conta. Este passo amplia o envio além do teste pessoal final 7399; precisa de confirmação específica. Nenhum teste a cliente será feito pelo agente.
 5. Kennedy abre atendimento-conversas.html, escolhe contato, escreve, confere número, marca a confirmação e envia. Teste controlado inicial deve ser feito pelo próprio Kennedy. Para interromper novos envios, voltar somente a flag manual para false; leitura permanece disponível e reservas não são apagadas.

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teste único de envio — Voecomkennedy</title><link rel="stylesheet" href="css/atendimento.css">
+<style>main{max-width:780px}.test-card{background:white;border:1px solid #dbe7f0;border-radius:12px;padding:24px}blockquote{margin:16px 0;padding:16px;background:#f0f4f8;border-radius:8px;line-height:1.7}#test-result{line-height:1.6}#test-form label{display:flex;gap:10px;align-items:flex-start;line-height:1.5;margin:20px 0}#test-form button{min-height:44px}</style></head>
+<body><nav aria-label="Navegação principal"><a class="brand" href="index.html">Voecomkennedy</a><a href="atendimento-recebidos.html">Mensagens recebidas</a></nav>
+<main><header><div><p class="eyebrow">Teste acompanhado</p><h1>Uma mensagem de teste</h1></div><span class="pill">Confirmação manual</span></header>
+<p class="notice">Este controle envia somente a mensagem abaixo, quando o teste estiver liberado. Não há envio automático nem nova tentativa automática.</p>
+<section class="test-card" aria-labelledby="test-destination"><h2 id="test-destination">Kennedy · WhatsApp pessoal final 7399</h2>
+<p>Texto que será enviado:</p><blockquote id="test-text">Teste de conexão do CRM Voecomkennedy. Kennedy, pode responder TESTE RECEBIDO para conferirmos a chegada?</blockquote>
+<p id="test-gate" role="status">Verificando sessão…</p><a id="test-login" href="login.html" hidden>Entrar no sistema</a>
+<form id="test-form" hidden><label><input id="test-confirm" type="checkbox">Conferi o destinatário final 7399 e o texto. Quero iniciar a única tentativa autorizada.</label><button id="test-send" class="primary" type="submit" disabled>Enviar uma única mensagem de teste</button></form>
+<p id="test-result" role="status" aria-live="polite"></p><p class="help">O aceite da Z-API não comprova a entrega no WhatsApp. Se a resposta for incerta, não tente novamente: a tentativa precisa ser conferida antes de qualquer ação.</p></section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/supabase-config.js"></script><script src="js/auth.js"></script><script type="module" src="js/atendimento-teste-unico.mjs"></script>
+</body></html>

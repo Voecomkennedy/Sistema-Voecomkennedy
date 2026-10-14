@@ -132,6 +132,22 @@ const CloudSync = {
                 usuarioAnterior || null
             );
         }
+        // An older app can change the operational owner without knowing this
+        // journal key. Preserve a foreign/unknown journal separately, even when
+        // the current operational owner already matches this account.
+        [this.CONFLITO_KEY, this.CONFLITOS_KEY].forEach(chave => {
+            const raw = localStorage.getItem(chave);
+            if (raw === null) return;
+            let registros;
+            try {
+                const valor = JSON.parse(raw);
+                registros = chave === this.CONFLITOS_KEY ? valor : [valor];
+            } catch { registros = null; }
+            if (Array.isArray(registros) && registros.every(item => item?.userId === this._userId)) return;
+            const donos = new Set((Array.isArray(registros) ? registros : [])
+                .map(item => item?.userId).filter(dono => typeof dono === 'string' && dono));
+            this._isolarCache([chave], 'conflito-de-outra-conta-ou-sem-dono', donos.size === 1 ? [...donos][0] : null);
+        });
         // Nem mesmo um dono atual conhecido comprova a origem destas chaves:
         // versões antigas deixavam o legado de outras contas no navegador.
         this._isolarCache(this.CHAVES_LEGADAS, 'legado-sem-dono');
@@ -263,6 +279,7 @@ const CloudSync = {
     _registrarConflito(captura, local, nuvem, versaoNuvem, atualizadoEm, resolucao = 'pendente', id = null) {
         const anteriores = JSON.parse(localStorage.getItem(this.CONFLITOS_KEY) || '[]');
         if (!Array.isArray(anteriores)) throw new Error('Histórico local de conflitos inválido. Os dados foram mantidos.');
+        if (anteriores.some(item => item?.userId !== this._userId)) throw new Error('Há cópias de conflito de outra conta. Preserve e isole essas cópias antes de continuar.');
         const ultimoRaw = localStorage.getItem(this.CONFLITO_KEY);
         if (!anteriores.length && ultimoRaw) {
             const ultimo = JSON.parse(ultimoRaw);

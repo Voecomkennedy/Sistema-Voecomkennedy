@@ -203,6 +203,16 @@ test('conflict copies are isolated with the previous owner, never mixed into the
   assert.ok(recovery[0].dados[d.sync.CONFLITOS_KEY].includes('PRIVATE'));
 });
 
+test('foreign conflict journal left by an older app is isolated even if the operational owner already matches', () => {
+  const b=new Backend(),d=device(b);d.write(contents([q('CURRENT')]));
+  const raw=JSON.stringify([{userId:'previous-owner',local:contents([q('PREVIOUS')])}]);
+  d.localStorage.setItem(d.sync.CONFLITOS_KEY,raw);d.sync._prepararCacheDoUsuario();
+  assert.equal(d.localStorage.getItem(d.sync.CONFLITOS_KEY),null);
+  const recovery=JSON.parse(d.localStorage.getItem(d.sync.RECUPERACAO_KEY));
+  assert.equal(recovery[0].usuarioId,'previous-owner');assert.equal(recovery[0].dados[d.sync.CONFLITOS_KEY],raw);
+  assert.deepEqual(d.read().emissao_cotacoes.map(x=>x.id),['CURRENT']);
+});
+
 test('dialog names all three actions; Escape reviews later without native confirm', async () => {
   const dom = new JSDOM('<body></body>', {url:'https://synthetic.invalid',runScripts:'outside-only'});
   try {

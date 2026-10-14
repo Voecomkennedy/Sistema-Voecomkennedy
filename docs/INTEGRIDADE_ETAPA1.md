@@ -6,12 +6,14 @@ Este pacote corrige o reconhecimento de envios e a identidade de propostas/conve
 
 - O sincronizador conserva o controle de versão e o escopo da conta em `dados_app`. A comparação de confirmação usa conteúdo canônico completo, para não confundir a ordem de propriedades retornada pelo JSONB com mudança de dados. Metadados antigos continuam aceitos.
 - Uma edição feita durante um envio fica pendente até seu conteúdo ser confirmado. Falha de rede mantém erro visível, permite tentativa explícita/reconexão e faz até três retentativas automáticas com espera crescente.
-- Uma resposta perdida após commit pode ser reconhecida ao consultar a versão atual, sem duplicar registros ou oferecer substituição desnecessária. Falha ao guardar metadados da confirmação não anuncia sucesso.
+- Uma resposta perdida após commit pode ser reconhecida ao consultar a versão atual, sem duplicar registros ou oferecer substituição desnecessária. A sessão conserva capturas incertas para reconhecer uma revisão antiga confirmada, mesmo quando outra edição local já existe; a edição nova continua pendente e só segue com CAS. Conteúdo ou versão remota diferente exige conflito explícito, sem merge automático. Falha ao guardar metadados da confirmação não anuncia sucesso.
 - Um conflito guarda captura enviada, estado local recente e nuvem em `emissao_cloud_sync_conflitos_v1`, conservando o ponteiro anterior e conflitos já registrados. Falha de preservação bloqueia aplicação de outra versão. As cópias seguem o isolamento e a preservação da conta no logout. Cópias de outra conta deixadas por uma versão antiga também são preservadas separadamente, mesmo quando o marcador do cache operacional já corresponde à conta atual.
 - O diálogo oferece Revisar depois, Usar dados da nuvem e Substituir nuvem por estes dados. Revisar depois e Escape mantêm ambos os lados; reconexão não escolhe uma versão. Edição posterior à apresentação do conflito invalida a escolha destrutiva e exige revisão novamente. Suspensão/troca de conta invalida a operação em trânsito.
+- Quando o conflito ocorre na sincronização inicial, Revisar depois/Escape **não libera a aplicação**: o painel de segurança permanece e a retomada acontece por Recarregar e nova decisão. Não há revisão dentro da aplicação nessa fase. Se o conflito aparece após a aplicação já ter aberto, o indicador permite Revisar conflito e as edições locais ficam pendentes. O bloqueio inicial é mantido.
 - A proposta tem ID e revisão visíveis. Novo/Limpar abre outra identidade. Editar conserva o ID. Um editor cujo registro já mudou não o substitui silenciosamente. O contador de revisão ainda não armazena versões anteriores.
 - No cotador incorporado, a gravação precede o PDF. O download conserva a cópia salva mesmo que o formulário mude; outras alterações podem ser salvas enquanto o arquivo é gerado. Cliques adicionais de PDF enquanto há download são ignorados com aviso. No cotador avulso, o comportamento de histórico continua próprio.
 - A conversão grava `cotacaoOrigemId` na venda e usa `cotacao-<id da cotação>` como identidade estável. Falha na gravação do vínculo deixa um erro explícito e permite retomar com a venda existente. A retomada conserva os valores da primeira gravação e informa isso ao usuário. O formulário concluído não cria outra venda ao repetir Salvar; uma nova abertura inicia outra operação.
+- Cotações legadas que têm apenas `nomeCliente` podem ser vinculadas ao contato cadastrado **explicitamente selecionado** em Vendas. O vínculo é concluído junto da conversão, sem procurar ou mesclar contatos pelo nome e sem mudar o nome histórico da cotação. Uma cotação que já tem `clienteId` continua rejeitando cliente divergente. Depois de uma conversão parcial, a escolha de outro cliente também é rejeitada; a retomada deve conservar o cliente da venda já criada.
 
 As demais páginas recebem apenas versões novas nas referências aos scripts compartilhados. Fórmulas financeiras, promoções, check-in, motor de envios, configuração e Conversas manual não foram alterados. Não há migração de banco neste pacote.
 
@@ -43,10 +45,10 @@ Os testes usam dados sintéticos e rede bloqueada/stubs. A suíte não chama job
 
 | Arquivo | Casos |
 |---|---|
-| `tests/cloud-persistence.test.cjs` | Edição durante ack e conflito; três decisões e Escape; preservação insuficiente; quota de metadados; leitura inválida; reconexão/retentativas limitadas; resposta incerta; suspensão e troca de conta |
+| `tests/cloud-persistence.test.cjs` | Edição durante ack e conflito; três decisões e Escape; preservação insuficiente; quota de metadados; leitura inválida; reconexão/retentativas limitadas; resposta incerta com/sem edição posterior; rejeição de reconciliação quando remoto diverge; suspensão e troca de conta |
 | `tests/cloud-scope.test.cjs` | Regressão de conta, legado, recuperação, logout e respostas tardias |
 | `tests/proposal-save-pdf.test.cjs` | Três propostas do mesmo cliente; Novo/Limpar/Editar durante PDF; outra revisão durante download; mudança de contato; falha de gravação/PDF; clique repetido; editor desatualizado; recarga |
-| `tests/conversion-retry.test.cjs` | Primeiro/segundo salvamento falhando; vínculo retomado após recarga; valores preservados; repetição; três propostas independentes |
+| `tests/conversion-retry.test.cjs` | Primeiro/segundo salvamento falhando; vínculo retomado após recarga; valores preservados; repetição; três propostas independentes; legado sem clienteId, escolha explícita e cliente divergente |
 | Suítes existentes do painel/cotador | Contatos, conversão, pagamentos/taxas, fusos, bebês, PDF, check-in, mensagens e Conversas manual |
 
 ## Riscos residuais
@@ -57,6 +59,7 @@ Os testes usam dados sintéticos e rede bloqueada/stubs. A suíte não chama job
 4. Conversão é retomável, mas ainda tem duas gravações locais. Uma interrupção pode deixar vínculo incompleto até a retomada; a venda tem origem explícita para ser reconhecida. Atomicidade de todas as coleções e transações duráveis ficam para a etapa seguinte.
 5. Fechar a página não garante que uma requisição assíncrona chegue ao servidor. O estado local continua importante. Não considerar geração de PDF como envio ao cliente ou confirmação na nuvem.
 6. As suítes não validam navegação/download nativos em aparelhos reais nem um ciclo entre contas de teste conectadas. Não houve teste autenticado contra produção. Causas históricas individuais e recuperação de cadastros antigos não foram atribuídas ou executadas.
+7. O reconhecimento de capturas incertas adicionais fica na memória da sessão e é descartado na suspensão/troca de conta. Depois de recarregar, uma resposta antiga perdida seguida de edição local pode exigir revisão manual do conflito. Persistência durável dessa evidência pertence à etapa seguinte; não fazer merge por aproximação para ocultar a limitação.
 
 ## Reversão de código
 

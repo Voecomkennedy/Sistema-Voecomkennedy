@@ -159,6 +159,27 @@ test('lost response after commit is recognized on retry instead of overwriting o
   assert.equal(d.sync._backupPendente, false);
 });
 
+test('lost ack followed by a newer local edit recognizes the uncertain sent capture without an artificial conflict', async () => {
+  const b=new Backend(),d=device(b);d.write(contents([q('A')]));b.loseAck=true;
+  assert.equal(await d.sync.enviarParaNuvem(),false);
+  assert.deepEqual(b.row.conteudo.emissao_cotacoes.map(x=>x.id),['A']);
+  d.write(contents([q('A'),q('B')]));await d.runTimers();
+  assert.deepEqual(b.row.conteudo.emissao_cotacoes.map(x=>x.id),['A','B']);
+  assert.equal(d.prompts.length,0);assert.equal(d.sync._backupPendente,false);
+});
+
+test('uncertain capture recognition never merges or replaces a different intervening remote edit', async () => {
+  const b=new Backend(),d=device(b);d.write(contents([q('A')]));b.loseAck=true;
+  await d.sync.enviarParaNuvem();d.write(contents([q('A'),q('B')]));b.remoteChange(contents([q('A'),q('C')]));
+  await d.runTimers();
+  assert.deepEqual(b.row.conteudo.emissao_cotacoes.map(x=>x.id),['A','C']);
+  assert.deepEqual(d.read().emissao_cotacoes.map(x=>x.id),['A','B']);
+  assert.equal(d.prompts.length,1);assert.equal(d.sync._backupPendente,true);
+  const history=JSON.parse(d.localStorage.getItem(d.sync.CONFLITOS_KEY));
+  assert.deepEqual(history[0].local.emissao_cotacoes.map(x=>x.id),['A','B']);
+  assert.deepEqual(history[0].nuvem.emissao_cotacoes.map(x=>x.id),['A','C']);
+});
+
 test('review later can be resumed explicitly; reconnect does not choose a version for the user', async () => {
   const b = new Backend(); let choice='depois';
   const d=device(b,b.row.conteudo,{choice:()=>choice});

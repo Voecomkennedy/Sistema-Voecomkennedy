@@ -18,6 +18,7 @@ const CloudSync = {
     _falhasConsecutivas: 0,
     _conflitoPendente: null,
     _revisandoConflito: false,
+    _enviosIncertos: [],
 
     CHAVES: ['emissao_vendas', 'emissao_pessoas', 'emissao_pacotes', 'emissao_cotacoes'],
     CHAVES_LEGADAS: ['emissao_clientes', 'emissao_fornecedores'],
@@ -176,6 +177,7 @@ const CloudSync = {
         this._backupPendente = false;
         this._conflitoPendente = null;
         this._revisandoConflito = false;
+        this._enviosIncertos = [];
         this._falhasConsecutivas = 0;
         this._revisaoLocal = 0;
         this._revisaoConfirmada = 0;
@@ -397,6 +399,7 @@ const CloudSync = {
     _confirmarEnvio(conteudo, versao, atualizadoEm) {
         this._versaoNuvem = Number(versao) || 0;
         this._salvarMeta(this._versaoNuvem, conteudo, atualizadoEm);
+        this._enviosIncertos = this._enviosIncertos.filter(item => item.userId === this._userId && item.versao > this._versaoNuvem);
         this._falhasConsecutivas = 0;
         const atualizado = this._conteudosIguais(this._obterConteudoLocal(), conteudo);
         this._backupPendente = !atualizado;
@@ -505,25 +508,33 @@ const CloudSync = {
         };
 
         let resposta;
-        if (this._versaoNuvem === null) {
-            resposta = await client
-                .from('dados_app')
-                .insert(registro)
-                .select('versao, atualizado_em')
-                .maybeSingle();
-        } else {
-            resposta = await client
-                .from('dados_app')
-                .update(registro)
-                .eq('user_id', operacao.userId)
-                .eq('versao', this._versaoNuvem)
-                .select('versao, atualizado_em')
-                .maybeSingle();
+        try {
+            if (this._versaoNuvem === null) {
+                resposta = await client
+                    .from('dados_app')
+                    .insert(registro)
+                    .select('versao, atualizado_em')
+                    .maybeSingle();
+            } else {
+                resposta = await client
+                    .from('dados_app')
+                    .update(registro)
+                    .eq('user_id', operacao.userId)
+                    .eq('versao', this._versaoNuvem)
+                    .select('versao, atualizado_em')
+                    .maybeSingle();
+            }
+        } catch (error) {
+            if (this._operacaoAtual(operacao)) this._lembrarEnvioIncerto(registro);
+            throw error;
         }
 
         if (!this._operacaoAtual(operacao)) return false;
         if (resposta.error) {
-            if (resposta.error.code !== '23505') throw resposta.error;
+            if (resposta.error.code !== '23505') {
+                this._lembrarEnvioIncerto(registro);
+                throw resposta.error;
+            }
         } else if (resposta.data) {
             this._confirmarEnvio(conteudo, Number(resposta.data.versao) || proximaVersao, resposta.data.atualizado_em);
             return true;
@@ -544,6 +555,15 @@ const CloudSync = {
             this._confirmarEnvio(conteudo, atual.versao, atual.atualizado_em);
             return true;
         }
+        const confirmado = this._enviosIncertos.some(item => item.userId === operacao.userId &&
+            item.versao === Number(atual.versao) && this._conteudosIguais(item.conteudo, atual.conteudo || {}));
+        if (confirmado) {
+            // The lost response belonged to an older local revision. Acknowledge
+            // only that exact snapshot/version; newer edits stay pending and the
+            // next send still uses server CAS. Any different remote edit conflicts.
+            this._confirmarEnvio(atual.conteudo, atual.versao, atual.atualizado_em);
+            return true;
+        }
 
         if (confirmouSobrescrita) {
             // Outro conflito aconteceu enquanto a escolha anterior era aplicada.
@@ -557,6 +577,15 @@ const CloudSync = {
             atual.atualizado_em,
             operacao
         );
+    },
+
+    _lembrarEnvioIncerto(registro) {
+        if (this._enviosIncertos.some(item => item.userId === registro.user_id && item.versao === registro.versao &&
+            this._conteudosIguais(item.conteudo, registro.conteudo))) return;
+        // Session-only recognition. Never attach client data to logged errors,
+        // reuse another account's snapshot, or infer a commit from a partial match.
+        this._enviosIncertos.push({ userId: registro.user_id, versao: registro.versao,
+            conteudo: JSON.parse(JSON.stringify(registro.conteudo)) });
     },
 
     async enviarParaNuvem() {

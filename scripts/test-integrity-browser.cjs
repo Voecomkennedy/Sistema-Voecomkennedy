@@ -5,6 +5,10 @@ const path = require('node:path');
 const http = require('node:http');
 const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '..');
+// Optional read-only reproduction against the exact commit reviewed. Only
+// these application sources differ; fixtures, identities and network guards stay.
+const baseline = new Map(process.argv.includes('--baseline') ? ['js/integrity-store.js','js/integrity-history.js','js/storage.js','js/cloud-sync.js','js/proposal-integration.js','vendas.html'].map(file=>
+ [file,require('node:child_process').execFileSync('git',['show','270dfcd9dbf2de85b8c4abe152695f030df0a0a8:'+file],{cwd:root})]) : []);
 const A = '11111111-1111-4111-8111-111111111111', B = '22222222-2222-4222-8222-222222222222';
 const empty = () => Object.fromEntries(['emissao_vendas','emissao_pessoas','emissao_pacotes','emissao_cotacoes'].map(k=>[k,[]]));
 const pageSource = `<!doctype html><html><body><script src="/js/integrity-store.js"></script><script src="/js/storage.js"></script><script src="/js/cloud-sync.js"></script><script>
@@ -34,7 +38,7 @@ const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kin
   }
   const file=path.resolve(root,'.'+new URL(req.url,'http://127.0.0.1').pathname);
   if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
-  try{res.setHeader('content-type',file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'text/plain');res.end(fs.readFileSync(file));}
+  try{res.setHeader('content-type',file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'text/plain');res.end(baseline.get(path.relative(root,file).split(path.sep).join('/'))||fs.readFileSync(file));}
   catch{res.writeHead(404);res.end();}
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -56,7 +60,7 @@ const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kin
     if(['cdn.jsdelivr.net','cdnjs.cloudflare.com','fonts.googleapis.com','fonts.gstatic.com'].includes(u.hostname))return route.fulfill({body:''});
     forbidden.push(u.origin);return route.abort();
    });
-   try{await fn(context);passed++;console.log('PASS '+name);}finally{await context.close();}
+   try{console.log('RUN '+name);await fn(context);passed++;console.log('PASS '+name);}finally{await context.close();}
   }
   const fixture=async(context,owner=A)=>{const page=await context.newPage();await page.goto(url+'/__fixture');await page.evaluate(o=>boot(o),owner);return page;};
   const createContact=p=>p.evaluate(()=>StorageManager.gravar('addPessoa',[{tipo:'cliente',nome:'Contato sintético'}]));
@@ -68,6 +72,21 @@ const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kin
    const p=await c.newPage();p.setDefaultTimeout(8000);await p.goto(url+'/'+name+'.html');
    await p.waitForFunction(()=>document.documentElement.dataset.appAutenticado==='true');
    await p.evaluate(()=>{CloudSync._programarEnvio=()=>{};window.__errors=[];if(window.Utils)Utils.showError=m=>__errors.push(m)});return p;
+  }
+  async function fillNativeProposal(p,pax=1,obs="Proposta sintética") {
+   await p.evaluate(async({pax,obs})=>{
+    novaPropostaCompleta();selecionarContatoProposta('client-1');const f=document.getElementById('quadroProposta').contentWindow;
+    // This fixture has no account card-rate service. Choose the real, valid
+    // no-interest mode; do not bypass the application's with-interest guard.
+    f.document.getElementById('p-com-juros').checked=false;
+    f.document.getElementById('p-com-juros').dispatchEvent(new f.Event('change',{bubbles:true}));
+    for(const[id,value]of Object.entries({'p-orig':'BSB','p-dest':'POA','p-data-ida':'2027-10-27','p-hora-dep':'10:10','p-hora-cheg':'12:45','p-data-volta':'2027-11-02','p-hora-dep-v':'05:15','p-hora-cheg-v':'07:45','p-cia':'LATAM','p-classe':'Economica','p-adultos':String(pax),'p-val-total-pix':String(pax*1000),'p-val-pix-pessoa':'1000','p-val-cartao':String(pax*1100),'p-parcelas':'10','p-obs':obs})){
+     const el=f.document.getElementById(id);el.value=value;el.dispatchEvent(new f.Event('input',{bubbles:true}));el.dispatchEvent(new f.Event('change',{bubbles:true}));
+    }
+    const toasts=[];const toast=f.showToast;f.showToast=message=>{toasts.push(message);return toast(message)};
+    const proposal=f.coletarDadosProposta();f.showToast=toast;
+    if(!proposal)throw new Error('Invalid synthetic quotation form: '+JSON.stringify({toasts,timingReady:f.TimingUI?.ready,invalid:[...f.document.querySelectorAll('#panel-proposta input,#panel-proposta select')].filter(el=>!el.checkValidity()).map(el=>({id:el.id,type:el.type,message:el.validationMessage})),clientPresent:!!f.document.getElementById('p-cliente').value}));
+   },{pax,obs});
   }
   await test('two native tabs preserve simultaneous inclusions',async c=>{
    const p=await fixture(c),q=await fixture(c);
@@ -203,6 +222,50 @@ const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kin
    await p.waitForFunction(()=>IntegrityStore._blocked===true);
    assert.equal(await p.evaluate(async()=>{try{await StorageManager.gravar('addPessoa',[{nome:'Blocked'}]);return null}catch(e){return e.code}}),'INTEGRITY_SCOPE');
   });
+  for(const preserveFails of[false,true])await test('legacy write racing queued transaction is preserved before projection'+(preserveFails?' even with recovery quota':''),async c=>{
+   const p=await fixture(c);await createContact(p);
+   const q=await c.newPage();await q.goto(url+'/__fixture');
+   const raw=' [{"id":"legacy-race","tipo":"cliente","nome":"Legado sintético"}] ';
+   await p.evaluate(preserveFails=>{
+    if(preserveFails)CloudSync._preservarCache=()=>{throw new DOMException('synthetic recovery quota','QuotaExceededError')};
+    window.__legacySeen=false;addEventListener('storage',e=>{if(e.key==='emissao_pessoas'&&e.newValue?.includes('legacy-race'))window.__legacySeen=true});
+    // A real native transaction keeps the subsequent mutation and observer
+    // reads queued in IndexedDB. No refresh or transaction API is mocked.
+    const hold=IntegrityStore.db.transaction(['accounts','history'],'readwrite');
+    const pump=()=>{const get=hold.objectStore('accounts').get(IntegrityStore.owner);get.onsuccess=()=>{if(!window.__releaseHold)pump()}};pump();
+    window.__racingSave=StorageManager.gravar('addPessoa',[{nome:'Nova transação sintética'}]);
+    setTimeout(()=>{window.__releaseHold=true},5000);
+   },preserveFails);
+   await q.evaluate(raw=>localStorage.setItem('emissao_pessoas',raw),raw);
+   await p.waitForFunction(()=>window.__legacySeen===true);
+   await p.evaluate(async()=>{window.__releaseHold=true;try{await window.__racingSave}catch(e){window.__racingError=e.code}});
+   try{await p.waitForFunction(()=>IntegrityStore._blocked===true,{},{timeout:3000})}catch(cause){
+    const observed=await p.evaluate(()=>({blocked:IntegrityStore._blocked,state:IntegrityStore.state.body.emissao_pessoas.map(x=>x.id),projection:JSON.parse(localStorage.getItem('emissao_pessoas')).map(x=>x.id),recovery:localStorage.getItem(CloudSync.RECUPERACAO_KEY)}));
+    throw new Error('Legacy race did not block or preserve: '+JSON.stringify(observed));
+   }
+   assert.deepEqual(await p.evaluate(()=>IntegrityStore.state.body.emissao_pessoas.map(x=>x.nome)),['Contato sintético','Nova transação sintética']);
+   assert.equal(await p.evaluate(()=>localStorage.getItem('emissao_pessoas')),raw,'projection must not overwrite unknown legacy bytes');
+   if(!preserveFails)assert.equal(await p.evaluate(raw=>JSON.parse(localStorage.getItem(CloudSync.RECUPERACAO_KEY)).some(x=>x.dados.emissao_pessoas===raw),raw),true);
+   else assert.equal(await p.evaluate(()=>localStorage.getItem(CloudSync.RECUPERACAO_KEY)),null);
+  });
+  await test('storage event bytes survive a newer cache value and a stale projection-busy marker',async c=>{
+   const p=await fixture(c);await createContact(p);const q=await c.newPage();await q.goto(url+'/__fixture');
+   const before=await p.evaluate(()=>localStorage.getItem('emissao_pessoas'));
+   await q.evaluate(before=>{
+    localStorage.setItem('emissao_integrity_projection_busy_v1','stale-projection');
+    localStorage.setItem('emissao_pessoas',' [{"id":"event-only-legacy","nome":"Evento sintético"}] ');
+    localStorage.setItem('emissao_pessoas',before);
+   },before);
+   await p.waitForFunction(()=>IntegrityStore._blocked===true,{},{timeout:3000});
+   assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem(CloudSync.RECUPERACAO_KEY)).some(x=>x.dados.emissao_pessoas===' [{"id":"event-only-legacy","nome":"Evento sintético"}] ')),true);
+  });
+  await test('older durable projection is recognized without discarding the newest authority',async c=>{
+   const p=await fixture(c);await createContact(p);const old=await p.evaluate(()=>localStorage.getItem('emissao_pessoas'));
+   await createContact(p);await createContact(p);const q=await c.newPage();await q.goto(url+'/__fixture');
+   await q.evaluate(old=>localStorage.setItem('emissao_pessoas',old),old);
+   assert.equal(await p.evaluate(()=>IntegrityStore._project()),true);
+   assert.deepEqual(await p.evaluate(()=>[IntegrityStore._blocked,StorageManager.getPessoas().length,JSON.parse(localStorage.getItem('emissao_pessoas')).length]),[false,3,3]);
+  });
   await test('partially projected conversion reloads its complete durable sale and quote',async c=>{
    const p=await fixture(c),contact=await createContact(p);
    const quote=await p.evaluate(id=>StorageManager.gravar('addCotacao',[{clienteId:id,status:'aberta'}]),contact.id);
@@ -288,27 +351,69 @@ const mockSource = `window.getSupabaseClient=()=>({from(table){let op={table,kin
    p.once('dialog',d=>d.accept());await p.click('#applyRecovery');await p.waitForFunction(()=>document.getElementById('historyStatus').textContent.includes('mudaram depois da prévia'));
    assert.equal(await p.evaluate(async()=>{await IntegrityStore.refresh();return StorageManager.getCotacoes()[0].observacao}),'Posterior');
   });
+  await test('recovery UI restores a legacy proposal found only before the first local transaction',async c=>{
+   await appContext(c);const seed=await c.newPage();await seed.goto(url+'/__fixture');
+   const quote={id:'legacy-before-only',clienteId:'legacy-contact',status:'aberta',observacao:'Anterior à primeira revisão'};
+   await seed.evaluate(({quote,owner})=>{
+    localStorage.setItem('emissao_cloud_sync_usuario_local',owner);
+    localStorage.setItem('emissao_pessoas',JSON.stringify([{id:'legacy-contact',tipo:'cliente',nome:'Contato legado sintético'}]));
+    localStorage.setItem('emissao_cotacoes',JSON.stringify([quote]));
+   },{quote,owner:A});await seed.evaluate(o=>boot(o),A);
+   await seed.evaluate(id=>StorageManager.gravar('deleteCotacao',[id]),quote.id);
+   rows.set(A,{user_id:A,versao:1,conteudo:await seed.evaluate(()=>IntegrityStore.state.body)});
+   const p=await appPage(c,'integridade');await p.waitForFunction(()=>document.querySelectorAll('#historyVersion option').length>1);
+   const option=await p.evaluate(()=>[...document.querySelectorAll('#historyVersion option')].find(o=>o.textContent.includes('anterior à revisão 1'))?.value);
+   assert.notEqual(option,undefined,'initial before snapshot must be selectable');await p.selectOption('#historyVersion',option);await p.selectOption('#historyQuote',quote.id);
+   const revision=await p.evaluate(()=>IntegrityStore.state.revision);await p.click('#previewRecovery');await p.waitForFunction(()=>!document.getElementById('recoveryPreview').hidden);
+   assert.match(await p.textContent('#recoveryAfter'),/Anterior à primeira revisão/);assert.equal(await p.evaluate(()=>IntegrityStore.state.revision),revision);
+   p.once('dialog',d=>d.accept());await p.click('#applyRecovery');await p.waitForFunction(()=>document.getElementById('historyStatus').textContent.includes('recuperada neste aparelho'));
+   assert.equal(await p.evaluate(id=>StorageManager.getCotacaoById(id).observacao,quote.id),quote.observacao);
+   assert.equal(await p.evaluate(()=>IntegrityStore.state.revision),revision+1);
+  });
+  await test('native sales page restores archived sale through the transaction and reports quota errors',async c=>{
+   rows.set(A,{user_id:A,versao:1,conteudo:{...empty(),emissao_pessoas:[{id:'client-1',tipo:'cliente',nome:'Contato sintético'}],emissao_vendas:[{id:'archived-sale',clienteId:'client-1',valorVenda:100,excluidaEm:'2026-10-14T00:00:00Z'}]}});
+   await appContext(c);const p=await appPage(c,'vendas');
+   await p.evaluate(async()=>{Utils.confirm=()=>true;await Promise.all([restaurarVenda('archived-sale'),restaurarVenda('archived-sale')])});
+   assert.equal(await p.evaluate(()=>StorageManager.getVendaById('archived-sale').excluidaEm),null);
+   assert.equal(await p.evaluate(async()=>{const h=await IntegrityStore.history();return h.at(-1).source}),'restaurarVenda');
+   await p.evaluate(()=>CloudSync.enviarParaNuvem());await p.reload();await p.waitForFunction(()=>document.documentElement.dataset.appAutenticado==='true');
+   assert.equal(await p.evaluate(()=>StorageManager.getVendas().length),1);
+   const result=await p.evaluate(async()=>{
+    await StorageManager.gravar('deleteVenda',['archived-sale']);const revision=IntegrityStore.state.revision;window.__restoreErrors=[];window.__restoreSuccesses=[];
+    Utils.confirm=()=>true;Utils.showError=m=>__restoreErrors.push(m);Utils.showSuccess=m=>__restoreSuccesses.push(m);
+    const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){if(this.name==='accounts')throw new DOMException('synthetic restore quota','QuotaExceededError');return put.apply(this,args)};
+    try{await restaurarVenda('archived-sale')}finally{IDBObjectStore.prototype.put=put}
+    return[!!StorageManager.getVendaById('archived-sale').excluidaEm,IntegrityStore.state.revision===revision,__restoreErrors.length,__restoreSuccesses.length];
+   });assert.deepEqual(result,[true,true,1,0]);
+   await p.evaluate(()=>StorageManager.abrirEditor('VENDAS','archived-sale'));
+   const q=await fixture(c);await q.evaluate(()=>StorageManager.gravar('updateVenda',['archived-sale',{observacoes:'Revisão concorrente'}]));
+   await p.evaluate(async()=>{__restoreErrors=[];await restaurarVenda('archived-sale')});
+   assert.equal(await p.evaluate(()=>__restoreErrors.length),1);
+   assert.deepEqual(await p.evaluate(async()=>{await IntegrityStore.refresh();const v=StorageManager.getVendaById('archived-sale');return[!!v.excluidaEm,v.observacoes]}),[true,'Revisão concorrente']);
+  });
   await test('native quotation form keeps three independent proposals and edits only one',async c=>{
    rows.set(A,{user_id:A,versao:1,conteudo:{...empty(),emissao_pessoas:[{id:'client-1',tipo:'cliente',nome:'Contato Sintético'}]}});
    await appContext(c);const p=await appPage(c,'cotacoes');await p.waitForFunction(()=>typeof document.getElementById('quadroProposta').contentWindow?.coletarDadosProposta==='function' && document.getElementById('quadroProposta').contentWindow.TimingUI?.ready===true);
-   for(const pax of[4,3,3])await p.evaluate(async pax=>{
-    novaPropostaCompleta();selecionarContatoProposta('client-1');const f=document.getElementById('quadroProposta').contentWindow;
-    // This fixture has no account card-rate service. Choose the real, valid
-    // no-interest mode; do not bypass the application's with-interest guard.
-    f.document.getElementById('p-com-juros').checked=false;
-    f.document.getElementById('p-com-juros').dispatchEvent(new f.Event('change',{bubbles:true}));
-    for(const[id,value]of Object.entries({'p-orig':'BSB','p-dest':'POA','p-data-ida':'2027-10-27','p-hora-dep':'10:10','p-hora-cheg':'12:45','p-data-volta':'2027-11-02','p-hora-dep-v':'05:15','p-hora-cheg-v':'07:45','p-cia':'LATAM','p-classe':'Economica','p-adultos':String(pax),'p-val-total-pix':String(pax*1000),'p-val-pix-pessoa':'1000','p-val-cartao':String(pax*1100),'p-parcelas':'10','p-obs':'Proposta sintética '+pax})){
-     const el=f.document.getElementById(id);el.value=value;el.dispatchEvent(new f.Event('input',{bubbles:true}));el.dispatchEvent(new f.Event('change',{bubbles:true}));
-    }
-    const toasts=[];const toast=f.showToast;f.showToast=message=>{toasts.push(message);return toast(message)};
-    const proposal=f.coletarDadosProposta();f.showToast=toast;
-    if(!proposal)throw new Error('Invalid synthetic quotation form: '+JSON.stringify({toasts,timingReady:f.TimingUI?.ready,invalid:[...f.document.querySelectorAll('#panel-proposta input,#panel-proposta select')].filter(el=>!el.checkValidity()).map(el=>({id:el.id,type:el.type,message:el.validationMessage})),clientPresent:!!f.document.getElementById('p-cliente').value}));await salvarPropostaCompleta();
-   },pax);
+   for(const pax of[4,3,3]){await fillNativeProposal(p,pax,'Proposta sintética '+pax);await p.evaluate(()=>salvarPropostaCompleta())}
    const initial=await p.evaluate(()=>StorageManager.getCotacoes());assert.equal(initial.length,3);assert.equal(initial.reduce((n,q)=>n+q.totalPassageiros,0),10);
    await p.evaluate(async id=>{await editarPropostaCompleta(id);document.getElementById('quadroProposta').contentWindow.document.getElementById('p-obs').value='Somente primeira';await salvarPropostaCompleta()},initial[0].id);
    const updated=await p.evaluate(()=>StorageManager.getCotacoes());assert.equal(updated[0].observacao,'Somente primeira');assert.deepEqual(updated.slice(1),initial.slice(1));
    await p.evaluate(()=>CloudSync.enviarParaNuvem());await p.reload();await p.waitForFunction(()=>document.documentElement.dataset.appAutenticado==='true');
    assert.equal(await p.evaluate(()=>StorageManager.getCotacoes().length),3);
+  });
+  await test('native proposal PDF continues after the committed save cannot schedule backup',async c=>{
+   rows.set(A,{user_id:A,versao:1,conteudo:{...empty(),emissao_pessoas:[{id:'client-1',tipo:'cliente',nome:'Contato Sintético'}]}});
+   await appContext(c);const p=await appPage(c,'cotacoes');await p.waitForFunction(()=>document.getElementById('quadroProposta').contentWindow.TimingUI?.ready===true);
+   await fillNativeProposal(p,1,'Agendamento indisponível');
+   const result=await p.evaluate(async()=>{
+    const f=document.getElementById('quadroProposta').contentWindow;
+    window.__pdfs=[];window.__toasts=[];f.ProposalDownload.download=async d=>__pdfs.push(d.obs);f.showToast=m=>__toasts.push(m);
+    CloudSync.agendarBackup=()=>{throw new Error('synthetic scheduler failure')};
+    await f.gerarProposta();
+    return[StorageManager.getCotacoes().length,IntegrityStore.state.pending,CloudSync._backupPendente,__pdfs,__toasts.some(m=>m.includes('não foi salva'))];
+   });assert.deepEqual(result,[1,true,true,['Agendamento indisponível'],false]);
+   await p.reload();await p.waitForFunction(()=>document.documentElement.dataset.appAutenticado==='true');
+   assert.equal(await p.evaluate(()=>StorageManager.getCotacoes().length),1);
   });
   await test('contact save after Novo preserves contact without retargeting the new form',async c=>{
    rows.set(A,{user_id:A,versao:1,conteudo:{...empty(),emissao_pessoas:[{id:'client-1',tipo:'cliente',nome:'Contato Sintético'}]}});

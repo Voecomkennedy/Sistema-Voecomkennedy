@@ -12,11 +12,15 @@ Conversão grava a venda e o vínculo da cotação na mesma transação local. P
 
 LocalStorage é projeção compatível para os leitores antigos. Não é autoridade nem uma transação de quatro chaves. Se a projeção falhar, o estado e o histórico já confirmados em IndexedDB permanecem; uma mistura composta exclusivamente pelos estados anterior/posterior conhecidos pode ser reconstruída na recarga. Conteúdo divergente escrito por uma aba antiga é preservado e bloqueia edição, inclusive quando sua preservação falha. Não há fusão automática de cache desconhecido. Não apagar dados do navegador.
 
+O detector conserva `storage.newValue`, inclusive quando outra escrita já substituiu o cache ou existe um marcador de projeção. Confere a cópia capturada contra estado/histórico duráveis, sem comparar um cache relido depois de `refresh()`. Antes de projetar, o gravador confere os bytes presentes e preserva/bloqueia uma escrita desconhecida; falha de quota mantém o original. Projeções antigas já existentes no histórico são reconhecidas sem substituir a autoridade mais recente. A consulta ao histórico é feita por cursor apenas quando a linha da conta não explica o evento/cache.
+
 Envios são serializados entre abas pelo Web Locks. A tentativa completa e sua identidade são persistidas antes da rede; ficam disponíveis após recarga. Confirmação antiga não confirma edição nova. A recarga reconhece somente versão/conteúdo exatos de uma tentativa preservada. CAS do servidor e decisões de conflito do PR 27 continuam valendo. Uma segunda aba com o mesmo conteúdo já confirmado não gera outro upload. Erro de agendamento não rejeita uma mutação local que já foi commitada.
 
 ## Histórico e recuperação
 
 `integridade.html`, acessível pela tela Backup, lista revisões locais e páginas de versões da nuvem. A prévia lê uma cotação e compara com o registro atual. A confirmação cria nova revisão da mesma identidade, preservando outras propostas, contatos e vendas. Uma alteração posterior à prévia invalida a operação. Recuperação de cotação removida conserva o ID original.
+
+A lista inclui os estados anterior e posterior de cada revisão local. Assim, uma cotação legada removida pela primeira transação permanece selecionável no snapshot anterior. Restaurar venda arquivada usa `StorageManager.gravar()`, com bloqueio de cliques simultâneos e apresentação de erros de quota/conflito. O bridge de proposta também separa o commit confirmado da tentativa posterior de agendar o envio; falha no agendamento mantém a pendência e permite gerar o PDF da revisão salva.
 
 O fluxo recusa cotação convertida, venda de origem existente, reatribuição de contato e contato histórico ausente. Legado sem identidade de contato ou recuperação conjunta de venda/cotação exige revisão específica. Não há restore integral de projeto, recuperação automática das propostas historicamente relatadas ou comprovação de envio ao cliente.
 
@@ -66,6 +70,8 @@ npm run test:integrity:db
 ```
 
 O runner de navegador usa contexto/perfil temporário e mocks de API em 127.0.0.1; não usa perfil real, autenticação real ou endpoints operacionais. O runner de banco cria e encerra um PostgreSQL 17 temporário com papéis/identidades sintéticos. RLS e rollback são exercitados no PostgreSQL, não apenas em mocks. Não equivalem a teste de OAuth/PostgREST real em um projeto Supabase.
+
+Os quatro bloqueadores da revisão de `270dfcd9` são reproduzíveis com `node scripts/test-integrity-browser.cjs --baseline --case=<trecho do nome>`. Essa opção lê somente os fontes pertinentes daquele commit com `git show`, sem trocar o estado do checkout. A corrida usa uma transação IndexedDB nativa para controlar a fila; `refresh()` e as APIs de transação não são substituídos. Ensaios atuais cobrem preservação antes da projeção, quota, bytes do evento, seleção do primeiro snapshot anterior, restauração de venda/CAS e PDF com falha de agendamento.
 
 Playwright foi fixado em 1.55.1, primeira versão corrigida para GHSA-7mvr-c777-76hp. É dependência de desenvolvimento. Instalação com scripts desativados, sem download/reinstalação de navegadores. Npm audit após a correção encontrou zero vulnerabilidades.
 

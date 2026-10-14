@@ -144,7 +144,13 @@
                     currentBase = fingerprint(saved);
                     showMode(saved);
                 }
-                CloudSync.agendarBackup();
+                try { CloudSync.agendarBackup(); }
+                catch (_) {
+                    // The proposal is already committed. A scheduler failure
+                    // leaves cloud confirmation pending, but must allow its PDF.
+                    CloudSync._backupPendente = true;
+                    try { CloudSync._atualizarIndicador?.('erro', 'Cotação salva neste aparelho. Não foi possível agendar o envio.'); } catch (_) {}
+                }
                 status(`Cotação #${saved.id}, revisão ${saved.propostaRevisao}, salva neste aparelho. A confirmação na nuvem aparece no indicador de sincronização.`);
                 carregarCotacoes();
                 return saved;

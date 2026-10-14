@@ -62,7 +62,10 @@
     $('moreHistory').addEventListener('click', loadRemote);
     AppBootstrap.iniciar(async () => {
         const local = await IntegrityStore.history();
-        versions = local.slice().reverse().map(item => ({ label: `Este aparelho: revisão ${item.revision} · ${item.at}`, body: item.after }));
+        versions = local.slice().reverse().flatMap(item => [
+            { label: `Este aparelho: revisão ${item.revision} · ${item.at}`, body: item.after },
+            ...(item.before ? [{ label: `Este aparelho: anterior à revisão ${item.revision} · ${item.at}`, body: item.before }] : [])
+        ]);
         render(); await loadRemote();
     });
 })();

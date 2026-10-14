@@ -2365,9 +2365,9 @@
             }
         }
 
-        function restaurarVenda(id) {
+        async function restaurarVenda(id) {
             if (!Utils.confirm('Restaurar esta venda para a lista ativa e para os relatórios?')) return;
-            if (StorageManager.restaurarVenda(id)) {
+            if (await StorageManager.gravar('restaurarVenda', [id])) {
                 Utils.showSuccess('Venda restaurada com sucesso!');
                 carregarVendas();
             }

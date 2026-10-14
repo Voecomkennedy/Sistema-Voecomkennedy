@@ -3,6 +3,20 @@ const assert = require('node:assert/strict');
 const {fixture,fill,frame} = require('./helpers/proposal-form.cjs');
 const {page,person} = require('./helpers/proposal-dom.cjs');
 
+test('backup scheduling failure after save keeps the proposal and allows its PDF', async () => {
+  const a=await fixture();
+  try {
+    const w=a.window,f=frame(w);let pdfs=0;
+    w.novaPropostaCompleta();fill(w,'Scheduler failure');
+    w.CloudSync.agendarBackup=()=>{throw new Error('synthetic scheduler failure')};
+    f.ProposalDownload.download=async data=>{pdfs++;assert.equal(data.obs,'Scheduler failure')};
+    await f.gerarProposta();
+    assert.equal(pdfs,1);assert.equal(w.StorageManager.getCotacoes().length,1);
+    assert.equal(w.CloudSync._backupPendente,true);
+    assert.match(w.document.getElementById('propostaEstado').textContent,/salva neste aparelho/);
+  } finally {a.dom.window.close()}
+});
+
 test('three same-client proposals remain independent through Novo, Limpar, PDF, editing and reload', async () => {
   const a=await fixture(); let entries;
   try {

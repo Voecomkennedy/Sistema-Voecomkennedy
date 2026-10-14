@@ -94,9 +94,9 @@ const CloudSync = {
             })));
     },
 
-    _preservarCache(chaves, motivo, usuarioId = null) {
+    _preservarCache(chaves, motivo, usuarioId = null, captura = null) {
         const valores = Object.fromEntries(chaves
-            .map(chave => [chave, localStorage.getItem(chave)])
+            .map(chave => [chave, captura && Object.hasOwn(captura, chave) ? captura[chave] : localStorage.getItem(chave)])
             .filter(([, valor]) => valor !== null));
         if (!Object.keys(valores).length) return false;
         const dados = Object.fromEntries(Object.entries(valores).filter(([chave]) => chave !== this.META_KEY));

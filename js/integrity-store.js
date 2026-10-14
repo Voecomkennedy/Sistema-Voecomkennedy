@@ -79,7 +79,7 @@
                 // Every value in a partial projection already exists in the
                 // durable before/after snapshots; quota need not duplicate it.
             }
-            if (this._project() === false) throw error('INTEGRITY_PROJECTION', 'Dados duráveis preservados. O cache da tela não pôde ser atualizado; não apague os dados do navegador.');
+            if (await this._project() === false) throw error('INTEGRITY_PROJECTION', 'Dados duráveis preservados. O cache da tela não pôde ser atualizado; não apague os dados do navegador.');
             this.db.onversionchange = () => { this.suspend(); };
             if (!this._listening) {
                 this._listening = true;
@@ -92,14 +92,11 @@
                     }
                     if (event.key === 'emissao_integrity_notice_v1' && this.ready) this.refresh().catch(() => {});
                     if (keys.includes(event.key) && this.ready) {
-                        if (localStorage.getItem('emissao_integrity_projection_busy_v1')) return;
-                        this.refresh().then(() => {
-                            if (canonical(this._legacyBody()) !== canonical(this.state.body)) {
-                                this._blocked = true;
-                                try { global.CloudSync?._preservarCache(keys, 'escrita-por-aba-antiga', this.owner); }
-                                finally { global.document?.dispatchEvent(new CustomEvent('integrity:blocked')); }
-                            }
-                        }).catch(() => {});
+                        // Event bytes outlive a later cache overwrite. A busy marker
+                        // cannot prove that this particular write was our projection.
+                        const captured = this._legacyValues();
+                        captured[event.key] = event.newValue;
+                        this._observeLegacyEvent(event.key, captured, this.owner, this.generation);
                     }
                 });
             }
@@ -119,6 +116,56 @@
             if (!this.context) throw error('INTEGRITY_WRITE_REQUIRED', 'A gravação precisa usar uma transação.');
             this.context[key] = clone(value);
         },
+        _legacyValues() {
+            return Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)]));
+        },
+        _blockLegacy(captured, owner, generation) {
+            if (owner !== this.owner || generation !== this.generation ||
+                localStorage.getItem('emissao_cloud_sync_usuario_local') !== owner) return;
+            this._blocked = true;
+            let preserved = false;
+            try { preserved = global.CloudSync?._preservarCache(keys, 'escrita-por-aba-antiga', owner, captured) === true; }
+            catch (_) {} // The caller must retain the original bytes and refuse projection.
+            global.document?.dispatchEvent(new CustomEvent('integrity:blocked', { detail: {
+                code: 'INTEGRITY_LEGACY_CONFLICT', message: preserved
+                    ? 'Uma aba antiga alterou o cache. A cópia foi preservada; revise antes de continuar.'
+                    : 'Uma aba antiga alterou o cache e não foi possível preservar a cópia. A projeção foi bloqueada; não apague os dados do navegador.'
+            } }));
+        },
+        _observeLegacyEvent(key, captured, owner, generation) {
+            // Read the durable snapshots without refresh(), which can be queued
+            // behind a committing transaction and must not re-read mutable cache.
+            this._knownLegacyValues(captured, [key], owner).then(known => {
+                if (!known) this._blockLegacy(captured, owner, generation);
+            }).catch(() => this._blockLegacy(captured, owner, generation));
+        },
+        _knownLegacyValues(captured, selectedKeys, owner = this.owner) {
+            let values;
+            try { values = Object.fromEntries(selectedKeys.map(key => [key, JSON.parse(captured[key] || '[]')])); }
+            catch (_) { return Promise.resolve(false); }
+            return new Promise((resolve, reject) => {
+                const remaining = new Set(selectedKeys);
+                const match = body => { if (body) for (const key of remaining)
+                    if (canonical(body[key]) === canonical(values[key])) remaining.delete(key); };
+                const tx = this.db.transaction(['accounts', 'history']);
+                const account = tx.objectStore('accounts').get(owner);
+                account.onsuccess = () => {
+                    match(account.result?.body);
+                    try { match(JSON.parse(account.result?.projection)); } catch (_) {}
+                    if (!remaining.size) return;
+                    // Ordinary projection events need only the account row.
+                    // Inspect older snapshots lazily, without loading all history.
+                    const cursor = tx.objectStore('history').openCursor(IDBKeyRange.bound([owner, 0], [owner, Number.MAX_SAFE_INTEGER]));
+                    cursor.onsuccess = () => {
+                        const item = cursor.result; if (!item) return;
+                        match(item.value.before); match(item.value.after);
+                        if (remaining.size) item.continue();
+                    };
+                };
+                tx.oncomplete = () => resolve(!remaining.size);
+                tx.onerror = tx.onabort = () => reject(tx.error || error('INTEGRITY_ABORT', 'Não foi possível conferir o cache.'));
+            });
+        },
         async refresh() {
             this._check(); const owner = this.owner, generation = this.generation;
             const state = await new Promise((resolve, reject) => {
@@ -131,12 +178,35 @@
             if (!this.state || state.revision >= this.state.revision) this.state = state;
             return clone(this.state);
         },
-        _project() {
+        async _project(rechecks = 0) {
             this._check(); this._projecting = true;
             const token = this.owner + ':' + crypto.randomUUID();
             try {
                 const notice = JSON.parse(localStorage.getItem('emissao_integrity_notice_v1') || 'null');
                 if (notice?.owner === this.owner && notice.revision > this.state.revision) return true;
+                // A legacy write may precede a queued observer read. Preserve
+                // it synchronously before any collection can be overwritten.
+                const captured = this._legacyValues();
+                let prior, known = false;
+                try {
+                    prior = JSON.parse(this.state.projection);
+                    known = keys.every(key => {
+                        const value = JSON.parse(captured[key] || '[]');
+                        return canonical(value) === canonical(prior?.[key]) || canonical(value) === canonical(this.state.body[key]);
+                    });
+                } catch (_) {}
+                if (!known) {
+                    // A delayed projection can be older than the immediately
+                    // preceding revision, yet already preserved in the journal.
+                    const owner = this.owner, generation = this.generation;
+                    known = await this._knownLegacyValues(captured, keys, owner);
+                    this._check(owner, generation);
+                    if (!known) { this._blockLegacy(captured, owner, generation); return false; }
+                    if (keys.some(key => localStorage.getItem(key) !== captured[key])) {
+                        if (rechecks >= 3) return false;
+                        return this._project(rechecks + 1);
+                    }
+                }
                 localStorage.setItem('emissao_integrity_projection_busy_v1', token);
                 for (const key of keys) localStorage.setItem(key, JSON.stringify(this.state.body[key]));
                 localStorage.setItem('emissao_integrity_notice_v1', JSON.stringify({ owner: this.owner, revision: this.state.revision }));
@@ -194,13 +264,16 @@
                         accounts.put(next);
                     } catch (cause) { failure = cause; tx.abort(); }
                 };
-                tx.oncomplete = () => {
+                tx.oncomplete = async () => {
                     try {
                         this._check(owner, generation);
                         if (!this.state || next.revision >= this.state.revision) this.state = next;
-                        this._project();
+                        await this._project();
+                        if (owner !== this.owner || generation !== this.generation ||
+                            localStorage.getItem('emissao_cloud_sync_usuario_local') !== owner)
+                            throw error('INTEGRITY_SCOPE', 'A conta mudou após a gravação local. Recarregue antes de continuar.');
                         global.document?.dispatchEvent(new CustomEvent('integrity:changed', { detail: { owner, revision: next.revision } }));
-                        if (next.pending) {
+                        if (next.pending && !this._blocked) {
                             try { global.CloudSync?.agendarBackup(); }
                             catch (cause) {
                                 // A scheduling error cannot reject an already committed operation.

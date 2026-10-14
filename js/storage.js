@@ -823,7 +823,7 @@ window.StorageManager = StorageManager;
 // Inline form handlers surface transaction failures and keep the form open.
 if (typeof document !== 'undefined') document.addEventListener('app:ready', () => {
     const names = ['salvarPessoa', 'excluirPessoa', 'salvarCadastroClienteRapido', 'salvarCadastroPassageiroRapido',
-        'salvarVenda', 'excluirVenda', 'salvarMovimentoFinanceiro', 'salvarCotacao', 'marcarComoPerdida',
+        'salvarVenda', 'excluirVenda', 'restaurarVenda', 'salvarMovimentoFinanceiro', 'salvarCotacao', 'marcarComoPerdida',
         'excluirCotacao', 'salvarPacote', 'excluirPacote', 'salvarRevisao'];
     for (const name of names) {
         const original = window[name]; if (typeof original !== 'function' || original._integrityWrapped) continue;

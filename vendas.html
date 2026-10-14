@@ -872,7 +872,7 @@
 
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
-    <script src="js/storage.js?v=15"></script>
+    <script src="js/storage.js?v=16"></script>
     <script src="js/utils.js?v=11"></script>
 
     <script>
@@ -1374,7 +1374,7 @@
             document.getElementById('novoClienteEmail').value = '';
         }
 
-        function salvarCadastroClienteRapido() {
+        async function salvarCadastroClienteRapido() {
             const nome = document.getElementById('novoClienteNome').value.trim();
             const cpf = document.getElementById('novoClienteCpf').value.trim();
 
@@ -1390,14 +1390,14 @@
                 return;
             }
 
-            const cliente = StorageManager.addPessoa({
+            const cliente = await StorageManager.gravar('addPessoa', [{
                 tipo: 'cliente',
                 nome,
                 cpf,
                 dataNascimento: document.getElementById('novoClienteNascimento').value,
                 telefone: document.getElementById('novoClienteTelefone').value,
                 email: document.getElementById('novoClienteEmail').value
-            });
+            }]);
 
             carregarClientes();
             if (typeof carregarPassageirosCache === 'function') {
@@ -1767,7 +1767,7 @@
             document.getElementById(`novoPassageiroEmail_${index}`).value = '';
         }
 
-        function salvarCadastroPassageiroRapido(index) {
+        async function salvarCadastroPassageiroRapido(index) {
             const nome = document.getElementById(`novoPassageiroNome_${index}`).value.trim();
             const cpf = document.getElementById(`novoPassageiroCpf_${index}`).value.trim();
 
@@ -1783,14 +1783,14 @@
                 return;
             }
 
-            const passageiro = StorageManager.addPessoa({
+            const passageiro = await StorageManager.gravar('addPessoa', [{
                 tipo: 'passageiro',
                 nome,
                 cpf,
                 dataNascimento: document.getElementById(`novoPassageiroNascimento_${index}`).value,
                 telefone: document.getElementById(`novoPassageiroTelefone_${index}`).value,
                 email: document.getElementById(`novoPassageiroEmail_${index}`).value
-            });
+            }]);
 
             carregarPassageirosCache();
             selecionarPassageiro(index, passageiro.id);
@@ -2053,6 +2053,7 @@
         // Abrir modal para nova venda
         function abrirModalVenda(vendaId = null) {
             vendaEditandoId = vendaId;
+            StorageManager.abrirEditor('VENDAS', vendaId);
             prepararFormularioVendaLimpo();
 
             if (vendaId) {
@@ -2178,7 +2179,7 @@
         }
 
         // Salvar venda
-        function salvarVenda() {
+        async function salvarVenda() {
             if (vendaSalvaNoFormularioId) return StorageManager.getVendaById(vendaSalvaNoFormularioId);
             const form = document.getElementById('formVenda');
             if (cotacaoOrigemId !== null) {
@@ -2330,14 +2331,14 @@
             let retomada = false;
             try {
                 if (cotacaoOrigemId !== null) {
-                    const resultado = StorageManager.salvarConversaoCotacao(cotacaoOrigemId, venda);
+                    const resultado = await StorageManager.gravar('salvarConversaoCotacao', [cotacaoOrigemId, venda]);
                     vendaSalva = resultado.venda;
                     retomada = resultado.retomada;
                 } else if (vendaEditandoId) {
-                    vendaSalva = StorageManager.updateVenda(vendaEditandoId, venda);
+                    vendaSalva = await StorageManager.gravar('updateVenda', [vendaEditandoId, venda]);
                 } else {
                     venda.statusVenda = 'emitida';
-                    vendaSalva = StorageManager.addVenda(venda);
+                    vendaSalva = await StorageManager.gravar('addVenda', [venda]);
                 }
                 if (!vendaSalva) throw new Error('A venda não foi salva. Mantenha o formulário aberto e tente novamente.');
             } catch (error) {
@@ -2355,10 +2356,10 @@
         }
 
         // Arquivar preserva o registro e todo o histórico.
-        function excluirVenda(id) {
+        async function excluirVenda(id) {
             if (!Utils.confirm('Arquivar esta venda? Ela sairá dos relatórios, mas poderá ser restaurada.')) return;
 
-            if (StorageManager.deleteVenda(id)) {
+            if (await StorageManager.gravar('deleteVenda', [id])) {
                 Utils.showSuccess('Venda arquivada com sucesso!');
                 carregarVendas();
             }
@@ -2373,6 +2374,7 @@
         }
 
         function abrirMovimentoFinanceiro(id) {
+            StorageManager.abrirEditor('VENDAS', id);
             const venda = StorageManager.getVendaById(id);
             if (!venda || venda.excluidaEm) return;
             document.getElementById('movimentoVendaId').value = venda.id;
@@ -2417,7 +2419,7 @@
             return erros.length === 0;
         }
 
-        function salvarMovimentoFinanceiro() {
+        async function salvarMovimentoFinanceiro() {
             const id = document.getElementById('movimentoVendaId').value;
             const data = document.getElementById('movimentoData').value;
             const motivo = document.getElementById('movimentoMotivo').value.trim();
@@ -2432,7 +2434,7 @@
                 return;
             }
 
-            const atualizado = StorageManager.updateVenda(id, {
+            const atualizado = await StorageManager.gravar('updateVenda', [id, {
                 statusVenda: document.getElementById('movimentoStatusVenda').value,
                 valorReembolsadoCliente: StorageManager.centavosParaNumero(
                     StorageManager.numeroParaCentavos(document.getElementById('movimentoReembolsoCliente').value)
@@ -2443,7 +2445,7 @@
                 dataMovimentoFinanceiro: data,
                 motivoCancelamento: motivo,
                 acaoHistorico: 'movimento_financeiro'
-            });
+            }]);
             if (!atualizado) {
                 Utils.showError('Não foi possível atualizar a venda.');
                 return;
@@ -3073,8 +3075,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=10"></script>
     <script src="js/auth.js?v=12"></script>
-    <script src="js/cloud-sync.js?v=13"></script>
-    <script src="js/app-bootstrap.js?v=12"></script>
+    <script src="js/integrity-store.js?v=1"></script>
+    <script src="js/cloud-sync.js?v=14"></script>
+    <script src="js/app-bootstrap.js?v=13"></script>
     <script src="js/card-rates.js?v=2"></script>
     <script src="js/card-rates-ui.js?v=1"></script>
     <script>

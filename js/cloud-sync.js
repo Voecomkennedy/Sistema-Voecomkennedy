@@ -52,6 +52,11 @@ const CloudSync = {
         const operacao = this._novaOperacao();
 
         this._prepararCacheDoUsuario();
+        if (window.IntegrityStore) {
+            await window.IntegrityStore.init(userId);
+            if (!this._operacaoAtual(operacao)) return false;
+            this._enviosIncertos = (await window.IntegrityStore.attempts()).map(item => ({ userId: item.owner, versao: item.version, conteudo: item.body }));
+        }
         this._online = true;
         const sincronizado = await this.baixarDaNuvem(operacao);
         if (!this._operacaoAtual(operacao)) return false;
@@ -62,6 +67,12 @@ const CloudSync = {
         this._monitorarLocalStorage();
         this._registrarSalvamentoDeEmergencia();
         this._inicializado = true;
+        if (window.IntegrityStore?.ready) {
+            await window.IntegrityStore.refresh();
+            if (!this._operacaoAtual(operacao)) return false;
+            this._backupPendente = window.IntegrityStore.state.pending;
+            if (this._backupPendente) this._programarEnvio(0);
+        }
 
         if (!this._backupPendente) this._atualizarIndicador('sincronizado');
         return true;
@@ -165,6 +176,7 @@ const CloudSync = {
     },
 
     suspenderSincronizacao() {
+        window.IntegrityStore?.suspend();
         // As respostas já em trânsito também perdem autorização para tocar o cache.
         this._geracao++;
         clearTimeout(this._salvandoTimeout);
@@ -202,6 +214,7 @@ const CloudSync = {
     },
 
     _obterConteudoLocal() {
+        if (window.IntegrityStore?.ready) return JSON.parse(JSON.stringify(window.IntegrityStore.state.body));
         const conteudo = {};
         this.CHAVES.forEach(chave => {
             const raw = localStorage.getItem(chave);
@@ -245,6 +258,11 @@ const CloudSync = {
     },
 
     _obterMeta() {
+        if (window.IntegrityStore?.ready && window.IntegrityStore.state.remote) {
+            const remote = window.IntegrityStore.state.remote;
+            return { userId: this._userId, versao: remote.version, fingerprintCanonico: this._fingerprint(remote.body, true),
+                conteudoConfirmado: remote.body };
+        }
         try {
             const meta = JSON.parse(localStorage.getItem(this.META_KEY) || 'null');
             return meta && meta.userId === this._userId ? meta : null;
@@ -253,7 +271,8 @@ const CloudSync = {
         }
     },
 
-    _salvarMeta(versao, conteudo, atualizadoEm = null) {
+    async _salvarMeta(versao, conteudo, atualizadoEm = null) {
+        if (window.IntegrityStore?.ready) await window.IntegrityStore.metadata({ version: Number(versao) || 0, body: conteudo, at: atualizadoEm });
         localStorage.setItem(this.META_KEY, JSON.stringify({
             userId: this._userId,
             versao: Number(versao) || 0,
@@ -263,7 +282,8 @@ const CloudSync = {
         }));
     },
 
-    _aplicarConteudo(conteudo) {
+    async _aplicarConteudo(conteudo) {
+        if (window.IntegrityStore?.ready) return window.IntegrityStore.replaceCloud(conteudo, null, this._obterConteudoLocal());
         this._aplicandoNuvem = true;
         try {
             this.CHAVES.forEach(chave => {
@@ -384,9 +404,9 @@ const CloudSync = {
             this._registrarConflito(captura, local, nuvem, versaoNuvem, atualizadoEm, escolha, registro.id);
             this._versaoNuvem = Number(versaoNuvem) || 0;
             if (escolha === 'nuvem') {
-                this._aplicarConteudo(nuvem);
+                await this._aplicarConteudo(nuvem);
                 this._conflitoPendente = null;
-                this._confirmarEnvio(nuvem, this._versaoNuvem, atualizadoEm);
+                await this._confirmarEnvio(nuvem, this._versaoNuvem, atualizadoEm);
                 return true;
             }
             this._conflitoPendente = null;
@@ -396,9 +416,9 @@ const CloudSync = {
         }
     },
 
-    _confirmarEnvio(conteudo, versao, atualizadoEm) {
+    async _confirmarEnvio(conteudo, versao, atualizadoEm) {
         this._versaoNuvem = Number(versao) || 0;
-        this._salvarMeta(this._versaoNuvem, conteudo, atualizadoEm);
+        await this._salvarMeta(this._versaoNuvem, conteudo, atualizadoEm);
         this._enviosIncertos = this._enviosIncertos.filter(item => item.userId === this._userId && item.versao > this._versaoNuvem);
         this._falhasConsecutivas = 0;
         const atualizado = this._conteudosIguais(this._obterConteudoLocal(), conteudo);
@@ -422,12 +442,14 @@ const CloudSync = {
         try {
             const { data, error } = await client
                 .from('dados_app')
-                .select('conteudo, atualizado_em, versao')
+                .select('conteudo, atualizado_em, versao, ultima_operacao_id')
                 .eq('user_id', operacao.userId)
                 .maybeSingle();
 
             if (!this._operacaoAtual(operacao)) return false;
             if (error) throw error;
+            if (window.IntegrityStore?.ready) await window.IntegrityStore.refresh();
+            if (!this._operacaoAtual(operacao)) return false;
 
             const local = this._obterConteudoLocal();
             if (!data) {
@@ -443,28 +465,37 @@ const CloudSync = {
             this._versaoNuvem = versaoNuvem;
 
             if (this._conteudosIguais(local, nuvem)) {
-                this._salvarMeta(versaoNuvem, nuvem, data.atualizado_em);
+                await this._salvarMeta(versaoNuvem, nuvem, data.atualizado_em);
+                return true;
+            }
+
+            // Reload may have preserved a committed request whose reply was
+            // lost, followed by newer local edits. Confirm only that exact
+            // stored capture/version; keep newer edits pending for server CAS.
+            if (this._enviosIncertos.some(item => item.userId === operacao.userId && item.versao === versaoNuvem &&
+                this._conteudosIguais(item.conteudo, nuvem))) {
+                await this._confirmarEnvio(nuvem, versaoNuvem, data.atualizado_em);
                 return true;
             }
 
             if (!this._temRegistros(local)) {
-                this._aplicarConteudo(nuvem);
-                this._salvarMeta(versaoNuvem, nuvem, data.atualizado_em);
+                await this._aplicarConteudo(nuvem);
+                await this._salvarMeta(versaoNuvem, nuvem, data.atualizado_em);
                 return true;
             }
 
-            const localNaoMudou = meta && (meta.fingerprintCanonico
+            const localNaoMudou = meta && (meta.conteudoConfirmado ? this._conteudosIguais(local, meta.conteudoConfirmado) : meta.fingerprintCanonico
                 ? this._fingerprint(local, true) === meta.fingerprintCanonico
                 : hashLocal === meta.fingerprint);
             const nuvemNaoMudou = meta &&
                 versaoNuvem === Number(meta.versao) &&
-                (meta.fingerprintCanonico
+                (meta.conteudoConfirmado ? this._conteudosIguais(nuvem, meta.conteudoConfirmado) : meta.fingerprintCanonico
                     ? this._fingerprint(nuvem, true) === meta.fingerprintCanonico
                     : hashNuvem === meta.fingerprint);
 
             if (localNaoMudou) {
-                this._aplicarConteudo(nuvem);
-                this._salvarMeta(versaoNuvem, nuvem, data.atualizado_em);
+                await this._aplicarConteudo(nuvem);
+                await this._salvarMeta(versaoNuvem, nuvem, data.atualizado_em);
                 return true;
             }
 
@@ -508,6 +539,11 @@ const CloudSync = {
         };
 
         let resposta;
+        if (window.IntegrityStore?.ready) {
+            const attempt = await window.IntegrityStore.prepareAttempt(conteudo, this._versaoNuvem);
+            if (!this._operacaoAtual(operacao)) return false;
+            registro.ultima_operacao_id = attempt.id;
+        }
         try {
             if (this._versaoNuvem === null) {
                 resposta = await client
@@ -536,7 +572,7 @@ const CloudSync = {
                 throw resposta.error;
             }
         } else if (resposta.data) {
-            this._confirmarEnvio(conteudo, Number(resposta.data.versao) || proximaVersao, resposta.data.atualizado_em);
+            await this._confirmarEnvio(conteudo, Number(resposta.data.versao) || proximaVersao, resposta.data.atualizado_em);
             return true;
         }
 
@@ -548,11 +584,11 @@ const CloudSync = {
         // instead of publishing it twice or offering an unnecessary overwrite.
         const recente = this._obterConteudoLocal();
         if (this._conteudosIguais(atual.conteudo || {}, recente)) {
-            this._confirmarEnvio(recente, atual.versao, atual.atualizado_em);
+            await this._confirmarEnvio(recente, atual.versao, atual.atualizado_em);
             return true;
         }
         if (this._conteudosIguais(atual.conteudo || {}, conteudo)) {
-            this._confirmarEnvio(conteudo, atual.versao, atual.atualizado_em);
+            await this._confirmarEnvio(conteudo, atual.versao, atual.atualizado_em);
             return true;
         }
         const confirmado = this._enviosIncertos.some(item => item.userId === operacao.userId &&
@@ -561,7 +597,7 @@ const CloudSync = {
             // The lost response belonged to an older local revision. Acknowledge
             // only that exact snapshot/version; newer edits stay pending and the
             // next send still uses server CAS. Any different remote edit conflicts.
-            this._confirmarEnvio(atual.conteudo, atual.versao, atual.atualizado_em);
+            await this._confirmarEnvio(atual.conteudo, atual.versao, atual.atualizado_em);
             return true;
         }
 
@@ -589,6 +625,21 @@ const CloudSync = {
     },
 
     async enviarParaNuvem() {
+        if (window.IntegrityStore?.ready) return window.IntegrityStore.withCloudLock(async () => {
+            if (!this._online || !this._userId) return false;
+            this._versaoNuvem = window.IntegrityStore.state.remote?.version ?? this._versaoNuvem;
+            const state = window.IntegrityStore.state;
+            if (!state.pending && state.remote && this._conteudosIguais(state.body, state.remote.body)) {
+                this._backupPendente = false;
+                this._atualizarIndicador('sincronizado');
+                return true;
+            }
+            return this._enviarParaNuvemSemLock();
+        });
+        return this._enviarParaNuvemSemLock();
+    },
+
+    async _enviarParaNuvemSemLock() {
         if (!this._online || !this._userId || this._conflitoPendente) return false;
         const operacao = this._novaOperacao();
 
@@ -687,8 +738,10 @@ const CloudSync = {
         const self = this;
 
         localStorage.setItem = function (chave, valor) {
+            if (window.IntegrityStore?.ready && self.CHAVES.includes(chave) && !window.IntegrityStore._projecting)
+                throw new Error('Use a transação de armazenamento para gravar esta coleção.');
             originalSetItem(chave, valor);
-            if (!self._aplicandoNuvem && self.CHAVES.includes(chave)) {
+            if (!window.IntegrityStore?.ready && !self._aplicandoNuvem && self.CHAVES.includes(chave)) {
                 self.agendarBackup();
             }
         };

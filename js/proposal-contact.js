@@ -4,6 +4,7 @@
     const form = $('cadastroContatoProposta');
     let ready = false;
     let saving = false;
+    let formVersion = 0;
     const authenticated = () => ready && document.documentElement.dataset.appAutenticado === 'true';
     const message = text => { $('contatoPropostaEstado').textContent = text; };
     const cleanName = value => value.trim().replace(/\s+/g, ' ');
@@ -39,6 +40,7 @@
         $('abrirContatoProposta').setAttribute('aria-expanded', 'false');
     };
     window.reiniciarCadastroContatoProposta = function () {
+        formVersion++;
         window.fecharCadastroContatoProposta();
         form.reset();
         message('');
@@ -92,8 +94,9 @@
         message('Este WhatsApp já aparece no cadastro. Selecione o contato correto para evitar duplicidade.');
     }
 
-    function save(confirmedFingerprint = null) {
+    async function save(confirmedFingerprint = null) {
         if (!authenticated() || saving || form.hidden) return;
+        const version = formVersion;
         clearMatches();
         const first = cleanName($('contatoPropostaNome').value);
         const last = cleanName($('contatoPropostaSobrenome').value);
@@ -127,8 +130,12 @@
                 showMatches(exact.length ? exact : matches, fingerprint, !exact.length);
                 return;
             }
-            const contact = StorageManager.addPessoa({ tipo: 'cliente', nome, telefone });
+            const contact = await StorageManager.gravar('addPessoa', [{ tipo: 'cliente', nome, telefone }]);
             if (!contact?.id || !StorageManager.getClienteById(contact.id)) throw new Error('Não foi possível gravar o contato. Tente novamente.');
+            if (version !== formVersion) {
+                $('propostaEstado').textContent = 'O contato foi cadastrado. O formulário mudou durante a gravação; selecione o contato quando for usá-lo.';
+                return;
+            }
             selectContact(contact, true);
             try { CloudSync.agendarBackup(); }
             catch {

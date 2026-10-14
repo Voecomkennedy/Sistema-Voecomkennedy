@@ -34,6 +34,7 @@ function harness() {
             addEventListener: (type, callback) => { events[type] = callback; }
         },
         StorageManager: {
+            gravar(method, args) { return this[method](...args); },
             getClientes: () => [client],
             getClienteById: id => id === client.id ? client : undefined,
             getCotacaoById: id => quotes.find(q => q.id === id),

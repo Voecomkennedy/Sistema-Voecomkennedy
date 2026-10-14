@@ -16,7 +16,7 @@ const AppBootstrap = {
         titulo.id = 'tituloErroInicializacao';
         titulo.textContent = 'Não foi possível carregar seus dados com segurança';
         const detalhe = document.createElement('p');
-        detalhe.textContent = erro?.code === 'CACHE_RECOVERY_FAILED'
+        detalhe.textContent = erro?.code?.startsWith('INTEGRITY_') ? erro.message : erro?.code === 'CACHE_RECOVERY_FAILED'
             ? 'A cópia de recuperação dos dados locais não pôde ser concluída. Não limpe os dados deste site. Revise a recuperação antes de continuar.'
             : 'A sincronização inicial não foi concluída. Verifique sua conexão e recarregue a página para tentar novamente.';
         const tentar = document.createElement('button');
@@ -66,5 +66,8 @@ const AppBootstrap = {
         return this._iniciando;
     }
 };
+
+document.addEventListener('integrity:blocked', event => AppBootstrap._mostrarErroInicializacao(event.detail || { code: 'INTEGRITY_LEGACY_CONFLICT', message: 'Uma aba antiga alterou o cache. Os dados foram preservados. Feche as abas antigas e revise a recuperação.' }));
+document.addEventListener('integrity:projection-error', () => AppBootstrap._mostrarErroInicializacao({ code: 'INTEGRITY_PROJECTION', message: 'A gravação durável foi preservada, mas o cache da tela não pôde ser atualizado. Recarregue sem apagar os dados do navegador.' }));
 
 window.AppBootstrap = AppBootstrap;

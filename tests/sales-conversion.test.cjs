@@ -86,7 +86,7 @@ test('conversion loads current quote instead of outdated transfer cache and conc
         assert.equal(a.w.document.getElementById('valorVenda').value, 'R$ 1.500,00');
         assert.equal(a.w.StorageManager.getCotacaoById(quote.id).status, 'aberta');
         completeSale(a.w);
-        a.w.salvarVenda();
+        await a.w.salvarVenda();
         const sale = a.w.StorageManager.getTodasVendas()[0];
         assert.ok(sale);
         assert.equal(a.w.StorageManager.getCotacaoById(quote.id).vendaId, sale.id);
@@ -101,7 +101,7 @@ test('closing conversion then saving an independent sale does not convert the ab
         a.w.document.getElementById('modalVenda').dispatchEvent(new a.w.Event('hidden.bs.modal'));
         a.w.abrirModalVenda();
         completeSale(a.w, other.id);
-        a.w.salvarVenda();
+        await a.w.salvarVenda();
         assert.equal(a.w.StorageManager.getTodasVendas().length, 1);
         assert.equal(a.w.StorageManager.getCotacaoById(quote.id).status, 'aberta');
         assert.equal(a.w.StorageManager.getCotacaoById(quote.id).vendaId, undefined);
@@ -118,7 +118,7 @@ test('opening an independent form cancels pending automatic quote fill', async (
         assert.equal(a.w.document.getElementById('clienteId').value, '');
         assert.equal(a.w.document.getElementById('origem').value, '');
         completeSale(a.w, other.id);
-        a.w.salvarVenda();
+        await a.w.salvarVenda();
         assert.equal(a.w.StorageManager.getCotacaoById(quote.id).status, 'aberta');
     } finally { a.dom.window.close(); }
 });
@@ -136,7 +136,7 @@ test('editing another sale while conversion is open clears the quote link', asyn
         await a.waitFor(() => a.w.document.getElementById('clienteId').value === person.id);
         a.w.abrirModalVenda(independentSale.id);
         completeSale(a.w, other.id);
-        a.w.salvarVenda();
+        await a.w.salvarVenda();
         assert.equal(a.w.StorageManager.getTodasVendas().length, 1);
         assert.equal(a.w.StorageManager.getCotacaoById(quote.id).status, 'aberta');
     } finally { a.dom.window.close(); }
@@ -147,7 +147,7 @@ test('changing client in a linked conversion blocks accidental association to a 
     try {
         await a.waitFor(() => a.w.document.getElementById('clienteId').value === person.id);
         completeSale(a.w, other.id);
-        a.w.salvarVenda();
+        await a.w.salvarVenda();
         assert.equal(a.w.StorageManager.getTodasVendas().length, 0);
         assert.equal(a.w.StorageManager.getCotacaoById(quote.id).status, 'aberta');
         assert.match(a.w.__errors.join(' '), /vínculo com a cotação mudou/);

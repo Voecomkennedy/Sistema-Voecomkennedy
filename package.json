@@ -4,11 +4,14 @@
   "scripts": {
     "test": "node --test tests/*.test.cjs",
     "test:db": "node scripts/test-messages-db.cjs",
-    "test:atendimento:db": "node scripts/test-atendimento-db.cjs"
+    "test:atendimento:db": "node scripts/test-atendimento-db.cjs",
+    "test:integrity:browser": "node scripts/test-integrity-browser.cjs",
+    "test:integrity:db": "node scripts/test-integrity-db.cjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.117.3",
-    "pg": "8.23.1"
+    "pg": "8.23.1",
+    "playwright": "1.55.1"
   },
   "engines": {
     "node": ">=22.19"

@@ -5,6 +5,7 @@
     let currentBase = null;
     let selectionVersion = 0;
     let ready = false;
+    let saving = false;
     const $ = id => document.getElementById(id);
     const frame = () => $('quadroProposta').contentWindow;
     const whenFrameReady = () => frame()?.restaurarProposta
@@ -125,6 +126,7 @@
             return true;
         },
         save(d) {
+            if (saving) throw new Error('Aguarde a gravação atual terminar antes de salvar novamente.');
             if (!this.canSave()) throw new Error('Selecione um cliente cadastrado.');
             const contact = { ...client() };
             const snapshot = JSON.parse(JSON.stringify(d));
@@ -134,15 +136,24 @@
             if (existing?.status === 'convertida') throw new Error('Esta cotação já virou venda e não pode ser alterada.');
             if (existing && currentBase && fingerprint(existing) !== currentBase) throw new Error('A cotação mudou em outra tela. Reabra a versão atual antes de salvar alterações.');
             const quote = mapQuote(snapshot, existing, contact);
-            const saved = existing ? StorageManager.updateCotacao(currentId, quote) : StorageManager.addCotacao(quote);
-            if (!saved) throw new Error('Falha ao gravar a cotação.');
-            currentId = saved.id;
-            currentBase = fingerprint(saved);
-            showMode(saved);
-            CloudSync.agendarBackup();
-            status(`Cotação #${saved.id}, revisão ${saved.propostaRevisao}, salva neste aparelho. A confirmação na nuvem aparece no indicador de sincronização.`);
-            carregarCotacoes();
-            return saved;
+            const version = selectionVersion;
+            const finish = saved => {
+                if (!saved) throw new Error('Falha ao gravar a cotação.');
+                if (version === selectionVersion) {
+                    currentId = saved.id;
+                    currentBase = fingerprint(saved);
+                    showMode(saved);
+                }
+                CloudSync.agendarBackup();
+                status(`Cotação #${saved.id}, revisão ${saved.propostaRevisao}, salva neste aparelho. A confirmação na nuvem aparece no indicador de sincronização.`);
+                carregarCotacoes();
+                return saved;
+            };
+            const stored = existing ? StorageManager.gravar('updateCotacao', [currentId, quote], { expectedRecord: existing })
+                : StorageManager.gravar('addCotacao', [quote]);
+            if (!stored?.then) return finish(stored);
+            saving = true;
+            return stored.then(finish).finally(() => { saving = false; });
         }
     };
     window.ProposalBridge = bridge;
@@ -197,7 +208,7 @@
             const editor = await whenFrameReady();
             if (version !== selectionVersion) { status('O formulário mudou. Salve a proposta que está aberta agora.'); return; }
             const d = editor.coletarDadosProposta();
-            if (d) bridge.save(d);
+            if (d) await bridge.save(d);
         } catch (error) { status(error.message); }
     };
     window.baixarPDFProposta = async function (id) {

@@ -23,6 +23,15 @@ function cloud(entries = []) {
     return { sync: window.CloudSync, values, localStorage, window, context };
 }
 
+test('recovery captures event bytes even after the live cache has been projected again', () => {
+    const raw = ' [{"id":"legacy-event-only"}] ';
+    const { sync, localStorage } = cloud([['emissao_pessoas', '[{"id":"current-state"}]']]);
+    assert.equal(sync._preservarCache(['emissao_pessoas'], 'escrita-por-aba-antiga', 'owner', { emissao_pessoas: raw }), true);
+    const copies = JSON.parse(localStorage.getItem(sync.RECUPERACAO_KEY));
+    assert.equal(copies[0].dados.emissao_pessoas, raw);
+    assert.equal(localStorage.getItem('emissao_pessoas'), '[{"id":"current-state"}]');
+});
+
 test('existing CloudSync isolates quote cache when authenticated user changes', () => {
     const values = new Map([
         ['emissao_cloud_sync_usuario_local', 'old-user'],

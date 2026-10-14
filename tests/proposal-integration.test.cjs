@@ -34,6 +34,7 @@ function harness() {
             addEventListener: (type, callback) => { events[type] = callback; }
         },
         StorageManager: {
+            gravar(method, args) { return this[method](...args); },
             getClientes: () => [client],
             getClienteById: id => id === client.id ? client : undefined,
             getCotacaoById: id => quotes.find(q => q.id === id),
@@ -58,8 +59,20 @@ function harness() {
         valParcela: 'R$ 527,77', parcelas: '10',
         timing: { fields: { 'p-data-chegada-ida': '2026-10-27' } }
     };
-    return { window, nodes, quotes, data, getSyncs: () => syncs, getRestored: () => restored };
+    return { window, context, nodes, quotes, data, getSyncs: () => syncs, getRestored: () => restored };
 }
+
+test('a rejected backup scheduler cannot reject the committed proposal', async () => {
+    const h = harness();
+    const save = h.context.StorageManager.gravar;
+    h.context.StorageManager.gravar = function (...args) { return Promise.resolve(save.apply(this, args)); };
+    h.context.CloudSync.agendarBackup = () => { throw new Error('synthetic scheduler failure'); };
+    const saved = await h.window.ProposalBridge.save(h.data);
+    assert.equal(saved.id, h.quotes[0].id);
+    assert.equal(h.quotes.length, 1);
+    assert.equal(h.context.CloudSync._backupPendente, true);
+    assert.match(h.nodes.propostaEstado.textContent, /salva neste aparelho/);
+});
 
 test('new proposal stores full snapshot and stable identity across repeated saves', () => {
     const h = harness();

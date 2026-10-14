@@ -584,7 +584,7 @@
 
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
-    <script src="js/storage.js?v=15"></script>
+    <script src="js/storage.js?v=16"></script>
     <script src="js/utils.js?v=11"></script>
     <script src="cotador/js/passenger-pricing.js?v=1"></script>
     <script src="cotador/js/proposal-pdf.js?v=20261009-1"></script>
@@ -914,6 +914,7 @@
         // Abrir modal
         function abrirModalCotacao(cotacaoId = null) {
             cotacaoEditandoId = cotacaoId;
+            StorageManager.abrirEditor('COTACOES', cotacaoId);
 
             if (cotacaoId) {
                 const c = StorageManager.getCotacaoById(cotacaoId);
@@ -971,7 +972,7 @@
         }
 
         // Salvar cotação
-        function salvarCotacao() {
+        async function salvarCotacao() {
             const form = document.getElementById('formCotacao');
             if (!form.checkValidity()) {
                 form.reportValidity();
@@ -1080,10 +1081,10 @@
                 cotacao.status = original.status || 'aberta';
                 cotacao.dataCriacao = original.dataCriacao || original.dataCadastro;
                 cotacao.clienteId = original.clienteId || null;
-                StorageManager.updateCotacao(cotacaoEditandoId, cotacao);
+                await StorageManager.gravar('updateCotacao', [cotacaoEditandoId, cotacao]);
                 Utils.showSuccess('Cotação atualizada com sucesso!');
             } else {
-                StorageManager.addCotacao(cotacao);
+                await StorageManager.gravar('addCotacao', [cotacao]);
                 Utils.showSuccess('Cotação cadastrada com sucesso!');
             }
 
@@ -1200,23 +1201,23 @@
         }
 
         // Marcar como perdida
-        function marcarComoPerdida(id) {
+        async function marcarComoPerdida(id) {
             if (!confirm('Tem certeza que deseja marcar esta cotação como perdida?')) return;
 
             const cotacao = StorageManager.getCotacaoById(id);
             if (cotacao) {
                 cotacao.status = 'perdida';
-                StorageManager.updateCotacao(id, cotacao);
+                await StorageManager.gravar('updateCotacao', [id, cotacao]);
                 Utils.showSuccess('Cotação marcada como perdida');
                 carregarCotacoes();
             }
         }
 
         // Excluir cotação
-        function excluirCotacao(id) {
+        async function excluirCotacao(id) {
             if (!confirm('Tem certeza que deseja excluir esta cotação?')) return;
 
-            if (StorageManager.deleteCotacao(id)) {
+            if (await StorageManager.gravar('deleteCotacao', [id])) {
                 Utils.showSuccess('Cotação excluída com sucesso!');
                 carregarCotacoes();
             }
@@ -1899,8 +1900,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=10"></script>
     <script src="js/auth.js?v=12"></script>
-    <script src="js/cloud-sync.js?v=13"></script>
-    <script src="js/app-bootstrap.js?v=12"></script>
+    <script src="js/integrity-store.js?v=1"></script>
+    <script src="js/cloud-sync.js?v=14"></script>
+    <script src="js/app-bootstrap.js?v=13"></script>
     <script src="js/card-rates.js?v=2"></script>
     <script src="js/card-rates-ui.js?v=1"></script>
     <script src="js/proposal-integration.js?v=4"></script>

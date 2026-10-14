@@ -89,7 +89,14 @@ function fillContact(w, first = 'Ana', last = 'de Souza', number = '(61) 99999-1
     }
 }
 
-const submitContact = w => w.document.getElementById('cadastroContatoProposta').requestSubmit();
+const submitContact = async w => {
+    w.document.getElementById('cadastroContatoProposta').requestSubmit();
+    const until = Date.now() + 5000;
+    while (w.document.getElementById('salvarContatoProposta').disabled) {
+        if (Date.now() > until) throw new Error('Synthetic contact save did not complete');
+        await new Promise(resolve => setTimeout(resolve, 1));
+    }
+};
 
 test('quick contact saves only basic data, keeps proposal identity and can be completed in Pessoas', { timeout: 30000 }, async () => {
     const a = await page('cotacoes', { emissao_pessoas: [person] });
@@ -113,8 +120,8 @@ test('quick contact saves only basic data, keeps proposal identity and can be co
         const editor = iframe.contentWindow;
         const before = JSON.stringify(editor.coletarDadosProposta());
         fillContact(w, ' Ana ', ' de   Souza ');
-        submitContact(w);
-        submitContact(w); // Enter/double click after success must not add a second contact.
+        await submitContact(w);
+        await submitContact(w); // Enter/double click after success must not add a second contact.
         contacts = w.StorageManager.getPessoas();
         assert.equal(contacts.length, 2);
         const contact = contacts.find(c => c.id !== person.id);
@@ -151,7 +158,7 @@ test('quick contact saves only basic data, keeps proposal identity and can be co
         p.abrirModalPessoa(contact.id);
         assert.equal(p.document.getElementById('cpf').value, '');
         p.document.getElementById('cpf').value = '529.982.247-25'; // synthetic valid CPF
-        p.salvarPessoa();
+        await p.salvarPessoa();
         assert.equal(p.StorageManager.getPessoas().length, 2);
         assert.equal(p.StorageManager.getPessoaById(contact.id).cpf, '529.982.247-25');
     } finally { people.dom.window.close(); }
@@ -169,7 +176,7 @@ test('matching name and WhatsApp reuse the existing client without changing thei
     try {
         const w = a.window;
         fillContact(w, ' ANA ', 'de   SOUZA');
-        submitContact(w);
+        await submitContact(w);
         assert.equal(JSON.stringify(w.StorageManager.getPessoas()), JSON.stringify([existing]));
         assert.equal(w.document.getElementById('clienteProposta').value, existing.id);
         assert.match(w.document.getElementById('propostaEstado').textContent, /já cadastrado/);
@@ -183,7 +190,7 @@ test('shared WhatsApp asks which contact to use or deliberately creates a differ
     try {
         const w = a.window;
         fillContact(w, 'Bruno', 'de Souza');
-        submitContact(w);
+        await submitContact(w);
         const matches = w.document.getElementById('contatosPropostaEncontrados');
         assert.equal(matches.hidden, false);
         assert.equal(w.StorageManager.getPessoas().length, 1);
@@ -191,15 +198,16 @@ test('shared WhatsApp asks which contact to use or deliberately creates a differ
         matches.querySelector('.list-group button').click();
         assert.equal(w.document.getElementById('clienteProposta').value, existing.id);
         fillContact(w, 'Bruno', 'de Souza');
-        submitContact(w);
+        await submitContact(w);
         matches.querySelector('.btn').click();
+        await a.waitFor(() => w.document.getElementById('salvarContatoProposta').disabled === false);
         const contacts = w.StorageManager.getClientes();
         assert.equal(contacts.length, 2);
         assert.equal(contacts[0].id, existing.id);
         assert.equal(contacts[1].nome, 'Bruno de Souza');
         assert.equal(w.document.getElementById('clienteProposta').value, contacts[1].id);
         fillContact(w, 'Bruno', 'de Souza');
-        submitContact(w);
+        await submitContact(w);
         assert.equal(w.StorageManager.getClientes().length, 2);
     } finally { a.dom.window.close(); }
 });
@@ -210,25 +218,25 @@ test('invalid WhatsApp does not create contacts and international prefixes are p
         const w = a.window;
         for (const number of ['123', '00000000000', '61999991234abc', '++351912345678', '+0123456789', '+1234567890123456', '123456789012']) {
             fillContact(w, 'Nome', 'Sintético', number);
-            submitContact(w);
+            await submitContact(w);
             assert.equal(w.StorageManager.getPessoas().length, 0, number);
             assert.equal(w.document.getElementById('contatoPropostaWhatsapp').value, number);
             assert.match(w.document.getElementById('contatoPropostaEstado').textContent, /WhatsApp/);
         }
         fillContact(w, '   ', 'Sintético');
-        submitContact(w);
+        await submitContact(w);
         assert.equal(w.StorageManager.getPessoas().length, 0);
         fillContact(w, 'Nome', '123');
-        submitContact(w);
+        await submitContact(w);
         assert.equal(w.StorageManager.getPessoas().length, 0);
         fillContact(w, 'Contato', 'Portugal', '+351 912 345 678');
-        submitContact(w);
+        await submitContact(w);
         fillContact(w, 'Contato', 'Canadá', '+1 (416) 555-0123');
-        submitContact(w);
+        await submitContact(w);
         const contacts = w.StorageManager.getClientes();
         assert.deepEqual(Array.from(contacts, c => c.telefone), ['+351912345678', '+14165550123']);
         fillContact(w, 'Contato', 'Canadá', '+1 416 555 0123');
-        submitContact(w);
+        await submitContact(w);
         assert.equal(w.StorageManager.getClientes().length, 2);
     } finally { a.dom.window.close(); }
 });
@@ -243,7 +251,7 @@ test('storage failure keeps inputs and proposal; scheduling failure reports a lo
         const originalSave = w.StorageManager.savePessoas;
         w.StorageManager.savePessoas = () => { throw new Error('QuotaExceededError'); };
         fillContact(w);
-        submitContact(w);
+        await submitContact(w);
         assert.equal(w.StorageManager.getPessoas().length, 1);
         assert.equal(w.document.getElementById('clienteProposta').value, person.id);
         assert.equal(w.document.getElementById('cadastroContatoProposta').hidden, false);
@@ -253,8 +261,8 @@ test('storage failure keeps inputs and proposal; scheduling failure reports a lo
         assert.equal(editor.document.getElementById('p-obs').value, 'Não perder este rascunho');
         w.StorageManager.savePessoas = originalSave;
         w.CloudSync.agendarBackup = () => { throw new Error('Sync unavailable'); };
-        submitContact(w);
-        submitContact(w);
+        await submitContact(w);
+        await submitContact(w);
         assert.equal(w.StorageManager.getPessoas().length, 2);
         assert.notEqual(w.document.getElementById('clienteProposta').value, person.id);
         assert.match(w.document.getElementById('propostaEstado').textContent, /salvo neste aparelho.*falha.*sincronização/);
@@ -375,7 +383,7 @@ test('sale form receives the registered client from a quote', { timeout: 20000 }
         a.window.validarValoresFinanceiros();
         const invalid = [...d.getElementById('formVenda').elements].filter(el => !el.checkValidity()).map(el => el.id);
         assert.deepEqual(invalid, []);
-        a.window.salvarVenda();
+        await a.window.salvarVenda();
         assert.equal(a.window.StorageManager.getCotacaoById(quote.id).status, 'convertida');
         assert.equal(a.window.StorageManager.getTodasVendas().length, 1);
     } finally { a.dom.window.close(); }
@@ -402,7 +410,7 @@ test('legacy quote opens in its original editor without rewriting the stored rec
         a.window.document.getElementById('observacaoCotacao').value = 'Revisado';
         const form = a.window.document.getElementById('formCotacao');
         assert.equal(form.checkValidity(), true, Array.from(form.elements).filter(el => !el.checkValidity()).map(el => el.id).join(','));
-        a.window.salvarCotacao();
+        await a.window.salvarCotacao();
         const saved = a.window.StorageManager.getCotacoes()[0];
         assert.equal(saved.id, legacy.id);
         assert.equal(saved.dataCriacao, legacy.dataCriacao);

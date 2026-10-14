@@ -62,6 +62,7 @@
                 <h2 style="font-size: 1.6rem; margin-bottom: 0.3rem;">
                     <i class="bi bi-cloud-arrow-down-fill me-2"></i>Backup e Restauração
                 </h2>
+                <a href="integridade.html">Histórico e recuperação seletiva de cotações</a>
                 <p class="text-muted" style="font-size: 0.9rem;">Gerencie seus dados com segurança</p>
             </div>
         </div>
@@ -247,7 +248,7 @@
 
     <!-- Scripts -->
     <script src="js/utils.js?v=11"></script>
-    <script src="js/storage.js?v=15"></script>
+    <script src="js/storage.js?v=16"></script>
 
     <script>
         // Atualizar estatísticas
@@ -351,6 +352,9 @@
         }
 
         function gravarDadosComRollback(dados) {
+            if (window.IntegrityStore?.ready) return IntegrityStore.transact(body => {
+                for (const [name, key] of Object.entries(StorageManager.KEYS)) body[key] = dados[name.toLowerCase()];
+            }, { label: 'importacao-backup', expectedRevision: IntegrityStore.state.revision });
             const pares = [
                 [StorageManager.KEYS.VENDAS, dados.vendas],
                 [StorageManager.KEYS.PESSOAS, dados.pessoas],
@@ -382,11 +386,13 @@
             }
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            const ownerImportacao = localStorage.getItem('emissao_cloud_sync_usuario_local');
+            reader.onload = async function(e) {
                 try {
+                    if (localStorage.getItem('emissao_cloud_sync_usuario_local') !== ownerImportacao) throw new Error('A conta mudou durante a leitura do arquivo.');
                     const backup = JSON.parse(e.target.result);
                     const importacao = prepararDadosImportacao(backup);
-                    gravarDadosComRollback(importacao.dados);
+                    await gravarDadosComRollback(importacao.dados);
 
                     const avisos = [];
                     if (importacao.preservouPacotes) avisos.push('pacotes atuais foram preservados');
@@ -418,8 +424,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=10"></script>
     <script src="js/auth.js?v=12"></script>
-    <script src="js/cloud-sync.js?v=13"></script>
-    <script src="js/app-bootstrap.js?v=12"></script>
+    <script src="js/integrity-store.js?v=1"></script>
+    <script src="js/cloud-sync.js?v=14"></script>
+    <script src="js/app-bootstrap.js?v=13"></script>
     <script>AppBootstrap.iniciar();</script>
 </body>
 </html>

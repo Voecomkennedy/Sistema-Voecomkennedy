@@ -5395,7 +5395,7 @@ function coletarDadosProposta() {
 }
 
 async function gerarProposta() {
-  if (abrirProposta.busy) { showToast('Aguarde o PDF atual terminar antes de gerar outro. Você pode salvar alterações no painel.'); return; }
+  if (abrirProposta.busy || gerarProposta.busy) { showToast('Aguarde o PDF atual terminar antes de gerar outro. Você pode salvar alterações no painel.'); return; }
   const dados = coletarDadosProposta();
   if (!dados) return;
   if (window.parent !== window && !window.parent.ProposalBridge?.canSave()) {
@@ -5403,13 +5403,16 @@ async function gerarProposta() {
     return;
   }
   if (window.parent !== window && window.parent.ProposalBridge) {
-    // Commit the exact proposal synchronously before PDF generation. Changing
+    // Commit the captured proposal transaction before PDF generation. Changing
     // Novo/Limpar/Editar while downloading cannot retarget this saved revision.
     let saved;
-    try { saved = window.parent.ProposalBridge.save(dados); }
-    catch (e) { showToast('A cotação não foi salva. O PDF não foi gerado: ' + e.message); return; }
-    const snapshot = JSON.parse(JSON.stringify(saved.propostaCompleta));
-    if (!(await abrirProposta(snapshot))) showToast('A cotação ficou salva neste aparelho. Tente baixar o PDF novamente.');
+    gerarProposta.busy = true;
+    try {
+      saved = await window.parent.ProposalBridge.save(dados);
+      const snapshot = JSON.parse(JSON.stringify(saved.propostaCompleta));
+      if (!(await abrirProposta(snapshot))) showToast('A cotação ficou salva neste aparelho. Tente baixar o PDF novamente.');
+    } catch (e) { showToast('A cotação não foi salva. O PDF não foi gerado: ' + e.message); }
+    finally { gerarProposta.busy = false; }
     return;
   }
   if (!(await abrirProposta(dados))) return;

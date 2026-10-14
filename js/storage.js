@@ -1,5 +1,36 @@
 // Storage Manager - Funções para gerenciar LocalStorage
 const StorageManager = {
+    _editores: new Map(),
+    abrirEditor(name, id) {
+        if (id != null) this._editores.set(this.KEYS[name] + ':' + String(id),
+            this._read(this.KEYS[name]).find(item => String(item.id) === String(id)) || null);
+    },
+    _read(key) {
+        if (globalThis.window?.IntegrityStore?.configured && !window.IntegrityStore.ready) window.IntegrityStore._check();
+        if (globalThis.window?.IntegrityStore?.ready) return window.IntegrityStore.read(key);
+        return JSON.parse(localStorage.getItem(key) || '[]');
+    },
+    _write(key, records) {
+        if (globalThis.window?.IntegrityStore?.configured && !window.IntegrityStore.ready) window.IntegrityStore._check();
+        if (globalThis.window?.IntegrityStore?.ready) return window.IntegrityStore.write(key, records);
+        localStorage.setItem(key, JSON.stringify(records));
+    },
+    gravar(method, args, options = {}) {
+        const store = globalThis.window?.IntegrityStore;
+        if (store?.configured && !store.ready) store._check();
+        if (!store?.ready) return this[method](...args);
+        const names = { Venda: this.KEYS.VENDAS, Pessoa: this.KEYS.PESSOAS, Pacote: this.KEYS.PACOTES, Cotacao: this.KEYS.COTACOES };
+        const name = Object.keys(names).find(name => method.includes(name));
+        const editing = /^(update|delete|restaurar|revisar|salvarConversao)/.test(method);
+        const editorKey = names[name] + ':' + String(args[0]);
+        const expected = editing && name ? [{ key: names[name], id: args[0],
+            value: Object.hasOwn(options, 'expectedRecord') ? options.expectedRecord : this._editores.has(editorKey)
+                ? this._editores.get(editorKey) : this._read(names[name]).find(item => String(item.id) === String(args[0])) || null }] : [];
+        return store.transact(() => this[method](...args), { label: method, expected, resultKey: names[name] }).then(result => {
+            if (expected.length && store.canonical(this._editores.get(editorKey) ?? null) === store.canonical(expected[0].value)) this._editores.delete(editorKey);
+            return result;
+        });
+    },
     // Chaves do LocalStorage
     KEYS: {
         VENDAS: 'emissao_vendas',
@@ -37,8 +68,7 @@ const StorageManager = {
 
     // ========== VENDAS ==========
     getTodasVendas() {
-        const data = localStorage.getItem(this.KEYS.VENDAS);
-        return data ? JSON.parse(data) : [];
+        return this._read(this.KEYS.VENDAS);
     },
 
     // Por padrão, telas e relatórios recebem apenas vendas ativas. As arquivadas
@@ -49,7 +79,7 @@ const StorageManager = {
     },
 
     saveVendas(vendas) {
-        localStorage.setItem(this.KEYS.VENDAS, JSON.stringify(vendas));
+        this._write(this.KEYS.VENDAS, vendas);
     },
 
     addVenda(venda) {
@@ -396,12 +426,11 @@ const StorageManager = {
 
     // ========== PESSOAS (CLIENTES, PASSAGEIROS E FORNECEDORES) ==========
     getPessoas() {
-        const data = localStorage.getItem(this.KEYS.PESSOAS);
-        return data ? JSON.parse(data) : [];
+        return this._read(this.KEYS.PESSOAS);
     },
 
     savePessoas(pessoas) {
-        localStorage.setItem(this.KEYS.PESSOAS, JSON.stringify(pessoas));
+        this._write(this.KEYS.PESSOAS, pessoas);
     },
 
     normalizarPessoa(pessoa) {
@@ -495,12 +524,11 @@ const StorageManager = {
 
     // ========== PACOTES TURÍSTICOS ==========
     getPacotes() {
-        const data = localStorage.getItem(this.KEYS.PACOTES);
-        return data ? JSON.parse(data) : [];
+        return this._read(this.KEYS.PACOTES);
     },
 
     savePacotes(pacotes) {
-        localStorage.setItem(this.KEYS.PACOTES, JSON.stringify(pacotes));
+        this._write(this.KEYS.PACOTES, pacotes);
     },
 
     addPacote(pacote) {
@@ -536,12 +564,11 @@ const StorageManager = {
 
     // ========== COTAÇÕES ==========
     getCotacoes() {
-        const data = localStorage.getItem(this.KEYS.COTACOES);
-        return data ? JSON.parse(data) : [];
+        return this._read(this.KEYS.COTACOES);
     },
 
     saveCotacoes(cotacoes) {
-        localStorage.setItem(this.KEYS.COTACOES, JSON.stringify(cotacoes));
+        this._write(this.KEYS.COTACOES, cotacoes);
     },
 
     addCotacao(cotacao) {
@@ -792,3 +819,24 @@ const StorageManager = {
 
 // Tornar disponível globalmente
 window.StorageManager = StorageManager;
+
+// Inline form handlers surface transaction failures and keep the form open.
+if (typeof document !== 'undefined') document.addEventListener('app:ready', () => {
+    const names = ['salvarPessoa', 'excluirPessoa', 'salvarCadastroClienteRapido', 'salvarCadastroPassageiroRapido',
+        'salvarVenda', 'excluirVenda', 'restaurarVenda', 'salvarMovimentoFinanceiro', 'salvarCotacao', 'marcarComoPerdida',
+        'excluirCotacao', 'salvarPacote', 'excluirPacote', 'salvarRevisao'];
+    for (const name of names) {
+        const original = window[name]; if (typeof original !== 'function' || original._integrityWrapped) continue;
+        let pending = null;
+        const handler = async function (...args) {
+            if (pending) return pending;
+            pending = (async () => {
+                try { return await original.apply(this, args); }
+                catch (cause) { if (typeof Utils !== 'undefined') Utils.showError(cause.message || 'Não foi possível salvar. Os dados do formulário foram mantidos.'); }
+                finally { pending = null; }
+            })();
+            return pending;
+        };
+        handler._integrityWrapped = true; window[name] = handler;
+    }
+});

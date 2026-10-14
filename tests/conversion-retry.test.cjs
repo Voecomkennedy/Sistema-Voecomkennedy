@@ -9,7 +9,7 @@ test('partial conversion reports retained sale, retries its link and never dupli
     completeSale(w);w.__success=[];w.Utils.showSuccess=text=>w.__success.push(text);
     const original=w.Storage.prototype.setItem;
     w.Storage.prototype.setItem=function(key,value){if(key==='emissao_cotacoes')throw new w.DOMException('synthetic full quota','QuotaExceededError');return original.call(this,key,value);};
-    w.salvarVenda();
+    await w.salvarVenda();
     assert.equal(w.StorageManager.getTodasVendas().length,1);
     const sale=w.StorageManager.getTodasVendas()[0];
     assert.equal(sale.cotacaoOrigemId,quote.id);
@@ -18,7 +18,7 @@ test('partial conversion reports retained sale, retries its link and never dupli
     w.Storage.prototype.setItem=original;
     // A retry resumes the operation already committed, not a new form snapshot.
     w.document.getElementById('valorVenda').value='R$ 2.000,00';w.calcularMargem();
-    w.salvarVenda();w.salvarVenda();
+    await w.salvarVenda();await w.salvarVenda();
     assert.equal(w.StorageManager.getTodasVendas().length,1);
     assert.equal(w.StorageManager.getTodasVendas()[0].id,sale.id);
     assert.equal(w.StorageManager.getTodasVendas()[0].valorVenda,1500);
@@ -32,12 +32,12 @@ test('retry after reload finds the origin link left by partial conversion',async
   try{
     const w=a.w;await a.waitFor(()=>w.document.getElementById('clienteId').value===person.id);completeSale(w);
     w.StorageManager.concluirConversaoCotacao=()=>{throw new Error('synthetic second write failure');};
-    w.salvarVenda();retained=JSON.parse(w.localStorage.getItem('emissao_vendas'));
+    await w.salvarVenda();retained=JSON.parse(w.localStorage.getItem('emissao_vendas'));
     assert.equal(retained.length,1);
   }finally{a.dom.window.close();}
   const b=await fixture({sales:retained});
   try{
-    const w=b.w;await b.waitFor(()=>w.document.getElementById('clienteId').value===person.id);completeSale(w);w.salvarVenda();
+    const w=b.w;await b.waitFor(()=>w.document.getElementById('clienteId').value===person.id);completeSale(w);await w.salvarVenda();
     assert.equal(w.StorageManager.getTodasVendas().length,1);
     assert.equal(w.StorageManager.getCotacaoById(quote.id).vendaId,retained[0].id);
   }finally{b.dom.window.close();}
@@ -47,7 +47,7 @@ test('conversion of one of three same-client proposals preserves all originals a
   const quotes=[0,1,2].map(i=>({...quote,id:'quote-'+i,observacao:'Independent '+i}));
   const a=await fixture({storedQuote:quotes[1],storedQuotes:quotes,transfer:quotes[1]});
   try{
-    const w=a.w;await a.waitFor(()=>w.document.getElementById('clienteId').value===person.id);completeSale(w);w.salvarVenda();
+    const w=a.w;await a.waitFor(()=>w.document.getElementById('clienteId').value===person.id);completeSale(w);await w.salvarVenda();
     const stored=w.StorageManager.getCotacoes();
     assert.equal(stored.length,3);assert.equal(stored.filter(q=>q.status==='convertida').length,1);
     assert.equal(w.StorageManager.getCotacaoById('quote-0').status,'aberta');
@@ -61,8 +61,8 @@ test('failure of the first sale write leaves both collections unchanged and perm
   try{
     const w=a.w;await a.waitFor(()=>w.document.getElementById('clienteId').value===person.id);completeSale(w);
     const save=w.StorageManager.saveVendas;w.StorageManager.saveVendas=()=>{throw new Error('synthetic quota');};
-    w.salvarVenda();assert.equal(w.StorageManager.getTodasVendas().length,0);assert.equal(w.StorageManager.getCotacaoById(quote.id).status,'aberta');
-    w.StorageManager.saveVendas=save;w.salvarVenda();assert.equal(w.StorageManager.getTodasVendas().length,1);
+    await w.salvarVenda();assert.equal(w.StorageManager.getTodasVendas().length,0);assert.equal(w.StorageManager.getCotacaoById(quote.id).status,'aberta');
+    w.StorageManager.saveVendas=save;await w.salvarVenda();assert.equal(w.StorageManager.getTodasVendas().length,1);
     const result=w.StorageManager.salvarConversaoCotacao(quote.id,{clienteId:person.id});
     assert.equal(result.retomada,true);assert.equal(w.StorageManager.getTodasVendas().length,1);
   }finally{a.dom.window.close();}
@@ -74,7 +74,7 @@ test('legacy quote without client ID converts using the explicitly selected cont
   try{
     const w=a.w;await a.waitFor(()=>w.document.getElementById('origem').value==='BSB');
     assert.equal(w.document.getElementById('clienteId').value,'');
-    completeSale(w,person.id);w.salvarVenda();
+    completeSale(w,person.id);await w.salvarVenda();
     assert.equal(w.StorageManager.getTodasVendas().length,1);
     const sale=w.StorageManager.getTodasVendas()[0],saved=w.StorageManager.getCotacaoById(legacy.id);
     assert.equal(sale.clienteId,person.id);assert.equal(sale.cotacaoOrigemId,legacy.id);

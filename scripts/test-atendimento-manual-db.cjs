@@ -1,0 +1,30 @@
+// Cluster descartável, loopback e dados sintéticos. Nunca usa URL/credenciais de produção.
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),net=require('node:net'),assert=require('node:assert/strict');
+const{execFileSync}=require('node:child_process');const{Client}=require('pg');
+const root=path.resolve(__dirname,'..'),bin='/opt/homebrew/opt/postgresql@17/bin',username=os.userInfo().username;
+(async()=>{const dir=fs.mkdtempSync(path.join(root,'../manual-db-')),cluster=path.join(dir,'data');let started=false,client;
+ const run=(name,args)=>execFileSync(path.join(bin,name),args,{encoding:'utf8'});
+ try{const server=net.createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port;await new Promise(r=>server.close(r));
+ run('initdb',['-D',cluster,'--auth=trust','--no-locale','-E','UTF8','-U',username]);run('pg_ctl',['-D',cluster,'-l',path.join(dir,'postgres.log'),'-o',`-h 127.0.0.1 -p ${port} -k ''`,'-w','start']);started=true;
+ run('createdb',['-h','127.0.0.1','-p',String(port),'-U',username,'vck_central_test']);client=new Client({host:'127.0.0.1',port,user:username,database:'vck_central_test'});await client.connect();
+ await client.query(fs.readFileSync(path.join(root,'tests/db/bootstrap.sql'),'utf8'));
+ await client.query(`create table public.atendimento_recepcao_conversas(id uuid primary key,user_id uuid references auth.users(id),instancia text,unique(user_id,instancia,id));
+ create table public.atendimento_recepcao_identidades(user_id uuid,instancia text,conversa_id uuid,tipo text,valor text,primary key(user_id,instancia,tipo,valor),foreign key(user_id,instancia,conversa_id) references public.atendimento_recepcao_conversas(user_id,instancia,id));
+ grant select on public.atendimento_recepcao_identidades to service_role;
+ insert into auth.users values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+ insert into public.atendimento_recepcao_conversas values('cccccccc-cccc-4ccc-8ccc-cccccccccccc','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','SYNTHETIC'),('dddddddd-dddd-4ddd-8ddd-dddddddddddd','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','SYNTHETIC');
+ insert into public.atendimento_recepcao_identidades values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','SYNTHETIC','cccccccc-cccc-4ccc-8ccc-cccccccccccc','telefone','5562999990001'),('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','SYNTHETIC','dddddddd-dddd-4ddd-8ddd-dddddddddddd','telefone','5562999990002');`);
+ await client.query(fs.readFileSync(path.join(root,'supabase/migrations/20261014130000_atendimento_envio_manual.sql'),'utf8'));
+ const args=['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','SYNTHETIC','cccccccc-cccc-4ccc-8ccc-cccccccccccc','eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','5562999990001','Texto sintético'];
+ const rpc=values=>client.query('select public.atendimento_reservar_envio_manual($1,$2,$3,$4,$5,$6) as result',values);
+ await client.query('set role service_role');assert.equal((await rpc(args)).rows[0].result.created,true);assert.equal((await rpc(args)).rows[0].result.created,false);
+ await assert.rejects(rpc([...args.slice(0,5),'Outro texto']),e=>e.code==='23505');await assert.rejects(rpc([...args.slice(0,3),'ffffffff-ffff-4fff-8fff-ffffffffffff',...args.slice(4)]),e=>e.code==='23505');await assert.rejects(rpc([args[0],args[1],'dddddddd-dddd-4ddd-8ddd-dddddddddddd',args[3],'5562999990002',args[5]]),e=>e.code==='42501');
+ await assert.rejects(client.query('delete from public.atendimento_recepcao_saidas'),e=>e.code==='42501');
+ await client.query('reset role');await client.query("select set_config('request.jwt.claim.sub',$1,false)",[args[0]]);await client.query('set role authenticated');assert.equal((await client.query('select * from public.atendimento_recepcao_saidas')).rowCount,1);
+ await assert.rejects(client.query("update public.atendimento_recepcao_saidas set texto='alterado'"),e=>e.code==='42501');await assert.rejects(rpc(args),e=>e.code==='42501');
+ await client.query('reset role');await client.query("select set_config('request.jwt.claim.sub','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',false)");await client.query('set role authenticated');assert.equal((await client.query('select * from public.atendimento_recepcao_saidas')).rowCount,0);
+ await client.query('reset role');await client.query('set role anon');await assert.rejects(client.query('select * from public.atendimento_recepcao_saidas'),e=>e.code==='42501');await client.query('reset role');
+ assert.equal((await client.query('select count(*)::int as total from public.dados_app')).rows[0].total,0);
+ console.log('PASS: migração, reserva idempotente, conflito, vínculo do proprietário, RLS, grants e dados_app intacto.');
+ }finally{if(client)await client.end();if(started)run('pg_ctl',['-D',cluster,'-m','immediate','-w','stop']);console.log('Cluster local encerrado; evidências em '+dir);}
+})().catch(e=>{console.error(e);process.exitCode=1;});

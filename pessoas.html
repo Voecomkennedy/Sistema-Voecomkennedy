@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="manifest" href="site.webmanifest">
-    <meta name="theme-color" content="#2C3E50">
+    <meta name="theme-color" content="#0A1931">
     <meta name="application-name" content="Voecomkennedy">
     <meta name="apple-mobile-web-app-title" content="Voecomkennedy">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,39 +17,39 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=12">
+    <link rel="stylesheet" href="css/style.css?v=13">
 </head>
-<body>
+<body class="workspace-page people-page">
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand" href="index.html">
                 <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
                 <span>Voecomkennedy</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill"></i> Check-in</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
+                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="pessoas.html" aria-current="page"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill"></i> Mais</a>
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item active" href="pessoas.html"><i class="bi bi-people-fill"></i> Pessoas</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill"></i> Backup</a></li>
+                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
+                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
+                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
                         </ul>
                     </li>
                 </ul>
                 <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
                 <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right"></i> Sair
+                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
                 </button>
             </div>
         </div>
@@ -57,21 +57,15 @@
 
     <!-- Main Content -->
     <div class="container-fluid py-4">
-        <div class="row mb-4">
-            <div class="col-12">
-                <h2><i class="bi bi-people-fill me-2"></i>Gerenciamento de Pessoas</h2>
-                <p class="text-muted">Cadastre clientes, passageiros e fornecedores</p>
+        <header class="page-heading workspace-heading">
+            <div>
+                <h1>Clientes e pessoas</h1>
+                <p class="text-muted mb-0">Mantenha os dados de clientes, passageiros e fornecedores em um só lugar.</p>
             </div>
-        </div>
-
-        <!-- Botão Nova Pessoa -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <button class="btn btn-primary btn-lg" onclick="abrirModalPessoa()">
-                    <i class="bi bi-person-plus me-2"></i>Nova Pessoa
-                </button>
+            <div class="workspace-actions">
+                <button class="btn btn-primary" onclick="abrirModalPessoa()"><i class="bi bi-person-plus me-2" aria-hidden="true"></i>Novo cadastro</button>
             </div>
-        </div>
+        </header>
 
         <!-- Filtros -->
         <div class="row mb-4">
@@ -80,11 +74,11 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4 mb-2">
-                                <label class="form-label">Buscar</label>
-                                <input type="text" class="form-control" id="busca" placeholder="Nome, CPF, email...">
+                                <label class="form-label" for="busca">Buscar</label>
+                                <input type="text" class="form-control" id="busca" placeholder="Nome, CPF ou e-mail">
                             </div>
                             <div class="col-md-3 mb-2">
-                                <label class="form-label">Tipo</label>
+                                <label class="form-label" for="filtroTipo">Tipo</label>
                                 <select class="form-select" id="filtroTipo" onchange="aplicarFiltros()">
                                     <option value="todos">Todos</option>
                                     <option value="cliente">Clientes</option>
@@ -93,7 +87,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3 mb-2">
-                                <label class="form-label">Ordenar por</label>
+                                <label class="form-label" for="ordenacao">Ordenar por</label>
                                 <select class="form-select" id="ordenacao" onchange="aplicarFiltros()">
                                     <option value="nome_asc">Nome (A-Z)</option>
                                     <option value="nome_desc">Nome (Z-A)</option>
@@ -103,7 +97,7 @@
                             <div class="col-md-2 mb-2">
                                 <label class="form-label">&nbsp;</label>
                                 <button class="btn btn-secondary w-100" onclick="limparFiltros()">
-                                    <i class="bi bi-x-circle me-1"></i>Limpar
+                                    <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Limpar
                                 </button>
                             </div>
                         </div>
@@ -116,7 +110,7 @@
         <div class="row" id="cardsPessoas">
             <div class="col-12">
                 <div class="empty-state">
-                    <i class="bi bi-people"></i>
+                    <i class="bi bi-people" aria-hidden="true"></i>
                     <p>Nenhuma pessoa cadastrada. Clique em "Nova Pessoa" para começar.</p>
                 </div>
             </div>
@@ -124,14 +118,14 @@
     </div>
 
     <!-- Modal de Cadastro/Edição -->
-    <div class="modal fade" id="modalPessoa" tabindex="-1">
+    <div class="modal fade" id="modalPessoa" tabindex="-1" aria-labelledby="tituloModal" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="tituloModal">
-                        <i class="bi bi-person-plus me-2"></i>Nova Pessoa
+                        <i class="bi bi-person-plus me-2" aria-hidden="true"></i>Novo cadastro
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar cadastro"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formPessoa">
@@ -140,7 +134,7 @@
                         <!-- Tipo de Pessoa -->
                         <div class="row mb-4">
                             <div class="col-12">
-                                <label class="form-label">Tipo de Cadastro *</label>
+                                <label class="form-label" for="tipo">Tipo de Cadastro *</label>
                                 <select class="form-select" id="tipo" required onchange="alterarCamposPorTipo()">
                                     <option value="">Selecione o tipo</option>
                                     <option value="cliente">Cliente (quem paga/contrata)</option>
@@ -152,11 +146,11 @@
 
                         <!-- Campos Comuns -->
                         <div id="camposComuns" style="display: none;">
-                            <h6 class="mb-3"><i class="bi bi-person me-2"></i>Dados Básicos</h6>
+                            <h6 class="mb-3"><i class="bi bi-person me-2" aria-hidden="true"></i>Dados Básicos</h6>
 
                             <div class="row">
                                 <div class="col-md-12 mb-3">
-                                    <label class="form-label">Nome Completo / Razão Social *</label>
+                                    <label class="form-label" for="nome">Nome Completo / Razão Social *</label>
                                     <input type="text" class="form-control" id="nome" required>
                                 </div>
                             </div>
@@ -165,79 +159,79 @@
                             <div id="camposPessoaFisica" style="display: none;">
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">CPF *</label>
+                                        <label class="form-label" for="cpf">CPF *</label>
                                         <input type="text" class="form-control" id="cpf" maxlength="14">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">RG</label>
+                                        <label class="form-label" for="rg">RG</label>
                                         <input type="text" class="form-control" id="rg">
                                     </div>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Data de Nascimento</label>
+                                        <label class="form-label" for="dataNascimento">Data de Nascimento</label>
                                         <input type="date" class="form-control" id="dataNascimento">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Email</label>
+                                        <label class="form-label" for="email">Email</label>
                                         <input type="email" class="form-control" id="email">
                                     </div>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Telefone *</label>
+                                        <label class="form-label" for="telefone">Telefone *</label>
                                         <input type="text" class="form-control" id="telefone" maxlength="15">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Telefone 2</label>
+                                        <label class="form-label" for="telefone2">Telefone 2</label>
                                         <input type="text" class="form-control" id="telefone2" maxlength="15">
                                     </div>
                                 </div>
 
                                 <!-- Dados do Passaporte (apenas para viagens internacionais) -->
-                                <h6 class="mb-3 mt-4"><i class="bi bi-globe me-2"></i>Dados do Passaporte (Viagens Internacionais)</h6>
+                                <h6 class="mb-3 mt-4"><i class="bi bi-globe me-2" aria-hidden="true"></i>Dados do Passaporte (Viagens Internacionais)</h6>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Número do Passaporte</label>
+                                        <label class="form-label" for="passaporteNumero">Número do Passaporte</label>
                                         <input type="text" class="form-control" id="passaporteNumero">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">País Emissor</label>
+                                        <label class="form-label" for="passaportePais">País Emissor</label>
                                         <input type="text" class="form-control" id="passaportePais" placeholder="Ex: Brasil">
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Data de Emissão</label>
+                                        <label class="form-label" for="passaporteEmissao">Data de Emissão</label>
                                         <input type="date" class="form-control" id="passaporteEmissao">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Data de Validade</label>
+                                        <label class="form-label" for="passaporteValidade">Data de Validade</label>
                                         <input type="date" class="form-control" id="passaporteValidade">
                                     </div>
                                 </div>
 
                                 <!-- Endereço -->
-                                <h6 class="mb-3 mt-4"><i class="bi bi-geo-alt me-2"></i>Endereço</h6>
+                                <h6 class="mb-3 mt-4"><i class="bi bi-geo-alt me-2" aria-hidden="true"></i>Endereço</h6>
                                 <div class="row">
                                     <div class="col-md-8 mb-3">
-                                        <label class="form-label">Endereço</label>
+                                        <label class="form-label" for="endereco">Endereço</label>
                                         <input type="text" class="form-control" id="endereco">
                                     </div>
                                     <div class="col-md-4 mb-3">
-                                        <label class="form-label">CEP</label>
+                                        <label class="form-label" for="cep">CEP</label>
                                         <input type="text" class="form-control" id="cep" maxlength="9">
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Cidade</label>
+                                        <label class="form-label" for="cidade">Cidade</label>
                                         <input type="text" class="form-control" id="cidade">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Estado</label>
+                                        <label class="form-label" for="estado">Estado</label>
                                         <select class="form-select" id="estado">
                                             <option value="">Selecione</option>
                                             <option value="AC">Acre</option>
@@ -276,29 +270,29 @@
                             <div id="camposFornecedor" style="display: none;">
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">CNPJ</label>
+                                        <label class="form-label" for="cnpj">CNPJ</label>
                                         <input type="text" class="form-control" id="cnpj" maxlength="18">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Código IATA</label>
+                                        <label class="form-label" for="codigoIATA">Código IATA</label>
                                         <input type="text" class="form-control" id="codigoIATA" maxlength="3" placeholder="Ex: LA, G3, AD">
                                     </div>
                                 </div>
 
-                                <h6 class="mb-3 mt-4"><i class="bi bi-envelope me-2"></i>Contato</h6>
+                                <h6 class="mb-3 mt-4"><i class="bi bi-envelope me-2" aria-hidden="true"></i>Contato</h6>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Email</label>
+                                        <label class="form-label" for="emailFornecedor">Email</label>
                                         <input type="email" class="form-control" id="emailFornecedor">
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Telefone</label>
+                                        <label class="form-label" for="telefoneFornecedor">Telefone</label>
                                         <input type="text" class="form-control" id="telefoneFornecedor" maxlength="15">
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-12 mb-3">
-                                        <label class="form-label">Site</label>
+                                        <label class="form-label" for="site">Site</label>
                                         <input type="url" class="form-control" id="site" placeholder="https://www.exemplo.com">
                                     </div>
                                 </div>
@@ -307,7 +301,7 @@
                             <!-- Observações (para todos) -->
                             <div class="row mt-4">
                                 <div class="col-12 mb-3">
-                                    <label class="form-label">Observações</label>
+                                    <label class="form-label" for="observacoes">Observações</label>
                                     <textarea class="form-control" id="observacoes" rows="3"></textarea>
                                 </div>
                             </div>
@@ -317,7 +311,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" onclick="salvarPessoa()">
-                        <i class="bi bi-save me-2"></i>Salvar
+                        <i class="bi bi-save me-2" aria-hidden="true"></i>Salvar
                     </button>
                 </div>
             </div>
@@ -419,7 +413,7 @@
                 const pessoa = StorageManager.getPessoaById(pessoaId);
                 if (!pessoa) return;
 
-                document.getElementById('tituloModal').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Pessoa';
+                document.getElementById('tituloModal').innerHTML = '<i class="bi bi-pencil me-2" aria-hidden="true"></i>Editar Pessoa';
                 document.getElementById('pessoaId').value = pessoa.id;
                 document.getElementById('tipo').value = pessoa.tipo;
                 alterarCamposPorTipo();
@@ -451,7 +445,7 @@
 
                 document.getElementById('observacoes').value = pessoa.observacoes || '';
             } else {
-                document.getElementById('tituloModal').innerHTML = '<i class="bi bi-person-plus me-2"></i>Nova Pessoa';
+                document.getElementById('tituloModal').innerHTML = '<i class="bi bi-person-plus me-2" aria-hidden="true"></i>Novo cadastro';
                 document.getElementById('formPessoa').reset();
                 document.getElementById('pessoaId').value = '';
                 document.getElementById('camposComuns').style.display = 'none';
@@ -583,11 +577,13 @@
             const container = document.getElementById('cardsPessoas');
 
             if (pessoas.length === 0) {
+                const semCadastros = StorageManager.getPessoas().length === 0;
                 container.innerHTML = `
                     <div class="col-12">
                         <div class="empty-state">
-                            <i class="bi bi-people"></i>
-                            <p>Nenhuma pessoa encontrada.</p>
+                            <h3>${semCadastros ? 'Nenhum cadastro ainda' : 'Nenhum resultado encontrado'}</h3>
+                            <p>${semCadastros ? 'Cadastre um cliente, passageiro ou fornecedor para começar.' : 'Tente outro nome ou remova os filtros para ver todos os cadastros.'}</p>
+                            <button class="btn btn-outline-secondary" onclick="${semCadastros ? 'abrirModalPessoa()' : 'limparFiltros()'}">${semCadastros ? 'Novo cadastro' : 'Limpar filtros'}</button>
                         </div>
                     </div>
                 `;
@@ -606,69 +602,62 @@
                 'fornecedor': 'bi-building'
             };
 
-            const tipoBadges = {
-                'cliente': 'bg-primary',
-                'passageiro': 'bg-success',
-                'fornecedor': 'bg-info'
-            };
-
             let html = '';
             pessoas.forEach(pessoa => {
                 const icon = tipoIcons[pessoa.tipo] || 'bi-person';
-                const badge = tipoBadges[pessoa.tipo] || 'bg-secondary';
                 const tipoLabel = tipoLabels[pessoa.tipo] || 'Outro';
 
                 html += `
                     <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card h-100">
+                        <div class="card person-card h-100">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
                                     <h5 class="card-title mb-0">
-                                        <i class="bi ${icon} me-2 text-primary"></i>
+                                        <i class="bi ${icon} me-2 text-primary" aria-hidden="true"></i>
                                         ${Utils.escapeHTML(pessoa.nome)}
                                     </h5>
-                                    <span class="badge ${badge}">${tipoLabel}</span>
+                                    <span class="person-type">${tipoLabel}</span>
                                 </div>
                                 <hr>
 
                                 ${pessoa.cpf ? `
                                     <p class="card-text mb-2">
-                                        <strong><i class="bi bi-credit-card me-2"></i>CPF:</strong>
+                                        <strong><i class="bi bi-credit-card me-2" aria-hidden="true"></i>CPF:</strong>
                                         ${Utils.escapeHTML(Utils.formatCPF(pessoa.cpf))}
                                     </p>
                                 ` : ''}
 
                                 ${pessoa.cnpj ? `
                                     <p class="card-text mb-2">
-                                        <strong><i class="bi bi-card-text me-2"></i>CNPJ:</strong>
+                                        <strong><i class="bi bi-card-text me-2" aria-hidden="true"></i>CNPJ:</strong>
                                         ${Utils.escapeHTML(pessoa.cnpj)}
                                     </p>
                                 ` : ''}
 
                                 ${pessoa.codigoIATA ? `
                                     <p class="card-text mb-2">
-                                        <strong><i class="bi bi-tag me-2"></i>IATA:</strong>
+                                        <strong><i class="bi bi-tag me-2" aria-hidden="true"></i>IATA:</strong>
                                         <span class="badge bg-dark">${Utils.escapeHTML(pessoa.codigoIATA)}</span>
                                     </p>
                                 ` : ''}
 
                                 ${pessoa.email ? `
                                     <p class="card-text mb-2">
-                                        <strong><i class="bi bi-envelope me-2"></i>Email:</strong>
+                                        <strong><i class="bi bi-envelope me-2" aria-hidden="true"></i>Email:</strong>
                                         ${Utils.escapeHTML(pessoa.email)}
                                     </p>
                                 ` : ''}
 
                                 ${pessoa.telefone ? `
                                     <p class="card-text mb-2">
-                                        <strong><i class="bi bi-telephone me-2"></i>Telefone:</strong>
+                                        <strong><i class="bi bi-telephone me-2" aria-hidden="true"></i>Telefone:</strong>
                                         ${Utils.escapeHTML(Utils.formatPhone(pessoa.telefone))}
                                     </p>
                                 ` : ''}
 
                                 ${pessoa.passaporteNumero ? `
                                     <p class="card-text mb-2">
-                                        <strong><i class="bi bi-globe me-2"></i>Passaporte:</strong>
+                                        <strong><i class="bi bi-globe me-2" aria-hidden="true"></i>Passaporte:</strong>
                                         ${Utils.escapeHTML(pessoa.passaporteNumero)}
                                     </p>
                                 ` : ''}
@@ -681,10 +670,10 @@
                             </div>
                             <div class="card-footer bg-transparent">
                                 <button class="btn btn-sm btn-primary" onclick="abrirModalPessoa(${Utils.literalJSSeguro(pessoa.id)})">
-                                    <i class="bi bi-pencil me-1"></i>Editar
+                                    <i class="bi bi-pencil me-1" aria-hidden="true"></i>Editar
                                 </button>
                                 <button class="btn btn-sm btn-danger" onclick="excluirPessoa(${Utils.literalJSSeguro(pessoa.id)})">
-                                    <i class="bi bi-trash me-1"></i>Excluir
+                                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Excluir
                                 </button>
                             </div>
                         </div>

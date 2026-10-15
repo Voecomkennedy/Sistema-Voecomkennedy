@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="manifest" href="site.webmanifest">
-    <meta name="theme-color" content="#2C3E50">
+    <meta name="theme-color" content="#0A1931">
     <meta name="application-name" content="Voecomkennedy">
     <meta name="apple-mobile-web-app-title" content="Voecomkennedy">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,40 +17,40 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=12">
+    <link rel="stylesheet" href="css/style.css?v=13">
     <link rel="stylesheet" href="css/card-rates.css?v=1">
 </head>
-<body>
+<body class="workspace-page quotes-page">
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand" href="index.html">
                 <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
                 <span>Voecomkennedy</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="cotacoes.html"><i class="bi bi-calculator-fill"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill"></i> Check-in</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="cotacoes.html" aria-current="page"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill"></i> Mais</a>
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item" href="pessoas.html"><i class="bi bi-people-fill"></i> Pessoas</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill"></i> Backup</a></li>
+                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
+                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
+                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
                         </ul>
                     </li>
                 </ul>
                 <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
                 <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right"></i> Sair
+                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
                 </button>
             </div>
         </div>
@@ -58,30 +58,62 @@
 
     <!-- Main Content -->
     <div class="container-fluid py-4">
-        <div class="row mb-4">
-            <div class="col-12">
-                <h2><i class="bi bi-calculator-fill me-2"></i>Cotações de Viagens</h2>
-                <p class="text-muted">Crie orçamentos profissionais para seus clientes. Gere PDF ou copie para WhatsApp!</p>
+        <header class="page-heading workspace-heading">
+            <div>
+                <h1>Cotações</h1>
+                <p class="text-muted mb-0">Organize orçamentos, prepare propostas e acompanhe o retorno dos clientes.</p>
+            </div>
+            <div class="workspace-actions">
+                <button class="btn btn-primary" onclick="novaPropostaCompleta()"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Nova proposta</button>
+                <button type="button" class="btn btn-outline-secondary" data-card-rates-open>Taxas de cartão</button>
+                <button class="btn btn-outline-secondary" onclick="carregarCotacoes()"><i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>Atualizar</button>
+            </div>
+        </header>
+
+        <!-- Estatísticas Rápidas -->
+        <div class="row quote-metrics mb-3">
+            <div class="col-6 col-lg-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-label">Total de Cotações</div>
+                        <div class="stat-value" id="totalCotacoes">0</div>
+                        <small class="text-muted">Todas as cotações</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card stat-card success">
+                    <div class="card-body">
+                        <div class="stat-label">Convertidas</div>
+                        <div class="stat-value" id="cotacoesConvertidas">0</div>
+                        <small class="text-muted">Viraram vendas</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card stat-card warning">
+                    <div class="card-body">
+                        <div class="stat-label">Em Aberto</div>
+                        <div class="stat-value" id="cotacoesAbertas">0</div>
+                        <small class="text-muted">Aguardando cliente</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card stat-card danger">
+                    <div class="card-body">
+                        <div class="stat-label">Perdidas</div>
+                        <div class="stat-value" id="cotacoesPerdidas">0</div>
+                        <small class="text-muted">Não concretizadas</small>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Botões de Ação -->
         <div class="row mb-4">
             <div class="col-12">
-                <button class="btn btn-primary btn-lg" onclick="novaPropostaCompleta()">
-                    <i class="bi bi-plus-circle me-2"></i>Nova Proposta Completa
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-lg ms-2" data-card-rates-open>Taxas de cartão</button>
-                <button class="btn btn-outline-secondary btn-lg ms-2" onclick="carregarCotacoes()">
-                    <i class="bi bi-arrow-clockwise me-2"></i>Atualizar
-                </button>
-            </div>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-12">
-                <details id="editorProposta" class="card">
-                    <summary class="card-header" style="cursor:pointer">Proposta completa — voos, conexões, tarifas e PDF</summary>
+                <details id="editorProposta" class="card proposal-editor">
+                    <summary class="card-header" style="cursor:pointer">Editor da proposta</summary>
                     <div class="card-body">
                         <p id="propostaModo" class="fw-semibold mb-2">Nova cotação</p>
                         <div class="row g-2 align-items-end mb-3">
@@ -122,49 +154,9 @@
                             </div>
                         </form>
                         <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente e salve. O PDF salva esta cotação antes de gerar o arquivo. Use Nova proposta para criar outro orçamento.</p>
-                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261014-integridade1" style="width:100%;height:1350px;border:1px solid #d7e3ee;border-radius:12px"></iframe>
+                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261015-visual1" class="proposal-frame" style="height:1350px"></iframe>
                     </div>
                 </details>
-            </div>
-        </div>
-
-        <!-- Estatísticas Rápidas -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card stat-card">
-                    <div class="card-body">
-                        <div class="stat-label">Total de Cotações</div>
-                        <div class="stat-value" id="totalCotacoes">0</div>
-                        <small class="text-muted">Todas as cotações</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card stat-card success">
-                    <div class="card-body">
-                        <div class="stat-label">Convertidas</div>
-                        <div class="stat-value" id="cotacoesConvertidas">0</div>
-                        <small class="text-muted">Viraram vendas</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card stat-card warning">
-                    <div class="card-body">
-                        <div class="stat-label">Em Aberto</div>
-                        <div class="stat-value" id="cotacoesAbertas">0</div>
-                        <small class="text-muted">Aguardando cliente</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card stat-card danger">
-                    <div class="card-body">
-                        <div class="stat-label">Perdidas</div>
-                        <div class="stat-value" id="cotacoesPerdidas">0</div>
-                        <small class="text-muted">Não concretizadas</small>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -180,11 +172,11 @@
                     <div class="card-body">
                         <div class="row align-items-end">
                             <div class="col-md-3 mb-2">
-                                <label class="form-label">Buscar</label>
+                                <label class="form-label" for="buscaCotacao">Buscar</label>
                                 <input type="text" class="form-control" id="buscaCotacao" placeholder="Cliente, origem, destino...">
                             </div>
                             <div class="col-md-2 mb-2">
-                                <label class="form-label">Status</label>
+                                <label class="form-label" for="filtroStatus">Status</label>
                                 <select class="form-select" id="filtroStatus" onchange="aplicarFiltros()">
                                     <option value="todas">Todas</option>
                                     <option value="aberta">Em Aberto</option>
@@ -199,7 +191,7 @@
                                 </div>
                             </div>
                             <div class="col-md-3 mb-2">
-                                <label class="form-label">Ordenar por</label>
+                                <label class="form-label" for="ordenacaoCotacao">Ordenar por</label>
                                 <select class="form-select" id="ordenacaoCotacao" onchange="aplicarFiltros()">
                                     <option value="data_desc">Data (mais recente)</option>
                                     <option value="data_asc">Data (mais antiga)</option>
@@ -209,7 +201,7 @@
                             </div>
                             <div class="col-md-2 mb-2">
                                 <button class="btn btn-secondary w-100" onclick="limparFiltros()">
-                                    <i class="bi bi-x-circle me-2"></i>Limpar
+                                    <i class="bi bi-x-circle me-2" aria-hidden="true"></i>Limpar
                                 </button>
                             </div>
                         </div>
@@ -223,7 +215,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <i class="bi bi-list-ul me-2"></i>
+                        <i class="bi bi-list-ul me-2" aria-hidden="true"></i>
                         Lista de Cotações (<span id="totalRegistros">0</span>)
                     </div>
                     <div class="card-body">
@@ -262,7 +254,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="tituloCotacao">
-                        <i class="bi bi-plus-circle me-2"></i>Nova Cotação
+                        <i class="bi bi-plus-circle me-2" aria-hidden="true"></i>Nova Cotação
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -271,19 +263,19 @@
                         <input type="hidden" id="cotacaoId">
 
                         <!-- Dados do Cliente -->
-                        <h6 class="mb-3"><i class="bi bi-person-circle me-2"></i>Dados do Cliente</h6>
+                        <h6 class="mb-3"><i class="bi bi-person-circle me-2" aria-hidden="true"></i>Dados do Cliente</h6>
                         <div class="row">
                             <div class="col-md-12 mb-3">
-                                <label class="form-label">Nome do Cliente *</label>
-                                <input type="text" class="form-control" id="nomeCliente" required placeholder="Sudário Geraldo">
+                                <label class="form-label" for="nomeCliente">Nome do Cliente *</label>
+                                <input type="text" class="form-control" id="nomeCliente" required placeholder="Nome completo do cliente">
                             </div>
                         </div>
 
                         <!-- Passageiros -->
-                        <h6 class="mb-3 mt-4"><i class="bi bi-people-fill me-2"></i>Passageiros</h6>
+                        <h6 class="mb-3 mt-4"><i class="bi bi-people-fill me-2" aria-hidden="true"></i>Passageiros</h6>
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Adultos (12+ anos)</label>
+                                <label class="form-label" for="adultos">Adultos (12+ anos)</label>
                                 <select class="form-select" id="adultos" onchange="calcularTotalPassageiros()">
                                     <option value="0">Nenhum</option>
                                     <option value="1" selected>1 adulto</option>
@@ -298,7 +290,7 @@
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Crianças (2-11 anos)</label>
+                                <label class="form-label" for="criancas">Crianças (2-11 anos)</label>
                                 <select class="form-select" id="criancas" onchange="calcularTotalPassageiros()">
                                     <option value="0" selected>Nenhuma</option>
                                     <option value="1">1 criança</option>
@@ -309,7 +301,7 @@
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Bebês (0-23 meses)</label>
+                                <label class="form-label" for="bebes">Bebês (0-23 meses)</label>
                                 <select class="form-select" id="bebes" onchange="calcularTotalPassageiros()">
                                     <option value="0" selected>Nenhum</option>
                                     <option value="1">1 bebê</option>
@@ -326,15 +318,15 @@
                         </div>
 
                         <!-- Detalhes do Voo -->
-                        <h6 class="mb-3 mt-4"><i class="bi bi-airplane-fill me-2"></i>Detalhes do Voo</h6>
+                        <h6 class="mb-3 mt-4"><i class="bi bi-airplane-fill me-2" aria-hidden="true"></i>Detalhes do Voo</h6>
                         <div class="row">
                             <div class="col-md-6 mb-3 position-relative">
-                                <label class="form-label">Origem *</label>
+                                <label class="form-label" for="origemCotacao">Origem *</label>
                                 <input type="text" class="form-control" id="origemCotacao" required placeholder="Digite código ou cidade" autocomplete="off">
                                 <div id="sugestoesOrigemCotacao" class="autocomplete-dropdown" style="display: none;"></div>
                             </div>
                             <div class="col-md-6 mb-3 position-relative">
-                                <label class="form-label">Destino *</label>
+                                <label class="form-label" for="destinoCotacao">Destino *</label>
                                 <input type="text" class="form-control" id="destinoCotacao" required placeholder="Digite código ou cidade" autocomplete="off">
                                 <div id="sugestoesDestinoCotacao" class="autocomplete-dropdown" style="display: none;"></div>
                             </div>
@@ -342,7 +334,7 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Companhia Aérea *</label>
+                                <label class="form-label" for="companhiaCotacao">Companhia Aérea *</label>
                                 <select class="form-select" id="companhiaCotacao" required onchange="calcularCotacao()">
                                     <option value="">Selecione...</option>
                                     <option value="LATAM">LATAM</option>
@@ -352,7 +344,7 @@
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Tipo de Tarifa *</label>
+                                <label class="form-label" for="tipoTarifa">Tipo de Tarifa *</label>
                                 <select class="form-select" id="tipoTarifa" required onchange="preencherBagagem()">
                                     <option value="">Selecione...</option>
                                     <option value="Básica">Básica</option>
@@ -363,7 +355,7 @@
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Tipo de Viagem *</label>
+                                <label class="form-label" for="tipoViagem">Tipo de Viagem *</label>
                                 <select class="form-select" id="tipoViagem" required onchange="toggleVolta()">
                                     <option value="ida-volta">Ida e Volta</option>
                                     <option value="so-ida">Só Ida</option>
@@ -373,7 +365,7 @@
 
                         <div class="row">
                             <div class="col-md-12 mb-3">
-                                <label class="form-label">Link da Companhia Aérea</label>
+                                <label class="form-label" for="linkCompanhia">Link da Companhia Aérea</label>
                                 <input type="url" class="form-control" id="linkCompanhia" placeholder="https://...">
                                 <small class="text-muted">Salve o link para consultar depois</small>
                             </div>
@@ -381,33 +373,33 @@
 
                         <!-- Voo de IDA -->
                         <div class="alert alert-info">
-                            <strong><i class="bi bi-arrow-right-circle me-2"></i>Voo de IDA</strong>
+                            <strong><i class="bi bi-arrow-right-circle me-2" aria-hidden="true"></i>Voo de IDA</strong>
                         </div>
                         <div class="row">
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Data de Saída *</label>
+                                <label class="form-label" for="dataSaidaIda">Data de Saída *</label>
                                 <input type="date" class="form-control" id="dataSaidaIda" required onchange="atualizarCalendarios(); calcularTempoVoo('ida')">
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Horário Saída *</label>
+                                <label class="form-label" for="horaSaidaIda">Horário Saída *</label>
                                 <input type="time" class="form-control" id="horaSaidaIda" required onchange="calcularTempoVoo('ida')">
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Data de Chegada *</label>
+                                <label class="form-label" for="dataChegadaIda">Data de Chegada *</label>
                                 <input type="date" class="form-control" id="dataChegadaIda" required onchange="atualizarCalendarios(); calcularTempoVoo('ida')">
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Horário Chegada *</label>
+                                <label class="form-label" for="horaChegadaIda">Horário Chegada *</label>
                                 <input type="time" class="form-control" id="horaChegadaIda" required onchange="calcularTempoVoo('ida')">
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Tempo Total de Voo (Editar ou calcular automaticamente)</label>
+                                <label class="form-label" for="tempoTotalIda">Tempo Total de Voo (Editar ou calcular automaticamente)</label>
                                 <input type="text" class="form-control" id="tempoTotalIda" placeholder="8h 30min" style="background-color: #fff3cd; font-weight: bold;">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Tem Conexão?</label>
+                                <label class="form-label" for="temConexaoIda">Tem Conexão?</label>
                                 <select class="form-select" id="temConexaoIda" onchange="toggleParadasIda()">
                                     <option value="direto">Voo Direto</option>
                                     <option value="1">1 parada</option>
@@ -421,33 +413,33 @@
                         <!-- Voo de VOLTA -->
                         <div id="secaoVolta">
                             <div class="alert alert-warning">
-                                <strong><i class="bi bi-arrow-left-circle me-2"></i>Voo de VOLTA</strong>
+                                <strong><i class="bi bi-arrow-left-circle me-2" aria-hidden="true"></i>Voo de VOLTA</strong>
                             </div>
                             <div class="row">
                                 <div class="col-md-3 mb-3">
-                                    <label class="form-label">Data de Saída *</label>
+                                    <label class="form-label" for="dataSaidaVolta">Data de Saída *</label>
                                     <input type="date" class="form-control" id="dataSaidaVolta" onchange="atualizarCalendarios(); calcularTempoVoo('volta')">
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label class="form-label">Horário Saída *</label>
+                                    <label class="form-label" for="horaSaidaVolta">Horário Saída *</label>
                                     <input type="time" class="form-control" id="horaSaidaVolta" onchange="calcularTempoVoo('volta')">
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label class="form-label">Data de Chegada *</label>
+                                    <label class="form-label" for="dataChegadaVolta">Data de Chegada *</label>
                                     <input type="date" class="form-control" id="dataChegadaVolta" onchange="atualizarCalendarios(); calcularTempoVoo('volta')">
                                 </div>
                                 <div class="col-md-3 mb-3">
-                                    <label class="form-label">Horário Chegada *</label>
+                                    <label class="form-label" for="horaChegadaVolta">Horário Chegada *</label>
                                     <input type="time" class="form-control" id="horaChegadaVolta" onchange="calcularTempoVoo('volta')">
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Tempo Total de Voo (Editar ou calcular automaticamente)</label>
+                                    <label class="form-label" for="tempoTotalVolta">Tempo Total de Voo (Editar ou calcular automaticamente)</label>
                                     <input type="text" class="form-control" id="tempoTotalVolta" placeholder="8h 30min" style="background-color: #fff3cd; font-weight: bold;">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Tem Conexão?</label>
+                                    <label class="form-label" for="temConexaoVolta">Tem Conexão?</label>
                                     <select class="form-select" id="temConexaoVolta" onchange="toggleParadasVolta()">
                                         <option value="direto">Voo Direto</option>
                                         <option value="1">1 parada</option>
@@ -460,10 +452,10 @@
                         </div>
 
                         <!-- Cálculo de Valores -->
-                        <h6 class="mb-3 mt-4"><i class="bi bi-calculator me-2"></i>Cálculo de Valores (Interno - Cliente não vê milhas)</h6>
+                        <h6 class="mb-3 mt-4"><i class="bi bi-calculator me-2" aria-hidden="true"></i>Cálculo de Valores (Interno - Cliente não vê milhas)</h6>
                         <div class="row">
                             <div class="col-md-12 mb-3">
-                                <label class="form-label">Tipo de Cotação *</label>
+                                <label class="form-label" for="tipoCotacao">Tipo de Cotação *</label>
                                 <select class="form-select" id="tipoCotacao" required onchange="toggleTipoCotacao()">
                                     <option value="por-milhas">Por Milhas</option>
                                     <option value="valor-real">Por Valor Real (Consolidadora)</option>
@@ -475,15 +467,15 @@
                         <div id="camposPorMilhas">
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Quantidade de Milhas *</label>
+                                    <label class="form-label" for="quantidadeMilhas">Quantidade de Milhas *</label>
                                     <input type="text" class="form-control" id="quantidadeMilhas" required placeholder="Ex: 15.000" oninput="calcularCotacao()">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Valor do Milheiro (R$) *</label>
+                                    <label class="form-label" for="valorMilheiro">Valor do Milheiro (R$) *</label>
                                     <input type="text" class="form-control" id="valorMilheiro" required placeholder="Ex: 31,00" oninput="calcularCotacao()">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Taxas de Embarque (R$)</label>
+                                    <label class="form-label" for="taxasMilhas">Taxas de Embarque (R$)</label>
                                     <input type="text" class="form-control" id="taxasMilhas" placeholder="Ex: 250,00" oninput="calcularCotacao()">
                                 </div>
                             </div>
@@ -493,15 +485,15 @@
                         <div id="camposPorValor" style="display: none;">
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Valor Total à Vista (R$) *</label>
+                                    <label class="form-label" for="valorVistaReal">Valor Total à Vista (R$) *</label>
                                     <input type="text" class="form-control" id="valorVistaReal" placeholder="Ex: 5.000,00" oninput="calcularCotacao()">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Lucro (R$) - Opcional</label>
+                                    <label class="form-label" for="lucroReal">Lucro (R$) - Opcional</label>
                                     <input type="text" class="form-control" id="lucroReal" placeholder="Ex: 500,00" oninput="calcularCotacao()">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Taxas de Embarque (R$) - Opcional</label>
+                                    <label class="form-label" for="taxasReal">Taxas de Embarque (R$) - Opcional</label>
                                     <input type="text" class="form-control" id="taxasReal" placeholder="Ex: 250,00" oninput="calcularCotacao()">
                                 </div>
                             </div>
@@ -510,7 +502,7 @@
                         <!-- Observação (Empresa/Margem) -->
                         <div class="row">
                             <div class="col-md-12 mb-3">
-                                <label class="form-label">Observação (Empresa/Margem)</label>
+                                <label class="form-label" for="observacaoCotacao">Observação (Empresa/Margem)</label>
                                 <textarea class="form-control" id="observacaoCotacao" rows="2" placeholder="Ex: Consolidadora XYZ - margem 10%"></textarea>
                             </div>
                         </div>
@@ -520,7 +512,7 @@
                             <div class="col-12 mb-3">
                                 <div class="card" style="background: linear-gradient(135deg, #D4AF37 0%, #C5A028 100%); color: white;">
                                     <div class="card-body">
-                                        <h5 class="mb-3"><i class="bi bi-currency-dollar me-2"></i>Valores Calculados</h5>
+                                        <h5 class="mb-3"><i class="bi bi-currency-dollar me-2" aria-hidden="true"></i>Valores Calculados</h5>
                                         <div class="row">
                                             <div class="col-md-3 mb-2">
                                                 <small>VALOR POR PESSOA:</small>
@@ -531,7 +523,7 @@
                                                 <h4 id="valorTotalPix">R$ 0,00</h4>
                                             </div>
                                             <div class="col-md-3 mb-2">
-                                                <label class="form-label"><small>PARCELAS CARTÃO:</small></label>
+                                                <label class="form-label" for="numParcelas"><small>PARCELAS CARTÃO:</small></label>
                                                 <select class="form-select form-select-sm" id="numParcelas" onchange="calcularCotacao()">
                                                     <option value="1">1x</option>
                                                     <option value="2">2x</option>
@@ -557,10 +549,10 @@
                         </div>
 
                         <!-- Bagagem Incluída -->
-                        <h6 class="mb-3 mt-4"><i class="bi bi-luggage me-2"></i>Bagagem Incluída</h6>
+                        <h6 class="mb-3 mt-4"><i class="bi bi-luggage me-2" aria-hidden="true"></i>Bagagem Incluída</h6>
                         <div class="row">
                             <div class="col-md-12 mb-3">
-                                <label class="form-label">Descrição da Franquia de Bagagem</label>
+                                <label class="form-label" for="bagagemIncluida">Descrição da Franquia de Bagagem</label>
                                 <textarea class="form-control" id="bagagemIncluida" rows="3" placeholder="Ex: 1 mala de mão (10kg) + 1 bagagem despachada (23kg)"></textarea>
                                 <small class="text-muted">Preenchimento automático ao selecionar tipo de tarifa</small>
                             </div>
@@ -570,7 +562,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-success" onclick="salvarCotacao()">
-                        <i class="bi bi-save me-2"></i>Salvar Cotação
+                        <i class="bi bi-save me-2" aria-hidden="true"></i>Salvar Cotação
                     </button>
                 </div>
             </div>
@@ -753,11 +745,11 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-6 mb-2">
-                                    <label class="form-label">Cidade</label>
+                                    <label class="form-label" for="paradaIdaCidade${i}">Cidade</label>
                                     <input type="text" class="form-control" id="paradaIdaCidade${i}" placeholder="Ex: Brasília">
                                 </div>
                                 <div class="col-md-6 mb-2">
-                                    <label class="form-label">Tempo de Espera</label>
+                                    <label class="form-label" for="paradaIdaTempo${i}">Tempo de Espera</label>
                                     <input type="text" class="form-control" id="paradaIdaTempo${i}" placeholder="Ex: 2h 30min">
                                 </div>
                             </div>
@@ -790,11 +782,11 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-6 mb-2">
-                                    <label class="form-label">Cidade</label>
+                                    <label class="form-label" for="paradaVoltaCidade${i}">Cidade</label>
                                     <input type="text" class="form-control" id="paradaVoltaCidade${i}" placeholder="Ex: Brasília">
                                 </div>
                                 <div class="col-md-6 mb-2">
-                                    <label class="form-label">Tempo de Espera</label>
+                                    <label class="form-label" for="paradaVoltaTempo${i}">Tempo de Espera</label>
                                     <input type="text" class="form-control" id="paradaVoltaTempo${i}" placeholder="Ex: 2h 30min">
                                 </div>
                             </div>
@@ -958,7 +950,7 @@
                 document.getElementById('totalParcelado').textContent = 'Total: ' + Utils.formatCurrency(c.totalParcelado || 0);
             } else {
                 // Modo NOVA COTAÇÃO
-                document.getElementById('tituloCotacao').innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nova Cotação';
+                document.getElementById('tituloCotacao').innerHTML = '<i class="bi bi-plus-circle me-2" aria-hidden="true"></i>Nova Cotação';
                 document.getElementById('formCotacao').reset();
                 ['quantidadeMilhas', 'valorMilheiro'].forEach(id => { document.getElementById(id).required = true; });
                 document.getElementById('cotacaoId').value = '';
@@ -1144,10 +1136,15 @@
             document.getElementById('totalRegistros').textContent = cotacoes.length;
 
             if (cotacoes.length === 0) {
+                const semCotacoes = StorageManager.getCotacoes().length === 0;
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
-                            Nenhuma cotação encontrada com os filtros aplicados.
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <h3>${semCotacoes ? 'Nenhuma cotação ainda' : 'Nenhum resultado encontrado'}</h3>
+                                <p>${semCotacoes ? 'Selecione um cliente e prepare sua primeira proposta.' : 'Tente outra busca ou remova os filtros para ver todas as cotações.'}</p>
+                                <button class="btn btn-outline-secondary" onclick="${semCotacoes ? 'novaPropostaCompleta()' : 'limparFiltros()'}">${semCotacoes ? 'Nova proposta' : 'Limpar filtros'}</button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1172,12 +1169,12 @@
                         <td>${Utils.escapeHTML(Utils.formatCurrency(cotacao.valorTotalPix))}</td>
                         <td>${statusBadge[cotacao.status] || statusBadge['aberta']}</td>
                         <td>
-                            <i class="bi bi-pencil-square action-icon" onclick="editarPropostaCompleta(${Utils.literalJSSeguro(cotacao.id)})" title="Editar cotação"></i>
-                            <i class="bi bi-file-pdf action-icon" style="color: #dc3545;" onclick="gerarPDFCotacao(${Utils.literalJSSeguro(cotacao.id)})" title="Gerar PDF"></i>
-                            <i class="bi bi-whatsapp action-icon" style="color: #25D366;" onclick="copiarParaWhatsApp(${Utils.literalJSSeguro(cotacao.id)})" title="Copiar para WhatsApp"></i>
-                            ${cotacao.status === 'aberta' ? `<i class="bi bi-arrow-right-circle action-icon" style="color: #28a745;" onclick="converterParaVenda(${Utils.literalJSSeguro(cotacao.id)})" title="Converter para Venda"></i>` : ''}
-                            ${cotacao.status === 'aberta' ? `<i class="bi bi-x-circle action-icon" style="color: #dc3545;" onclick="marcarComoPerdida(${Utils.literalJSSeguro(cotacao.id)})" title="Marcar como Perdida"></i>` : ''}
-                            <i class="bi bi-trash action-icon delete" onclick="excluirCotacao(${Utils.literalJSSeguro(cotacao.id)})" title="Excluir"></i>
+                            <button type="button" class="quote-action" onclick="editarPropostaCompleta(${Utils.literalJSSeguro(cotacao.id)})" title="Editar cotação" aria-label="Editar cotação"><i class="bi bi-pencil-square action-icon" aria-hidden="true"></i></button>
+                            <button type="button" class="quote-action" onclick="gerarPDFCotacao(${Utils.literalJSSeguro(cotacao.id)})" title="Gerar PDF" aria-label="Gerar PDF"><i class="bi bi-file-pdf action-icon" style="color: #dc3545;" aria-hidden="true"></i></button>
+                            <button type="button" class="quote-action" onclick="copiarParaWhatsApp(${Utils.literalJSSeguro(cotacao.id)})" title="Copiar para WhatsApp" aria-label="Copiar para WhatsApp"><i class="bi bi-whatsapp action-icon" style="color: #25D366;" aria-hidden="true"></i></button>
+                            ${cotacao.status === 'aberta' ? `<button type="button" class="quote-action" onclick="converterParaVenda(${Utils.literalJSSeguro(cotacao.id)})" title="Converter para Venda" aria-label="Converter para Venda"><i class="bi bi-arrow-right-circle action-icon" style="color: #28a745;" aria-hidden="true"></i></button>` : ''}
+                            ${cotacao.status === 'aberta' ? `<button type="button" class="quote-action" onclick="marcarComoPerdida(${Utils.literalJSSeguro(cotacao.id)})" title="Marcar como Perdida" aria-label="Marcar como Perdida"><i class="bi bi-x-circle action-icon" style="color: #dc3545;" aria-hidden="true"></i></button>` : ''}
+                            <button type="button" class="quote-action" onclick="excluirCotacao(${Utils.literalJSSeguro(cotacao.id)})" title="Excluir" aria-label="Excluir"><i class="bi bi-trash action-icon delete" aria-hidden="true"></i></button>
                         </td>
                     </tr>
                 `;
@@ -1905,8 +1902,9 @@
     <script src="js/app-bootstrap.js?v=13"></script>
     <script src="js/card-rates.js?v=2"></script>
     <script src="js/card-rates-ui.js?v=1"></script>
-    <script src="js/proposal-integration.js?v=4"></script>
-    <script src="js/proposal-contact.js?v=1"></script>
+    <script src="js/client-picker.js?v=2"></script>
+    <script src="js/proposal-integration.js?v=5"></script>
+    <script src="js/proposal-contact.js?v=2"></script>
     <script>AppBootstrap.iniciar();</script>
 </body>
 </html>

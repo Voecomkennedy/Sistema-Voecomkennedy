@@ -18,7 +18,7 @@ if (/\/cotador\/index\.html$/.test(location.pathname)) {
 </script>
 <title>VoeComKennedy — Painel</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -50,7 +50,7 @@ if (/\/cotador\/index\.html$/.test(location.pathname)) {
   --dark:#0A1931;
   --radius:22px;
   --radius-sm:14px;
-  --font:'Manrope',Helvetica,Arial,sans-serif;
+  --font:'Inter',Helvetica,Arial,sans-serif;
   --sh-sm:0 10px 24px rgba(15,23,40,.05);
   --sh:0 16px 40px rgba(15,23,40,.07);
   --sh-lg:0 24px 60px rgba(15,23,40,.1);
@@ -1281,7 +1281,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
     <div class="section-label">Identificacao</div>
     <div class="field">
       <label for="p-cliente">Nome do Cliente</label>
-      <input type="text" id="p-cliente" placeholder="Ex: Carlos Alberto">
+      <input type="text" id="p-cliente" placeholder="Nome completo do cliente">
     </div>
     <div class="field-row-3">
       <div class="field">
@@ -2354,7 +2354,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
       Cole todas as informacoes da reserva confirmada (passageiros com CPF, voos, hotel, horarios, escalas) e clique em <strong>Preencher</strong>. O sistema extrai e preenche os campos do voucher automaticamente. Revise sempre antes de gerar.
     </p>
     <div class="field">
-      <textarea id="v-colar-tudo" rows="10" placeholder="Exemplo:&#10;Voucher: VCK-000042&#10;Localizador: BFHSRK&#10;&#10;Passageiros:&#10;Carlos Alberto da Silva - CPF 123.456.789-00 - E-ticket 044-1234567890&#10;Maria da Silva - CPF 987.654.321-00 - E-ticket 044-1234567891&#10;&#10;IDA: LATAM LA 8240 - GRU 20/05/2026 22:30 -> NAT 21/05/2026 05:10 - Economica - Direto - 4h 40m&#10;VOLTA: LATAM LA 8241 - NAT 29/05/2026 06:00 -> GRU 11:50 - Economica - 1 escala em BSB 1h 10m&#10;Bagagem: 1 mao 10kg + 1 despachada 23kg&#10;&#10;Hotel: Grand Bavaro Princess - 5 estrelas&#10;Endereco: Playas De Bavaro, Punta Cana&#10;Email: reservas@hotel.com - Tel: +1 809-221-2311&#10;Check-in 20/05/2026 15:00 - Check-out 29/05/2026 12:00&#10;Quarto: Duplo - Cama Queen - Regime: All Inclusive" style="width:100%;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8rem;line-height:1.55;padding:11px 12px;border:1px solid var(--border);border-radius:8px;outline:none"></textarea>
+      <textarea id="v-colar-tudo" rows="10" placeholder="Exemplo:&#10;Voucher: VCK-000042&#10;Localizador: BFHSRK&#10;&#10;Passageiros:&#10;Passageiro Exemplo 1 - CPF 123.456.789-00 - E-ticket 044-1234567890&#10;Passageiro Exemplo 2 - CPF 987.654.321-00 - E-ticket 044-1234567891&#10;&#10;IDA: LATAM LA 8240 - GRU 20/05/2026 22:30 -> NAT 21/05/2026 05:10 - Economica - Direto - 4h 40m&#10;VOLTA: LATAM LA 8241 - NAT 29/05/2026 06:00 -> GRU 11:50 - Economica - 1 escala em BSB 1h 10m&#10;Bagagem: 1 mao 10kg + 1 despachada 23kg&#10;&#10;Hotel: Grand Bavaro Princess - 5 estrelas&#10;Endereco: Playas De Bavaro, Punta Cana&#10;Email: reservas@hotel.com - Tel: +1 809-221-2311&#10;Check-in 20/05/2026 15:00 - Check-out 29/05/2026 12:00&#10;Quarto: Duplo - Cama Queen - Regime: All Inclusive" style="width:100%;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8rem;line-height:1.55;padding:11px 12px;border:1px solid var(--border);border-radius:8px;outline:none"></textarea>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
       <button type="button" class="btn-primary" onclick="autoPreencherVoucher()" style="background:#1A3D63;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:600;font-size:.85rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
@@ -6080,6 +6080,25 @@ if (new URLSearchParams(location.search).get('embedded') === '1') {
 .embedded-proposta header, .embedded-proposta .tab-bar, .embedded-proposta #panel-hotel, .embedded-proposta #panel-voucher, .embedded-proposta #panel-historico, .embedded-proposta #panel-backup { display:none !important; }
 .embedded-proposta main { max-width:none; padding:12px; }
 .embedded-proposta body { background:#f6fafd; }
+.embedded-proposta .hero-eyebrow { display:none; }
+.embedded-proposta .hero-copy h1 { font-size:1.5rem; letter-spacing:-.025em; }
+.embedded-proposta .page-hero-main, .embedded-proposta .card, .embedded-proposta .dashboard-rail-card { border-radius:10px; border-color:#DFE8EF; }
+.embedded-proposta .section-label { font-size:.95rem; font-weight:600; letter-spacing:0; text-transform:none; color:#1A3D63; }
+.embedded-proposta label { letter-spacing:0; text-transform:none; font-size:.85rem; }
+.embedded-proposta input, .embedded-proposta select, .embedded-proposta textarea { background-color:#fff; }
+.embedded-proposta .metric-card { background:#F6FAFD; border-color:#DFE8EF; }
+.embedded-proposta .btn-primary, .embedded-proposta .btn-secondary, .embedded-proposta .btn-preview { background-image:none; box-shadow:none; letter-spacing:0; text-transform:none; }
+.embedded-proposta .status-chip { letter-spacing:0; text-transform:none; border-radius:5px; }
+@media(max-width:760px) {
+ .embedded-proposta input, .embedded-proposta select, .embedded-proposta textarea { font-size:16px; }
+ .embedded-proposta .hero-copy h1 { font-size:1.3rem; }
+ .embedded-proposta .page-hero-main, .embedded-proposta .card, .embedded-proposta .dashboard-rail-card { padding:16px; }
+ .embedded-proposta .hero-kpis { margin-top:12px; gap:6px; }
+ .embedded-proposta .metric-card { padding:10px; display:grid; grid-template-columns:1fr auto; gap:4px; }
+ .embedded-proposta .metric-label { margin:0; align-self:center; }
+ .embedded-proposta .metric-value { font-size:.9rem; text-align:right; }
+ .embedded-proposta .metric-sub { grid-column:1 / -1; margin:0; font-size:.7rem; }
+}
 </style>
 </body>
 </html>

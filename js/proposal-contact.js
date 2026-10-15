@@ -56,7 +56,7 @@
     function selectContact(contact, created = false) {
         if (!window.selecionarContatoProposta(contact.id)) throw new Error('Não foi possível selecionar o contato. Tente novamente.');
         window.reiniciarCadastroContatoProposta();
-        $('clienteProposta').focus();
+        ($('clientePropostaBusca') || $('clienteProposta')).focus();
         $('propostaEstado').textContent = created
             ? 'Contato salvo neste aparelho e selecionado. Confira o indicador de sincronização antes de trocar de aparelho.'
             : 'Contato já cadastrado selecionado. Os dados da proposta foram mantidos.';

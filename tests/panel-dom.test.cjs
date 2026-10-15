@@ -297,8 +297,12 @@ test('authenticated panel saves, reopens and downloads one synthetic quote', { t
     try {
         const f = w.document.querySelector('#quadroProposta').contentWindow;
         w.novaPropostaCompleta();
-        w.document.querySelector('#clienteProposta').value = person.id;
-        w.selecionarClienteProposta();
+        const picker = w.document.getElementById('clientePropostaBusca');
+        picker.value = 'sintetico';
+        picker.dispatchEvent(new w.Event('input', { bubbles: true }));
+        picker.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        picker.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        assert.equal(w.document.querySelector('#clienteProposta').value, person.id);
         const set = (id, value) => {
             const el = f.document.getElementById(id);
             el.value = value;

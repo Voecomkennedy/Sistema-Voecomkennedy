@@ -59,73 +59,32 @@
         }
     </style>
     <link rel="stylesheet" href="css/card-rates.css?v=1">
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body>
+<body class="panel-direction vendas-page">
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html">
-                <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
-                <span>Voecomkennedy</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="vendas.html" aria-current="page"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
-                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
-                </button>
-            </div>
-        </div>
-    </nav>
+    <div id="panelShell" data-page="vendas"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
     <!-- Main Content -->
-    <div class="container-fluid py-4">
-        <div class="row mb-4">
-            <div class="col-12">
-                <h2><i class="bi bi-cart-fill me-2"></i>Gerenciamento de Vendas</h2>
-                <p class="text-muted">Cadastre e gerencie suas vendas de passagens aéreas</p>
-            </div>
-        </div>
+    <main id="panelMain" class="panel-main container-fluid">
+        <header class="panel-page-heading"><div><h1>Vendas</h1><p>Cadastre e acompanhe as vendas de passagens e pacotes.</p></div><div><button class="btn btn-primary" onclick="abrirModalVenda()"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nova venda</button></div></header>
 
         <!-- Botão Nova Venda -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <button class="btn btn-primary btn-lg" onclick="abrirModalVenda()">
-                    <i class="bi bi-plus-circle me-2"></i>Nova Venda
-                        </button>
-            </div>
-        </div>
+
 
         <!-- Filtros -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-body">
-                        <div class="row align-items-end">
+                        <div class="row align-items-end panel-filter-grid">
                             <div class="col-md-3 mb-2">
-                                <label class="form-label">Buscar</label>
+                                <label for="busca" class="form-label">Buscar</label>
                                 <input type="text" class="form-control" id="busca" placeholder="Localizador, cliente, origem, destino...">
                             </div>
                             <div class="col-md-2 mb-2">
-                                <label class="form-label">Período</label>
+                                <label for="filtroPeriodo" class="form-label">Período</label>
                                 <select class="form-select" id="filtroPeriodo" onchange="toggleDataCustomizada(); aplicarFiltros();">
                                     <option value="todos">Todas as vendas</option>
                                     <option value="hoje">Hoje</option>
@@ -139,15 +98,15 @@
                                 </select>
                             </div>
                             <div class="col-md-2 mb-2" id="dataInicioContainer" style="display: none;">
-                                <label class="form-label">Data Início</label>
+                                <label for="dataInicio" class="form-label">Data Início</label>
                                 <input type="date" class="form-control" id="dataInicio" onchange="aplicarFiltros()">
                             </div>
                             <div class="col-md-2 mb-2" id="dataFimContainer" style="display: none;">
-                                <label class="form-label">Data Fim</label>
+                                <label for="dataFim" class="form-label">Data Fim</label>
                                 <input type="date" class="form-control" id="dataFim" onchange="aplicarFiltros()">
                             </div>
                             <div class="col-md-2 mb-2">
-                                <label class="form-label">Situação</label>
+                                <label for="filtroStatusVenda" class="form-label">Situação</label>
                                 <select class="form-select" id="filtroStatusVenda" onchange="aplicarFiltros()">
                                     <option value="todos">Todas</option>
                                     <option value="emitida">Emitidas</option>
@@ -158,7 +117,7 @@
                                 </select>
                             </div>
                             <div class="col-md-2 mb-2">
-                                <label class="form-label">Pagamento</label>
+                                <label for="filtroStatusPagamento" class="form-label">Pagamento</label>
                                 <select class="form-select" id="filtroStatusPagamento" onchange="aplicarFiltros()">
                                     <option value="todos">Todos</option>
                                     <option value="recebido">Recebido</option>
@@ -169,7 +128,7 @@
                                 </select>
                             </div>
                             <div class="col-md-2 mb-2">
-                                <label class="form-label">Ordenar por</label>
+                                <label for="ordenacao" class="form-label">Ordenar por</label>
                                 <select class="form-select" id="ordenacao" onchange="aplicarFiltros()">
                                     <option value="data_desc">Data da venda (mais recente)</option>
                                     <option value="data_asc">Data da venda (mais antiga)</option>
@@ -177,8 +136,8 @@
                                     <option value="valor_asc">Valor (menor)</option>
                                 </select>
                             </div>
-                            <div class="col-md-1 mb-2">
-                                <button class="btn btn-secondary w-100" onclick="limparFiltros()">
+                            <div class="col-md-1 mb-2 panel-filter-clear">
+                                <button class="btn btn-secondary w-100" onclick="limparFiltros()" aria-label="Limpar filtros">
                                     <i class="bi bi-x-circle"></i>
                                 </button>
                             </div>
@@ -210,7 +169,7 @@
         </div>
 
         <!-- Mini Dashboard com Estatísticas do Período -->
-        <div class="row mb-4" id="miniDashboard" style="display: none;">
+        <div class="row mb-4 panel-stat-strip" id="miniDashboard" style="display: none;">
             <div class="col-md-3 col-sm-6 mb-2">
                 <div class="card stat-card">
                     <div class="card-body">
@@ -286,7 +245,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Modal de Cadastro/Edição de Venda -->
     <div class="modal fade" id="modalVenda" tabindex="-1">
@@ -333,25 +292,25 @@
                                     </div>
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Nome completo *</label>
+                                            <label for="novoClienteNome" class="form-label">Nome completo *</label>
                                             <input type="text" class="form-control" id="novoClienteNome">
                                         </div>
                                         <div class="col-md-3 mb-3">
-                                            <label class="form-label">CPF</label>
+                                            <label for="novoClienteCpf" class="form-label">CPF</label>
                                             <input type="text" class="form-control" id="novoClienteCpf" maxlength="14">
                                         </div>
                                         <div class="col-md-3 mb-3">
-                                            <label class="form-label">Nascimento</label>
+                                            <label for="novoClienteNascimento" class="form-label">Nascimento</label>
                                             <input type="date" class="form-control" id="novoClienteNascimento">
                                         </div>
                                     </div>
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Telefone</label>
+                                            <label for="novoClienteTelefone" class="form-label">Telefone</label>
                                             <input type="text" class="form-control" id="novoClienteTelefone" maxlength="15">
                                         </div>
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">E-mail</label>
+                                            <label for="novoClienteEmail" class="form-label">E-mail</label>
                                             <input type="email" class="form-control" id="novoClienteEmail">
                                         </div>
                                     </div>
@@ -368,7 +327,7 @@
                                 </div>
                             </div>
                             <div class="col-md-2 mb-3">
-                                <label class="form-label">Cliente viaja?</label>
+                                <label for="clienteViaja" class="form-label">Cliente viaja?</label>
                                 <div class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" id="clienteViaja" onchange="atualizarPassageiros()">
                                     <label class="form-check-label" for="clienteViaja">
@@ -382,7 +341,7 @@
                         <h6 class="mb-3 mt-4"><i class="bi bi-people-fill me-2"></i>Passageiros</h6>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Quantas pessoas vão viajar? *</label>
+                                <label for="quantidadePassageiros" class="form-label">Quantas pessoas vão viajar? *</label>
                                 <select class="form-select" id="quantidadePassageiros" required onchange="gerarCamposPassageiros()">
                                     <option value="">Selecione</option>
                                     <option value="1">1 Passageiro</option>
@@ -476,7 +435,7 @@
                         <div id="localizadoresContainer">
                             <div class="row localizador-item" data-index="1">
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Localizador 1 *</label>
+                                    <label for="localizador_1" class="form-label">Localizador 1 *</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control localizador-input" id="localizador_1" required placeholder="Ex: HGPTGK">
                                         <button type="button" class="btn btn-outline-success" onclick="adicionarLocalizador()" title="Adicionar outro localizador">
@@ -485,12 +444,12 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Número da Compra</label>
+                                    <label for="numeroCompra" class="form-label">Número da Compra</label>
                                     <input type="text" class="form-control" id="numeroCompra" placeholder="Ex: A95Z4975MDUI">
                                     <small class="text-muted">Opcional - algumas companhias fornecem</small>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Companhia Aérea *</label>
+                                    <label for="companhiaAerea" class="form-label">Companhia Aérea *</label>
                                     <select class="form-select" id="companhiaAerea" required>
                                         <option value="">Selecione a companhia</option>
                                     </select>
@@ -500,19 +459,19 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Número do Voo</label>
+                                <label for="numeroVoo" class="form-label">Número do Voo</label>
                                 <input type="text" class="form-control" id="numeroVoo" placeholder="Ex: G31234">
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3 position-relative">
-                                <label class="form-label">Origem *</label>
+                                <label for="origem" class="form-label">Origem *</label>
                                 <input type="text" class="form-control" id="origem" required placeholder="Digite código ou cidade" autocomplete="off">
                                 <div id="sugestoesOrigem" class="autocomplete-dropdown" style="display: none;"></div>
                             </div>
                             <div class="col-md-6 mb-3 position-relative">
-                                <label class="form-label">Destino *</label>
+                                <label for="destino" class="form-label">Destino *</label>
                                 <input type="text" class="form-control" id="destino" required placeholder="Digite código ou cidade" autocomplete="off">
                                 <div id="sugestoesDestino" class="autocomplete-dropdown" style="display: none;"></div>
                             </div>
@@ -524,11 +483,11 @@
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Data de Ida *</label>
+                                <label for="dataEmbarque" class="form-label">Data de Ida *</label>
                                 <input type="date" class="form-control" id="dataEmbarque" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Hora de Ida *</label>
+                                <label for="horaEmbarque" class="form-label">Hora de Ida *</label>
                                 <input type="time" class="form-control" id="horaEmbarque" required>
                             </div>
                         </div>
@@ -540,11 +499,11 @@
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Data de Volta</label>
+                                <label for="dataVolta" class="form-label">Data de Volta</label>
                                 <input type="date" class="form-control" id="dataVolta">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Hora de Volta</label>
+                                <label for="horaVolta" class="form-label">Hora de Volta</label>
                                 <input type="time" class="form-control" id="horaVolta">
                             </div>
                         </div>
@@ -563,20 +522,20 @@
                         <div id="voltaCompanhiaFields" style="display:none;">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Companhia Aérea da Volta *</label>
+                                    <label for="companhiaAereaVolta" class="form-label">Companhia Aérea da Volta *</label>
                                     <select class="form-select" id="companhiaAereaVolta">
                                         <option value="">Selecione a companhia</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Localizador da Volta</label>
+                                    <label for="localizadorVolta" class="form-label">Localizador da Volta</label>
                                     <input type="text" class="form-control text-uppercase" id="localizadorVolta" placeholder="Ex: ABCDEF" maxlength="20">
                                     <small class="text-muted">Localizador específico da companhia da volta</small>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-10 mb-3">
-                                    <label class="form-label"><i class="bi bi-link-45deg me-1"></i>Link de Rastreamento da Volta</label>
+                                    <label for="linkRastreamentoVolta" class="form-label"><i class="bi bi-link-45deg me-1"></i>Link de Rastreamento da Volta</label>
                                     <input type="url" class="form-control" id="linkRastreamentoVolta" placeholder="https://..." oninput="toggleBotaoRastreamentoVolta()">
                                     <small class="text-muted">Link da companhia da volta para acompanhar o voo de retorno</small>
                                 </div>
@@ -592,7 +551,7 @@
                         <!-- Fornecedor -->
                         <div class="row align-items-end">
                             <div class="col-md-10 mb-3">
-                                <label class="form-label">Fornecedor (Consolidadora)</label>
+                                <label for="fornecedorId" class="form-label">Fornecedor (Consolidadora)</label>
                                 <select class="form-select" id="fornecedorId">
                                     <option value="">Nenhum (opcional)</option>
                                 </select>
@@ -605,7 +564,7 @@
                         </div>
                         <div class="row" id="fornecedor2Row" style="display:none;">
                             <div class="col-md-10 mb-3">
-                                <label class="form-label">Fornecedor 2 (Volta)</label>
+                                <label for="fornecedorId2" class="form-label">Fornecedor 2 (Volta)</label>
                                 <select class="form-select" id="fornecedorId2">
                                     <option value="">Nenhum (opcional)</option>
                                 </select>
@@ -622,7 +581,7 @@
                         <h6 class="mb-3 mt-4"><i class="bi bi-link-45deg me-2"></i>Link de Rastreamento</h6>
                         <div class="row">
                             <div class="col-md-10 mb-3">
-                                <label class="form-label">URL de Rastreamento - Localizador 1</label>
+                                <label for="linkRastreamento" class="form-label">URL de Rastreamento - Localizador 1</label>
                                 <input type="url" class="form-control" id="linkRastreamento" placeholder="https://..." oninput="toggleBotaoRastreamento()">
                                 <small class="text-muted">Cole o link do site da companhia aérea para acompanhar o voo</small>
                             </div>
@@ -639,23 +598,23 @@
                         <h6 class="mb-3 mt-4"><i class="bi bi-cash-stack me-2"></i>Valores Financeiros</h6>
                         <div class="row">
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Valor de Venda (R$) *</label>
+                                <label for="valorVenda" class="form-label">Valor de Venda (R$) *</label>
                                 <input type="text" inputmode="numeric" class="form-control" id="valorVenda" required placeholder="0,00"
                                        oninput="Utils.aplicarMascaraMoeda(this); calcularMargem();">
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Lucro da Venda (R$) *</label>
+                                <label for="valorLucro" class="form-label">Lucro da Venda (R$) *</label>
                                 <input type="text" inputmode="numeric" class="form-control" id="valorLucro" required placeholder="0,00"
                                        oninput="Utils.aplicarMascaraMoeda(this); calcularMargem();">
                                 <small class="text-muted">Informe diretamente quanto você lucrou.</small>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Custo Calculado (R$)</label>
+                                <label for="valorCusto" class="form-label">Custo Calculado (R$)</label>
                                 <input type="text" class="form-control bg-light" id="valorCusto" readonly tabindex="-1" aria-readonly="true">
                                 <small class="text-muted">Venda menos lucro. Salvo para manter os relatórios atuais.</small>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Valor pago no milheiro (R$)</label>
+                                <label for="valorMilhas" class="form-label">Valor pago no milheiro (R$)</label>
                                 <input type="text" inputmode="numeric" class="form-control" id="valorMilhas" placeholder="0,00"
                                        oninput="Utils.aplicarMascaraMoeda(this);">
                                 <small class="text-muted">Somente informativo. Não entra em nenhuma somatória.</small>
@@ -685,12 +644,12 @@
                         </div>
                         <div class="row" id="campoDataVendaManual" style="display: none;">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Data da Venda *</label>
+                                <label for="dataVendaManual" class="form-label">Data da Venda *</label>
                                 <input type="date" class="form-control" id="dataVendaManual">
                                 <small class="text-muted">Quando a venda foi realmente efetuada</small>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Hora da Venda *</label>
+                                <label for="horaVendaManual" class="form-label">Hora da Venda *</label>
                                 <input type="time" class="form-control" id="horaVendaManual">
                             </div>
                         </div>
@@ -706,7 +665,7 @@
                         <h6 class="mb-3 mt-4"><i class="bi bi-credit-card me-2"></i>Forma de Pagamento</h6>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Forma de Pagamento *</label>
+                                <label for="formaPagamento" class="form-label">Forma de Pagamento *</label>
                                 <select class="form-select" id="formaPagamento" required onchange="toggleParcelas()">
                                     <option value="">Selecione</option>
                                     <option value="pix">PIX</option>
@@ -717,7 +676,7 @@
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3" id="campoParcelas" style="display: none;">
-                                <label class="form-label">Quantidade de Parcelas *</label>
+                                <label for="parcelas" class="form-label">Quantidade de Parcelas *</label>
                                 <button type="button" class="card-rates-link mb-2" data-card-rates-open>Taxas de cartão</button><p class="small">Taxa de referência atual; não altera o valor da venda salva.</p>
                                 <select class="form-select" id="parcelas" onchange="atualizarInfoTaxa()">
                                     <option value="1">1x</option>
@@ -739,7 +698,7 @@
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Status do Pagamento *</label>
+                                <label for="statusPagamento" class="form-label">Status do Pagamento *</label>
                                 <select class="form-select" id="statusPagamento" required onchange="toggleValorRecebido()">
                                     <option value="recebido">Recebido integralmente</option>
                                     <option value="parcial">Recebido parcialmente</option>
@@ -748,7 +707,7 @@
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Valor já recebido (R$) *</label>
+                                <label for="valorRecebido" class="form-label">Valor já recebido (R$) *</label>
                                 <input type="text" inputmode="numeric" class="form-control" id="valorRecebido" required placeholder="0,00"
                                        oninput="Utils.aplicarMascaraMoeda(this); validarValoresFinanceiros();">
                                 <small class="text-muted">Usado no saldo realizado. Não altera o valor contratado da venda.</small>
@@ -756,7 +715,7 @@
                         </div>
                         <div class="row" id="camposDataPagamento">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Data do Pagamento *</label>
+                                <label for="dataPagamento" class="form-label">Data do Pagamento *</label>
                                 <input type="date" class="form-control" id="dataPagamento" onchange="validarValoresFinanceiros()">
                                 <small class="text-muted">Data em que o valor recebido entrou efetivamente.</small>
                             </div>
@@ -771,7 +730,7 @@
                         <!-- Observações -->
                         <div class="row">
                             <div class="col-12 mb-3">
-                                <label class="form-label">Observações</label>
+                                <label for="observacoes" class="form-label">Observações</label>
                                 <textarea class="form-control" id="observacoes" rows="3" placeholder="Informações adicionais sobre a venda"></textarea>
                             </div>
                         </div>
@@ -797,7 +756,7 @@
                 <div class="modal-body">
                     <input type="hidden" id="movimentoVendaId">
                     <div class="mb-3">
-                        <label class="form-label">Nova situação *</label>
+                        <label for="movimentoStatusVenda" class="form-label">Nova situação *</label>
                         <select class="form-select" id="movimentoStatusVenda" onchange="validarMovimentoFinanceiro()">
                             <option value="emitida">Emitida / ativa</option>
                             <option value="cancelada">Cancelada</option>
@@ -806,19 +765,19 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Valor devolvido ao cliente (R$)</label>
+                        <label for="movimentoReembolsoCliente" class="form-label">Valor devolvido ao cliente (R$)</label>
                         <input type="text" inputmode="numeric" class="form-control" id="movimentoReembolsoCliente" placeholder="0,00" oninput="Utils.aplicarMascaraMoeda(this); validarMovimentoFinanceiro();">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Valor recuperado do fornecedor (R$)</label>
+                        <label for="movimentoEstornoFornecedor" class="form-label">Valor recuperado do fornecedor (R$)</label>
                         <input type="text" inputmode="numeric" class="form-control" id="movimentoEstornoFornecedor" placeholder="0,00" oninput="Utils.aplicarMascaraMoeda(this); validarMovimentoFinanceiro();">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Data do movimento *</label>
+                        <label for="movimentoData" class="form-label">Data do movimento *</label>
                         <input type="date" class="form-control" id="movimentoData">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Motivo / referência *</label>
+                        <label for="movimentoMotivo" class="form-label">Motivo / referência *</label>
                         <textarea class="form-control" id="movimentoMotivo" rows="3" placeholder="Descreva o cancelamento, reembolso ou reativação"></textarea>
                     </div>
                     <div class="alert alert-info mb-0" id="resumoMovimentoFinanceiro"></div>

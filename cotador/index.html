@@ -3222,7 +3222,10 @@ function buildDashboardLayout() {
       if (child !== titleEl && child !== subtitleEl) formColumn.appendChild(child);
     });
 
-    grid.append(formColumn, sideColumn);
+    if (panelName === 'proposta') {
+      grid.classList.add('proposal-form-grid');
+      grid.append(formColumn);
+    } else grid.append(formColumn, sideColumn);
     main.innerHTML = '';
     main.classList.add('dashboard-page');
     main.dataset.dashboardReady = '1';
@@ -6070,7 +6073,13 @@ if (new URLSearchParams(location.search).get('embedded') === '1') {
   document.addEventListener('DOMContentLoaded', () => {
     switchTab('proposta');
     document.getElementById('p-cliente').readOnly = true;
-    const reportHeight = () => window.parent.postMessage({ type: 'vck-proposal-height', height: document.documentElement.scrollHeight }, location.origin);
+    const reportHeight = () => {
+      const content = document.querySelector('#panel-proposta main');
+      if (!content) return;
+      // Measure the form itself so the iframe viewport cannot keep growing its own height.
+      const height = Math.ceil(content.getBoundingClientRect().bottom + window.scrollY + 24);
+      window.parent.postMessage({ type: 'vck-proposal-height', height }, location.origin);
+    };
     if (window.ResizeObserver) new ResizeObserver(reportHeight).observe(document.body);
     reportHeight();
   });
@@ -6100,5 +6109,6 @@ if (new URLSearchParams(location.search).get('embedded') === '1') {
  .embedded-proposta .metric-sub { grid-column:1 / -1; margin:0; font-size:.7rem; }
 }
 </style>
+<link rel="stylesheet" href="assets/editor-direction.css?v=1">
 </body>
 </html>

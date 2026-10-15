@@ -1,0 +1,37 @@
+.embedded-proposta body { background:#fff; min-height:0; display:block; }
+.embedded-proposta body::before { display:none; }
+.embedded-proposta main { padding:18px 0; }
+.embedded-proposta .dashboard-page { gap:14px; }
+.embedded-proposta .page-hero-main { padding:0 0 16px; background:none; border:0; border-bottom:1px solid #E7EDF2; border-radius:0; }
+.embedded-proposta .hero-copy { display:none; }
+.embedded-proposta .hero-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; margin:0; }
+.embedded-proposta .metric-card { display:block; padding:0 20px; border:0; border-right:1px solid #E7EDF2; border-radius:0; background:none; }
+.embedded-proposta .metric-card:first-child { padding-left:0; } .embedded-proposta .metric-card:last-child { border:0; }
+.embedded-proposta .metric-label { color:#77879A; font-size:10px; font-weight:500; text-transform:none; letter-spacing:0; margin-bottom:6px; }
+.embedded-proposta .metric-value { font-size:14px; font-weight:600; letter-spacing:0; line-height:1.4; text-align:left; }
+.embedded-proposta .metric-sub { display:none; }
+.proposal-form-grid { grid-template-columns:minmax(0,1fr) !important; gap:0; }
+.embedded-proposta .dashboard-form-column { gap:0; }
+.embedded-proposta #panel-proposta .card { padding:24px 0; border:0; border-bottom:1px solid #E7EDF2; border-radius:0; background:#fff; }
+.embedded-proposta .section-label { color:#1A3D63; font-size:14px; font-weight:600; margin-bottom:20px; letter-spacing:0; }
+.embedded-proposta .section-label::after { background:#EDF1F5; }
+.embedded-proposta .field-row,.embedded-proposta .field-row-3 { align-items:start; column-gap:20px; row-gap:16px; margin-bottom:18px; }
+.embedded-proposta label { color:#405469; font-size:12px; font-weight:500; line-height:18px; margin-bottom:6px; }
+.embedded-proposta .label-hint { font-size:10px; font-weight:400; color:#77879A; }
+.embedded-proposta input[type=text],.embedded-proposta input[type=number],.embedded-proposta input[type=url],.embedded-proposta input[type=date],.embedded-proposta input[type=time],.embedded-proposta textarea,.embedded-proposta select { min-height:44px; padding:10px 12px; border:1px solid #D3E0EA; border-radius:7px; color:#314A65; font-size:13px; line-height:22px; }
+.embedded-proposta .timing-manual { font-size:10px; line-height:16px; color:#64748B; align-items:start; gap:6px; margin-top:10px; }
+.embedded-proposta .timing-status { font-size:10px; line-height:16px; color:#77879A; }
+.embedded-proposta .card-somente-ida { padding:14px 16px; margin:18px 0 0; border:1px solid #DCE7EF; border-radius:8px; background:#F6FAFD; box-shadow:none; }
+.embedded-proposta .card-somente-ida .label-title { font-size:12px; color:#314A65; }
+.embedded-proposta .card-somente-ida .label-desc { font-size:10px; color:#77879A; font-weight:400; }
+@media(max-width:760px) {
+ .embedded-proposta main { padding:14px 0; }
+ .embedded-proposta #panel-proposta .card { padding:22px 0; }
+ .embedded-proposta .hero-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .embedded-proposta .metric-card { padding:0 9px; }
+ .embedded-proposta .metric-label { font-size:9px; }
+ .embedded-proposta .metric-value { font-size:11px; overflow-wrap:anywhere; }
+ .embedded-proposta input[type=text],.embedded-proposta input[type=number],.embedded-proposta input[type=url],.embedded-proposta input[type=date],.embedded-proposta input[type=time],.embedded-proposta textarea,.embedded-proposta select { font-size:16px; }
+ .embedded-proposta .field-row,.embedded-proposta .field-row-3 { grid-template-columns:1fr; gap:16px; }
+ .embedded-proposta .timing-status,.embedded-proposta .timing-manual { font-size:11px; }
+}

@@ -18,219 +18,38 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css?v=13">
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html">
-                <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
-                <span>Voecomkennedy</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link active" href="index.html" aria-current="page"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
-                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
-                </button>
-            </div>
-        </div>
-    </nav>
+<body class="panel-direction">
+    <div id="panelShell" data-page="inicio"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
-    <!-- Main Content -->
-    <div class="container-fluid py-3">
-        <div class="row mb-3">
-            <div class="col-12 page-heading">
-                <div>
-                    <div class="section-kicker">Central operacional</div>
-                    <h2 class="mb-1"><i class="bi bi-speedometer2 me-2"></i>O que precisa de atenção</h2>
-                    <p class="text-muted mb-0">Pendências primeiro; números de acompanhamento depois.</p>
+    <main id="panelMain" class="panel-main container-fluid">
+        <header class="panel-page-heading">
+            <div><h1>Visão geral</h1><p>O desempenho e as prioridades da sua operação, em um só lugar.</p><div class="panel-kpi-period"><span id="mesAtualTexto">Mês atual</span> · <a href="vendas.html?periodo=mes">Ver vendas do mês</a></div></div>
+            <div class="d-flex gap-2"><a href="pessoas.html?tipo=cliente&amp;novo=1" class="btn btn-outline-secondary">Novo cliente</a><a href="vendas.html?nova=1" class="btn btn-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nova venda</a></div>
+        </header>
+        <section class="panel-kpi-strip" aria-label="Resumo financeiro do mês">
+            <div class="panel-kpi"><span class="panel-kpi-label">Vendido líquido</span><strong class="panel-kpi-value" id="faturamentoTotal">R$ 0,00</strong><small>Somente vendas classificadas</small></div>
+            <div class="panel-kpi"><span class="panel-kpi-label">Resultado realizado</span><strong class="panel-kpi-value" id="lucroTotal">R$ 0,00</strong><small id="margemMedia">Margem realizada: 0%</small></div>
+            <div class="panel-kpi"><span class="panel-kpi-label">Vendas classificadas</span><strong class="panel-kpi-value" id="totalVendas">0</strong><small>Vendas do mês atual</small></div>
+        </section>
+        <div class="panel-analytics">
+            <section class="panel-block"><header class="panel-block-heading"><div><h2>Vendido líquido por mês</h2><p>Últimos seis meses, por data da venda</p></div><a href="balanco.html">Ver balanço <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></header><div id="monthlyRevenueChart" class="panel-chart"></div></section>
+            <section class="panel-block"><header class="panel-block-heading"><div><h2>Precisa de atenção</h2><p>Prioridades para o seu próximo passo</p></div></header>
+                <div class="panel-task-list" id="centralPendencias">
+                    <a class="attention-card" data-kind="pagamentos" href="vendas.html?pagamento=revisar"><span class="panel-task-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span><div><strong>Pagamentos a revisar</strong><small id="detalhePendenciasPagamento">Pendentes, parciais ou sem informação</small></div><span class="attention-value" id="pendenciasPagamento">0</span></a>
+                    <a class="attention-card" data-kind="cotacoes" href="cotacoes.html?status=aberta&amp;antigas=1"><span class="panel-task-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><div><strong>Cotações em aberto</strong><small id="detalheCotacoesAbertas">Aguardando retorno dos clientes</small></div><span class="attention-value" id="cotacoesAbertasPendentes">0</span></a>
+                    <a class="attention-card" data-kind="checkins" href="checkin.html?periodo=7dias"><span class="panel-task-icon"><i class="bi bi-airplane" aria-hidden="true"></i></span><div><strong>Check-ins urgentes</strong><small>Embarques nas próximas 48 horas</small></div><span class="attention-value" id="checkinsUrgentes">0</span></a>
+                    <a class="attention-card" data-kind="integridade" href="vendas.html?integridade=1"><span class="panel-task-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span><div><strong>Dados a conferir</strong><small id="detalhePendenciasIntegridade">Vendas que precisam de conferência</small></div><span class="attention-value" id="pendenciasIntegridade">0</span></a>
                 </div>
-                <div class="d-flex gap-2 btn-group-operacao">
-                    <a href="vendas.html?nova=1" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i>Nova venda
-                    </a>
-                    <a href="pessoas.html?tipo=cliente&novo=1" class="btn btn-outline-primary">
-                        <i class="bi bi-person-plus me-1"></i>Novo Cliente
-                    </a>
-                </div>
-            </div>
+            </section>
         </div>
-
-        <div class="row g-3 mb-2" id="centralPendencias">
-            <div class="col-xl-3 col-md-6">
-                <a class="attention-card warning" data-kind="pagamentos" href="vendas.html?pagamento=revisar">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="stat-label">Pagamentos a revisar</div>
-                            <i class="bi bi-cash-coin attention-icon"></i>
-                        </div>
-                        <div class="attention-value" id="pendenciasPagamento">0</div>
-                        <small class="text-muted" id="detalhePendenciasPagamento">Pendentes, parciais ou sem informação</small>
-                        <span class="attention-link">Abrir vendas filtradas <i class="bi bi-arrow-right"></i></span>
-                    </div>
-                </a>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <a class="attention-card info" data-kind="integridade" href="vendas.html?integridade=1">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="stat-label">Dados inconsistentes</div>
-                            <i class="bi bi-shield-exclamation attention-icon"></i>
-                        </div>
-                        <div class="attention-value" id="pendenciasIntegridade">0</div>
-                        <small class="text-muted" id="detalhePendenciasIntegridade">Vendas que precisam de conferência</small>
-                        <span class="attention-link">Revisar pendências <i class="bi bi-arrow-right"></i></span>
-                    </div>
-                </a>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <a class="attention-card danger" data-kind="checkins" href="checkin.html?periodo=7dias">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="stat-label">Check-ins urgentes</div>
-                            <i class="bi bi-clock-history attention-icon"></i>
-                        </div>
-                        <div class="attention-value" id="checkinsUrgentes">0</div>
-                        <small class="text-muted">Voos nas próximas 48 horas</small>
-                        <span class="attention-link">Abrir fila de check-in <i class="bi bi-arrow-right"></i></span>
-                    </div>
-                </a>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <a class="attention-card info" data-kind="cotacoes" href="cotacoes.html?status=aberta&antigas=1">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="stat-label">Cotações em aberto</div>
-                            <i class="bi bi-calculator attention-icon"></i>
-                        </div>
-                        <div class="attention-value" id="cotacoesAbertasPendentes">0</div>
-                        <small class="text-muted" id="detalheCotacoesAbertas">Aguardando conversão ou encerramento</small>
-                        <span class="attention-link">Ver cotações antigas <i class="bi bi-arrow-right"></i></span>
-                    </div>
-                </a>
-            </div>
+        <div class="panel-lower">
+            <section class="panel-block"><header class="panel-block-heading"><div><h2>Próximos embarques</h2><p>Alertas de check-in para os próximos 7 dias</p></div><a href="checkin.html">Ver todos</a></header><div class="panel-checkins" id="alertasCheckin"></div></section>
+            <section class="panel-block"><header class="panel-block-heading"><div><h2>Vendas recentes</h2><p>Os últimos cinco registros da operação</p></div><a href="vendas.html">Ver todas</a></header><div class="table-responsive"><table class="table table-hover" id="tabelaVendasRecentes"><thead><tr><th>Localizador</th><th>Cliente</th><th>Rota</th><th>Embarque</th><th>Situação</th><th>Valor líquido</th></tr></thead><tbody id="vendasRecentesBody"></tbody></table></div></section>
         </div>
-
-        <div class="section-heading">
-            <div>
-                <div class="section-kicker">Acompanhamento</div>
-                <h4 class="mb-0">Resumo confiável do mês</h4>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="vendas.html?periodo=mes" class="btn btn-sm btn-outline-secondary">Ver vendas do mês</a>
-                <a href="balanco.html" class="btn btn-sm btn-primary">Abrir balanço</a>
-            </div>
-        </div>
-
-        <!-- Cards de Estatísticas -->
-        <div class="row mb-3">
-            <div class="col-md-4 col-sm-6 mb-2">
-                <div class="card stat-card">
-                    <div class="card-body">
-                        <div class="stat-label">Vendas classificadas</div>
-                        <div class="stat-value" id="totalVendas">0</div>
-                        <small class="text-muted" id="mesAtualTexto">Mês atual</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6 mb-2">
-                <div class="card stat-card success">
-                    <div class="card-body">
-                        <div class="stat-label">Vendido líquido</div>
-                        <div class="stat-value" id="faturamentoTotal">R$ 0,00</div>
-                        <small class="text-muted">Somente vendas classificadas</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-12 mb-2">
-                <div class="card stat-card warning">
-                    <div class="card-body">
-                        <div class="stat-label">Resultado realizado</div>
-                        <div class="stat-value" id="lucroTotal">R$ 0,00</div>
-                        <small class="text-muted" id="margemMedia">Margem realizada: 0%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Alertas de Check-in -->
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        Alertas de Check-in - Próximos 7 dias
-                    </div>
-                    <div class="card-body" id="alertasCheckin">
-                        <div class="empty-state">
-                            <i class="bi bi-calendar-check"></i>
-                            <p>Nenhum voo próximo nos próximos 7 dias</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Vendas Recentes -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>
-                            <i class="bi bi-list-ul me-2"></i>
-                            Vendas Recentes
-                        </span>
-                        <a href="vendas.html" class="btn btn-sm btn-light">
-                            Ver todas <i class="bi bi-arrow-right"></i>
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover" id="tabelaVendasRecentes">
-                                <thead>
-                                    <tr>
-                                        <th>Localizador</th>
-                                        <th>Cliente</th>
-                                        <th>Rota</th>
-                                        <th>Embarque</th>
-                                        <th>Situação</th>
-                                        <th>Valor líquido</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="vendasRecentesBody">
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
-                                            Nenhuma venda cadastrada
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
+    </main>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -465,6 +284,7 @@
             window.addEventListener('pageshow', atualizarDashboard);
         }, { once: true });
     </script>
+    <script src="js/dashboard-view.js?v=1"></script>
     <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=10"></script>

@@ -19,45 +19,14 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css?v=13">
     <link rel="stylesheet" href="css/card-rates.css?v=1">
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body class="workspace-page quotes-page">
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html">
-                <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
-                <span>Voecomkennedy</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="cotacoes.html" aria-current="page"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
-                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
-                </button>
-            </div>
-        </div>
-    </nav>
+<body class="workspace-page quotes-page panel-direction">
+    <div id="panelShell" data-page="cotacoes"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
     <!-- Main Content -->
-    <div class="container-fluid py-4">
+    <main id="panelMain" class="panel-main container-fluid">
         <header class="page-heading workspace-heading">
             <div>
                 <h1>Cotações</h1>
@@ -70,45 +39,12 @@
             </div>
         </header>
 
-        <!-- Estatísticas Rápidas -->
-        <div class="row quote-metrics mb-3">
-            <div class="col-6 col-lg-3">
-                <div class="card stat-card">
-                    <div class="card-body">
-                        <div class="stat-label">Total de Cotações</div>
-                        <div class="stat-value" id="totalCotacoes">0</div>
-                        <small class="text-muted">Todas as cotações</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card stat-card success">
-                    <div class="card-body">
-                        <div class="stat-label">Convertidas</div>
-                        <div class="stat-value" id="cotacoesConvertidas">0</div>
-                        <small class="text-muted">Viraram vendas</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card stat-card warning">
-                    <div class="card-body">
-                        <div class="stat-label">Em Aberto</div>
-                        <div class="stat-value" id="cotacoesAbertas">0</div>
-                        <small class="text-muted">Aguardando cliente</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="card stat-card danger">
-                    <div class="card-body">
-                        <div class="stat-label">Perdidas</div>
-                        <div class="stat-value" id="cotacoesPerdidas">0</div>
-                        <small class="text-muted">Não concretizadas</small>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <section class="panel-kpi-strip quote-summary" aria-label="Resumo de cotações">
+            <div class="panel-kpi"><span class="panel-kpi-label">Todas as cotações</span><strong class="panel-kpi-value" id="totalCotacoes">0</strong></div>
+            <div class="panel-kpi"><span class="panel-kpi-label">Em aberto</span><strong class="panel-kpi-value" id="cotacoesAbertas">0</strong></div>
+            <div class="panel-kpi"><span class="panel-kpi-label">Convertidas em venda</span><strong class="panel-kpi-value" id="cotacoesConvertidas">0</strong></div>
+            <div class="panel-kpi"><span class="panel-kpi-label">Perdidas</span><strong class="panel-kpi-value" id="cotacoesPerdidas">0</strong></div>
+        </section>
 
         <div class="row mb-4">
             <div class="col-12">
@@ -116,14 +52,14 @@
                     <summary class="card-header" style="cursor:pointer">Editor da proposta</summary>
                     <div class="card-body">
                         <p id="propostaModo" class="fw-semibold mb-2">Nova cotação</p>
-                        <div class="row g-2 align-items-end mb-3">
-                            <div class="col-md-7">
+                        <div class="proposal-client-grid">
+                            <div class="proposal-client-field">
                                 <label class="form-label" for="clienteProposta">Cliente da proposta</label>
                                 <select id="clienteProposta" class="form-select" onchange="selecionarClienteProposta()">
                                     <option value="">Selecione um cliente</option>
                                 </select>
                             </div>
-                            <div class="col-md-5 d-flex flex-wrap gap-2">
+                            <div class="proposal-client-actions">
                                 <button class="btn btn-outline-secondary" type="button" onclick="abrirCadastroContatoProposta()" aria-controls="cadastroContatoProposta" aria-expanded="false" id="abrirContatoProposta">Cadastrar contato</button>
                                 <button id="salvarPropostaCompleta" class="btn btn-primary" type="button" onclick="salvarPropostaCompleta()">Salvar cotação</button>
                             </div>
@@ -131,19 +67,15 @@
                         <form id="cadastroContatoProposta" class="border rounded bg-light p-3 mb-3" hidden>
                             <h6>Contato para a cotação</h6>
                             <p class="text-muted small">Informe os dados básicos. Dados de documentos e emissão podem ser completados em Pessoas quando necessários.</p>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label for="contatoPropostaNome" class="form-label">Nome *</label>
-                                    <input id="contatoPropostaNome" class="form-control" autocomplete="given-name" maxlength="80" required>
+                            <div class="quick-contact-grid">
+                                <div>
+                                    <label for="contatoPropostaNome" class="form-label">Nome completo *</label>
+                                    <input id="contatoPropostaNome" class="form-control" autocomplete="name" maxlength="201" placeholder="Nome do cliente" required>
                                 </div>
-                                <div class="col-md-4">
-                                    <label for="contatoPropostaSobrenome" class="form-label">Sobrenome *</label>
-                                    <input id="contatoPropostaSobrenome" class="form-control" autocomplete="family-name" maxlength="120" required>
-                                </div>
-                                <div class="col-md-4">
+                                <div>
                                     <label for="contatoPropostaWhatsapp" class="form-label">WhatsApp *</label>
                                     <input id="contatoPropostaWhatsapp" class="form-control" type="tel" autocomplete="tel" maxlength="32" aria-describedby="contatoPropostaTelefoneAjuda" required>
-                                    <div id="contatoPropostaTelefoneAjuda" class="form-text">Com DDD, como (61) 99999-1234. Para outro país, use + e o código do país, como +351 912 345 678.</div>
+                                    <div id="contatoPropostaTelefoneAjuda" class="form-text">Com DDD. Para outro país, inclua + e o código do país.</div>
                                 </div>
                             </div>
                             <p id="contatoPropostaEstado" class="small mt-3 mb-2" role="status" aria-live="polite"></p>
@@ -154,7 +86,7 @@
                             </div>
                         </form>
                         <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente e salve. O PDF salva esta cotação antes de gerar o arquivo. Use Nova proposta para criar outro orçamento.</p>
-                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261015-visual1" class="proposal-frame" style="height:1350px"></iframe>
+                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261015-direction1" class="proposal-frame" style="height:1350px"></iframe>
                     </div>
                 </details>
             </div>
@@ -246,7 +178,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Modal de Cadastro/Edição de Cotação -->
     <div class="modal fade" id="modalCotacao" tabindex="-1">
@@ -510,7 +442,7 @@
                         <!-- Valores Calculados Automaticamente -->
                         <div class="row">
                             <div class="col-12 mb-3">
-                                <div class="card" style="background: linear-gradient(135deg, #D4AF37 0%, #C5A028 100%); color: white;">
+                                <div class="card" style="background: #F6FAFD; color: #1A3D63;">
                                     <div class="card-body">
                                         <h5 class="mb-3"><i class="bi bi-currency-dollar me-2" aria-hidden="true"></i>Valores Calculados</h5>
                                         <div class="row">
@@ -1904,7 +1836,7 @@
     <script src="js/card-rates-ui.js?v=1"></script>
     <script src="js/client-picker.js?v=2"></script>
     <script src="js/proposal-integration.js?v=5"></script>
-    <script src="js/proposal-contact.js?v=2"></script>
+    <script src="js/proposal-contact.js?v=3"></script>
     <script>AppBootstrap.iniciar();</script>
 </body>
 </html>

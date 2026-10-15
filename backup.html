@@ -18,54 +18,16 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css?v=13">
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body>
+<body class="panel-direction backup-page">
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html">
-                <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
-                <span>Voecomkennedy</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item active" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
-                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
-                </button>
-            </div>
-        </div>
-    </nav>
+    <div id="panelShell" data-page="backup"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
     <!-- Main Content -->
-    <div class="container-fluid py-3">
-        <div class="row mb-3">
-            <div class="col-12">
-                <h2 style="font-size: 1.6rem; margin-bottom: 0.3rem;">
-                    <i class="bi bi-cloud-arrow-down-fill me-2"></i>Backup e Restauração
-                </h2>
-                <a href="integridade.html">Histórico e recuperação seletiva de cotações</a>
-                <p class="text-muted" style="font-size: 0.9rem;">Gerencie seus dados com segurança</p>
-            </div>
-        </div>
+    <main id="panelMain" class="panel-main container-fluid">
+        <header class="panel-page-heading"><div><h1>Backup e recuperação</h1><p>Consulte o estado dos dados e as opções de cópia e recuperação.</p></div><div><a class="btn btn-outline-primary" href="integridade.html">Histórico de cotações</a></div></header>
 
         <!-- Status do Sistema -->
         <div class="row mb-3">
@@ -74,7 +36,7 @@
                     <div class="card-body" style="padding: 20px;">
                         <div class="d-flex align-items-center mb-3">
                             <div class="rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--secondary-color), var(--secondary-dark));">
+                                 style="width: 50px; height: 50px; background: #E9F1F7;">
                                 <i class="bi bi-shield-check" style="font-size: 1.5rem; color: var(--dark);"></i>
                             </div>
                             <div class="ms-3">
@@ -89,26 +51,26 @@
                         <!-- Estatísticas -->
                         <div class="row mt-3">
                             <div class="col-md-3 col-sm-6 mb-2">
-                                <div class="text-center p-2" style="background: rgba(201, 169, 97, 0.1); border-radius: 8px;">
-                                    <small style="color: var(--gray-400); font-weight: 600;">TOTAL DE REGISTROS</small>
+                                <div class="text-center p-2" style="background: #F6FAFD; border-radius: 8px;">
+                                    <small style="color: var(--gray-400); font-weight: 600;">Total de registros</small>
                                     <h4 class="mt-1 mb-0" style="color: var(--secondary-color);" id="totalRegistros">0</h4>
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-2">
-                                <div class="text-center p-2" style="background: rgba(201, 169, 97, 0.1); border-radius: 8px;">
-                                    <small style="color: var(--gray-400); font-weight: 600;">TOTAL NO CADASTRO VENDAS</small>
+                                <div class="text-center p-2" style="background: #F6FAFD; border-radius: 8px;">
+                                    <small style="color: var(--gray-400); font-weight: 600;">Total no cadastro de vendas</small>
                                     <h4 class="mt-1 mb-0" style="color: var(--secondary-color);" id="totalVendas">R$ 0,00</h4>
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-2">
-                                <div class="text-center p-2" style="background: rgba(201, 169, 97, 0.1); border-radius: 8px;">
-                                    <small style="color: var(--gray-400); font-weight: 600;">LUCRO TOTAL</small>
+                                <div class="text-center p-2" style="background: #F6FAFD; border-radius: 8px;">
+                                    <small style="color: var(--gray-400); font-weight: 600;">Lucro total</small>
                                     <h4 class="mt-1 mb-0" style="color: var(--success-color);" id="lucroTotal">R$ 0,00</h4>
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-2">
-                                <div class="text-center p-2" style="background: rgba(201, 169, 97, 0.1); border-radius: 8px;">
-                                    <small style="color: var(--gray-400); font-weight: 600;">PASSAGEIROS</small>
+                                <div class="text-center p-2" style="background: #F6FAFD; border-radius: 8px;">
+                                    <small style="color: var(--gray-400); font-weight: 600;">Passageiros</small>
                                     <h4 class="mt-1 mb-0" style="color: var(--secondary-color);" id="totalPassageiros">0</h4>
                                 </div>
                             </div>
@@ -116,20 +78,20 @@
 
                         <div class="row mt-2">
                             <div class="col-md-4 col-sm-6 mb-2">
-                                <div class="text-center p-2" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
-                                    <small style="color: var(--gray-400); font-weight: 600;">PACOTES ATIVOS</small>
+                                <div class="text-center p-2" style="background: #F6FAFD; border-radius: 8px;">
+                                    <small style="color: var(--gray-400); font-weight: 600;">Pacotes ativos</small>
                                     <h4 class="mt-1 mb-0" style="color: #3B82F6;" id="totalPacotes">0</h4>
                                 </div>
                             </div>
                             <div class="col-md-4 col-sm-6 mb-2">
-                                <div class="text-center p-2" style="background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
-                                    <small style="color: var(--gray-400); font-weight: 600;">VENDAS EM PACOTES (SEPARADO)</small>
+                                <div class="text-center p-2" style="background: #F6FAFD; border-radius: 8px;">
+                                    <small style="color: var(--gray-400); font-weight: 600;">Vendas em pacotes (separado)</small>
                                     <h4 class="mt-1 mb-0" style="color: #3B82F6;" id="totalVendasPacotes">R$ 0,00</h4>
                                 </div>
                             </div>
                             <div class="col-md-4 col-sm-6 mb-2">
-                                <div class="text-center p-2" style="background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
-                                    <small style="color: var(--gray-400); font-weight: 600;">LUCRO DOS PACOTES (SEPARADO)</small>
+                                <div class="text-center p-2" style="background: #F6FAFD; border-radius: 8px;">
+                                    <small style="color: var(--gray-400); font-weight: 600;">Lucro dos pacotes (separado)</small>
                                     <h4 class="mt-1 mb-0" style="color: var(--success-color);" id="lucroPacotes">R$ 0,00</h4>
                                 </div>
                             </div>
@@ -157,7 +119,7 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
                             <div class="rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width: 50px; height: 50px; background: linear-gradient(135deg, #3B82F6, #2563EB);">
+                                 style="width: 50px; height: 50px; background: #E9F1F7;">
                                 <i class="bi bi-download" style="font-size: 1.5rem; color: white;"></i>
                             </div>
                             <div class="ms-3">
@@ -185,7 +147,7 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
                             <div class="rounded-circle d-flex align-items-center justify-content-center"
-                                 style="width: 50px; height: 50px; background: linear-gradient(135deg, #F59E0B, #D97706);">
+                                 style="width: 50px; height: 50px; background: #E9F1F7;">
                                 <i class="bi bi-upload" style="font-size: 1.5rem; color: white;"></i>
                             </div>
                             <div class="ms-3">
@@ -201,7 +163,7 @@
 
                         <input type="file" id="arquivoBackup" accept=".json" class="d-none" onchange="importarBackup()">
                         <button class="btn w-100 mt-3" onclick="document.getElementById('arquivoBackup').click()"
-                                style="background: linear-gradient(135deg, var(--warning-color), #D97706); color: white; font-weight: 600;">
+                                style="background: #F6E6C6; color: #70470F; font-weight: 600;">
                             <i class="bi bi-upload me-2"></i>
                             Importar Arquivo JSON
                         </button>
@@ -241,7 +203,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

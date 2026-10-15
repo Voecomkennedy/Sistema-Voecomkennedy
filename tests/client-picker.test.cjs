@@ -72,6 +72,53 @@ test('large lists render 20 results and a refined search reaches every client', 
         assert.equal(f.select.options.length, 2);
     } finally { f.dom.window.close(); }
 });
+const homonyms = () => Array.from({ length: 21 }, (_, i) => ({
+    id: 'homonimo-' + String(i + 1).padStart(2, '0'), nome: 'Cliente Exemplo',
+    cpf: String(i + 1).padStart(11, '0'), telefone: '(61) 99999-1001'
+}));
+test('21 homonyms sharing a phone and no email remain reachable by keyboard and displayed ID', () => {
+    const clients = homonyms();
+    const original = JSON.stringify(clients);
+    const f = fixture(clients);
+    try {
+        f.search('Cliente Exemplo');
+        assert.equal(f.options().length, 20);
+        for (let i = 0; i < 21; i++) f.key('ArrowDown');
+        assert.equal(f.options().length, 1);
+        const active = f.w.document.getElementById(f.input.getAttribute('aria-activedescendant'));
+        assert.match(active.textContent, /ID: homonimo-21/);
+        assert.equal(active.getAttribute('aria-posinset'), '21');
+        assert.equal(active.getAttribute('aria-setsize'), '21');
+        assert.equal(active.getAttribute('aria-selected'), 'true');
+        assert.match(f.w.document.querySelector('[role="status"]').textContent, /21 a 21 de 21/);
+        f.key('ArrowUp');
+        assert.equal(f.options().length, 20);
+        assert.equal(f.w.document.getElementById(f.input.getAttribute('aria-activedescendant')).getAttribute('aria-posinset'), '20');
+        f.key('ArrowDown'); f.key('Enter');
+        assert.equal(f.select.value, 'homonimo-21');
+        f.search('homonimo-21');
+        assert.equal(f.options().length, 1);
+        f.key('ArrowDown'); f.key('Enter');
+        assert.equal(f.select.value, 'homonimo-21');
+        assert.equal(JSON.stringify(clients), original);
+    } finally { f.dom.window.close(); }
+});
+test('page controls stay reachable on focus and move to the remaining homonym', () => {
+    const f = fixture(homonyms());
+    try {
+        f.input.focus(); f.search('Cliente Exemplo');
+        const next = [...f.w.document.querySelectorAll('button')].find(el => el.textContent === 'Próximos');
+        next.focus();
+        assert.equal(f.input.getAttribute('aria-expanded'), 'true');
+        next.click();
+        assert.equal(f.w.document.activeElement, f.input);
+        assert.equal(f.options().length, 1);
+        f.key('Enter');
+        assert.equal(f.select.value, 'homonimo-21');
+        f.search('Cliente Exemplo'); f.key('ArrowUp'); f.key('Enter');
+        assert.equal(f.select.value, 'homonimo-21');
+    } finally { f.dom.window.close(); }
+});
 test('refresh preserves selected ID and safely clears a removed contact', () => {
     const f = fixture([{ id: 'a', nome: 'Cliente Exemplo' }]);
     try {

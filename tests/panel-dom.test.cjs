@@ -81,7 +81,7 @@ test('editor iframe stays unloaded when authentication fails', { timeout: 20000 
 function fillContact(w, first = 'Ana', last = 'de Souza', number = '(61) 99999-1234') {
     w.abrirCadastroContatoProposta();
     for (const [id, value] of Object.entries({
-        contatoPropostaNome: first, contatoPropostaSobrenome: last, contatoPropostaWhatsapp: number
+        contatoPropostaNome: [first, last].join(' '), contatoPropostaWhatsapp: number
     })) {
         const field = w.document.getElementById(id);
         field.value = value;
@@ -184,6 +184,56 @@ test('matching name and WhatsApp reuse the existing client without changing thei
     } finally { a.dom.window.close(); }
 });
 
+test('single or compound full names create, reopen and edit without splitting existing names', { timeout: 30000 }, async () => {
+    for (const [name, edited] of [['Lia', 'Lia de Souza'], ["Ana Maria d'Ávila dos Santos", 'Ana']]) {
+        const legacy = { ...person, nome: "LEGADO Jean-Pierre d'Ávila dos Santos", telefone: '61999990001' };
+        const a = await page('cotacoes', { emissao_pessoas: [legacy] });
+        let contact;
+        try {
+            const w = a.window;
+            assert.equal(w.document.getElementById('contatoPropostaSobrenome'), null);
+            fillContact(w, name, '', '(61) 99999-1234');
+            await submitContact(w);
+            contact = w.StorageManager.getClientes().find(c => c.id !== legacy.id);
+            assert.equal(contact.nome, w.Utils.formatarNomeProprio(name));
+            assert.equal(w.document.getElementById('clienteProposta').value, contact.id);
+            assert.equal(w.document.getElementById('quadroProposta').contentWindow.document.getElementById('p-cliente').value, contact.nome);
+            assert.deepEqual(JSON.parse(JSON.stringify(w.StorageManager.getClienteById(legacy.id))), legacy);
+        } finally { a.dom.window.close(); }
+        const b = await page('pessoas', { emissao_pessoas: [legacy, contact] });
+        try {
+            const w = b.window;
+            w.abrirModalPessoa(contact.id);
+            assert.equal(w.document.getElementById('nome').value, contact.nome);
+            w.document.getElementById('nome').value = edited;
+            w.document.getElementById('cpf').value = '529.982.247-25';
+            await w.salvarPessoa();
+            assert.equal(w.StorageManager.getClienteById(contact.id).nome, edited);
+            assert.equal(w.StorageManager.getClientes().length, 2);
+            assert.deepEqual(JSON.parse(JSON.stringify(w.StorageManager.getClienteById(legacy.id))), legacy);
+            w.abrirModalPessoa(contact.id);
+            assert.equal(w.document.getElementById('nome').value, edited);
+        } finally { b.dom.window.close(); }
+    }
+});
+
+test('editing only a phone preserves an existing compound name byte for byte', async () => {
+    const legacy = { ...person, nome: "LEGADO Jean-Pierre d'Ávila dos Santos", telefone: '61999990001' };
+    const a = await page('pessoas', { emissao_pessoas: [legacy] });
+    try {
+        const w = a.window;
+        w.abrirModalPessoa(legacy.id);
+        w.document.getElementById('nome').dispatchEvent(new w.Event('blur'));
+        assert.equal(w.document.getElementById('nome').value, legacy.nome);
+        w.document.getElementById('telefone').value = '(61) 99999-1002';
+        await w.salvarPessoa();
+        const saved = w.StorageManager.getClienteById(legacy.id);
+        assert.equal(saved.nome, legacy.nome);
+        assert.equal(saved.id, legacy.id);
+        assert.equal(saved.telefone.replace(/\D/g, ''), '61999991002');
+    } finally { a.dom.window.close(); }
+});
+
 test('shared WhatsApp asks which contact to use or deliberately creates a different person', { timeout: 20000 }, async () => {
     const existing = { ...person, nome: 'Ana de Souza', telefone: '61999991234' };
     const a = await page('cotacoes', { emissao_pessoas: [existing] });
@@ -223,10 +273,10 @@ test('invalid WhatsApp does not create contacts and international prefixes are p
             assert.equal(w.document.getElementById('contatoPropostaWhatsapp').value, number);
             assert.match(w.document.getElementById('contatoPropostaEstado').textContent, /WhatsApp/);
         }
-        fillContact(w, '   ', 'Sintético');
+        fillContact(w, '   ', '');
         await submitContact(w);
         assert.equal(w.StorageManager.getPessoas().length, 0);
-        fillContact(w, 'Nome', '123');
+        fillContact(w, '123', '');
         await submitContact(w);
         assert.equal(w.StorageManager.getPessoas().length, 0);
         fillContact(w, 'Contato', 'Portugal', '+351 912 345 678');
@@ -255,7 +305,7 @@ test('storage failure keeps inputs and proposal; scheduling failure reports a lo
         assert.equal(w.StorageManager.getPessoas().length, 1);
         assert.equal(w.document.getElementById('clienteProposta').value, person.id);
         assert.equal(w.document.getElementById('cadastroContatoProposta').hidden, false);
-        assert.equal(w.document.getElementById('contatoPropostaNome').value, 'Ana');
+        assert.equal(w.document.getElementById('contatoPropostaNome').value, 'Ana de Souza');
         assert.equal(w.document.getElementById('salvarContatoProposta').disabled, false);
         assert.match(w.document.getElementById('contatoPropostaEstado').textContent, /QuotaExceededError/);
         assert.equal(editor.document.getElementById('p-obs').value, 'Não perder este rascunho');

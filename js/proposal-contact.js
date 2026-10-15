@@ -98,16 +98,11 @@
         if (!authenticated() || saving || form.hidden) return;
         const version = formVersion;
         clearMatches();
-        const first = cleanName($('contatoPropostaNome').value);
-        const last = cleanName($('contatoPropostaSobrenome').value);
-        for (const [id, value, label] of [
-            ['contatoPropostaNome', first, 'nome'], ['contatoPropostaSobrenome', last, 'sobrenome']
-        ]) {
-            if (!value || !/\p{L}/u.test(value)) {
-                message('Informe o ' + label + ' do contato.');
-                $(id).focus();
-                return;
-            }
+        const nome = cleanName($('contatoPropostaNome').value);
+        if (!nome || !/\p{L}/u.test(nome)) {
+            message('Informe o nome do contato.');
+            $('contatoPropostaNome').focus();
+            return;
         }
         const telefone = phone($('contatoPropostaWhatsapp').value);
         if (!telefone) {
@@ -115,7 +110,6 @@
             $('contatoPropostaWhatsapp').focus();
             return;
         }
-        const nome = first + ' ' + last;
         const fingerprint = JSON.stringify([nameKey(nome), telefone]);
         const button = $('salvarContatoProposta');
         saving = true;

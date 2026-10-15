@@ -14,42 +14,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="css/style.css?v=13">
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body>
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html"><img src="icons/icon-192.png" alt="" class="navbar-brand-logo"><span>Voecomkennedy</span></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="vendas.html" aria-current="page"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
-                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair</button>
-            </div>
-        </div>
-    </nav>
+<body class="panel-direction revisao-page">
+    <div id="panelShell" data-page="revisao"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
-    <main class="container-fluid py-3 review-workspace">
+    <main id="panelMain" class="panel-main container-fluid  review-workspace">
         <div class="page-heading mb-3">
             <div>
-                <div class="section-kicker">Etapa 4A</div>
-                <h2 class="mb-1"><i class="bi bi-clipboard2-check me-2"></i>Revisão das vendas antigas</h2>
+
+                <h1>Revisão de legado</h1>
                 <p class="text-muted mb-0">Classifique um registro por vez. Nenhuma informação é preenchida automaticamente.</p>
             </div>
             <a href="vendas.html" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Voltar para vendas</a>
@@ -60,7 +35,7 @@
             <div><strong>Revisão segura:</strong> a data técnica do cadastro é apenas uma referência. Confirme a data real da venda e do pagamento antes de salvar.</div>
         </div>
 
-        <div class="row g-3 mb-3">
+        <div class="row g-3 mb-3 panel-stat-strip">
             <div class="col-md-4">
                 <div class="card stat-card warning h-100"><div class="card-body">
                     <div class="stat-label">Pendentes de revisão</div><div class="stat-value" id="totalPendentes">0</div>
@@ -87,11 +62,11 @@
             <div class="card-body">
                 <div class="row align-items-end g-2">
                     <div class="col-lg-5">
-                        <label class="form-label">Localizar na fila</label>
+                        <label for="buscaRevisao" class="form-label">Localizar na fila</label>
                         <input class="form-control" id="buscaRevisao" placeholder="Cliente ou localizador" oninput="carregarFila()">
                     </div>
                     <div class="col-lg-4">
-                        <label class="form-label">Tipo de pendência</label>
+                        <label for="filtroPendencia" class="form-label">Tipo de pendência</label>
                         <select class="form-select" id="filtroPendencia" onchange="carregarFila()">
                             <option value="todas">Todas as pendências</option>
                             <option value="data_venda">Sem data da venda</option>
@@ -101,7 +76,7 @@
                         </select>
                     </div>
                     <div class="col-lg-3">
-                        <label class="form-label">Registro atual</label>
+                        <label for="seletorVenda" class="form-label">Registro atual</label>
                         <select class="form-select" id="seletorVenda" onchange="selecionarVenda(this.value)"></select>
                     </div>
                 </div>
@@ -139,12 +114,12 @@
                     <input type="hidden" id="revisaoVendaId">
                     <div class="row g-3">
                         <div class="col-lg-4">
-                            <label class="form-label">Data original da venda *</label>
+                            <label for="revisaoDataVenda" class="form-label">Data original da venda *</label>
                             <input type="date" class="form-control" id="revisaoDataVenda" required>
                             <div class="form-text" id="avisoDataVenda">Confirme quando a venda realmente aconteceu.</div>
                         </div>
                         <div class="col-lg-4">
-                            <label class="form-label">Situação da venda *</label>
+                            <label for="revisaoStatusVenda" class="form-label">Situação da venda *</label>
                             <select class="form-select" id="revisaoStatusVenda" required>
                                 <option value="">Selecione</option>
                                 <option value="emitida">Emitida</option>
@@ -154,7 +129,7 @@
                             </select>
                         </div>
                         <div class="col-lg-4">
-                            <label class="form-label">Situação do pagamento *</label>
+                            <label for="revisaoStatusPagamento" class="form-label">Situação do pagamento *</label>
                             <select class="form-select" id="revisaoStatusPagamento" required onchange="ajustarPagamentoRevisao()">
                                 <option value="">Selecione</option>
                                 <option value="recebido">Recebido integralmente</option>
@@ -163,11 +138,11 @@
                             </select>
                         </div>
                         <div class="col-lg-4">
-                            <label class="form-label">Valor recebido *</label>
+                            <label for="revisaoValorRecebido" class="form-label">Valor recebido *</label>
                             <input type="text" inputmode="numeric" class="form-control" id="revisaoValorRecebido" required oninput="Utils.aplicarMascaraMoeda(this)">
                         </div>
                         <div class="col-lg-4" id="grupoDataPagamentoRevisao">
-                            <label class="form-label">Data do pagamento *</label>
+                            <label for="revisaoDataPagamento" class="form-label">Data do pagamento *</label>
                             <input type="date" class="form-control" id="revisaoDataPagamento">
                             <div class="form-text">Não confunda com a data da venda.</div>
                         </div>

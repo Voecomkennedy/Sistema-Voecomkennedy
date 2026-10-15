@@ -169,48 +169,18 @@
             .ticket { width: 100%; }
         }
     </style>
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body>
+<body class="panel-direction cartao-page">
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html">
-                <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
-                <span>Voecomkennedy</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item active" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
-                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
-                </button>
-            </div>
-        </div>
-    </nav>
+    <div id="panelShell" data-page="cartao"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
-    <div class="container-fluid py-4">
+    <main id="panelMain" class="panel-main container-fluid">
         <div class="row">
             <!-- COLUNA ESQUERDA: FORMULÁRIO -->
             <div class="col-lg-5 mb-4">
-                <h4 class="mb-3"><i class="bi bi-ticket-perforated-fill text-primary"></i> Gerar Cartão de Embarque</h4>
+                <h1 class="mb-3">Cartão de embarque</h1>
                 <p class="text-muted small">Preencha os dados do voo. A pré-visualização atualiza automaticamente. Depois clique em "Baixar PDF".</p>
 
                 <!-- PUXAR DE UMA VENDA JÁ CADASTRADA -->
@@ -232,7 +202,7 @@
                         <h6 class="text-primary"><i class="bi bi-building"></i> Companhia & Reserva</h6>
                         <div class="row g-2">
                             <div class="col-7">
-                                <label class="form-label small">Companhia Aérea</label>
+                                <label for="f_cia" class="form-label small">Companhia Aérea</label>
                                 <select class="form-select" id="f_cia" onchange="aoMudarCompanhia()">
                                     <option value="GOL">GOL</option>
                                     <option value="LATAM">LATAM</option>
@@ -241,21 +211,21 @@
                                 </select>
                             </div>
                             <div class="col-5">
-                                <label class="form-label small">Localizador</label>
+                                <label for="f_localizador" class="form-label small">Localizador</label>
                                 <input type="text" class="form-control text-uppercase" id="f_localizador" value="GSYUPK" placeholder="Ex: GSYUPK">
                             </div>
                             <!-- Campos extras só aparecem quando "Outra" -->
                             <div class="col-7" id="grupoCiaOutra" style="display:none;">
-                                <label class="form-label small">Nome da companhia</label>
+                                <label for="f_ciaOutraNome" class="form-label small">Nome da companhia</label>
                                 <input type="text" class="form-control" id="f_ciaOutraNome" placeholder="Ex: Voepass">
                             </div>
                             <div class="col-5" id="grupoCiaCor" style="display:none;">
-                                <label class="form-label small">Cor do logo</label>
+                                <label for="f_cor" class="form-label small">Cor do logo</label>
                                 <input type="color" class="form-control form-control-color w-100" id="f_cor" value="#002071">
                             </div>
                             <!-- LATAM precisa de link manual (orderId não vem no bilhete) -->
                             <div class="col-12" id="grupoLatamLink" style="display:none;">
-                                <label class="form-label small text-warning"><i class="bi bi-exclamation-triangle"></i> Link da LATAM (cole o link de gerenciar reserva)</label>
+                                <label for="f_latamLink" class="form-label small text-warning"><i class="bi bi-exclamation-triangle"></i> Link da LATAM (cole o link de gerenciar reserva)</label>
                                 <input type="text" class="form-control" id="f_latamLink" placeholder="https://www.latamairlines.com/br/pt/minhas-viagens/...">
                                 <small class="text-muted">A LATAM não traz o código no bilhete, então cole aqui o link que você recebe.</small>
                             </div>
@@ -267,18 +237,18 @@
                         <h6 class="text-primary"><i class="bi bi-person"></i> Passageiro</h6>
                         <div class="row g-2 align-items-end">
                             <div class="col-12 position-relative">
-                                <label class="form-label small">Buscar passageiro cadastrado (opcional)</label>
+                                <label for="f_buscaPassageiro" class="form-label small">Buscar passageiro cadastrado (opcional)</label>
                                 <input type="text" class="form-control" id="f_buscaPassageiro" autocomplete="off"
                                        placeholder="Digite o nome..." oninput="buscarPassageiroCartao(this.value)" onfocus="buscarPassageiroCartao(this.value)">
                                 <div id="resultadoPassageiroCartao" class="list-group position-absolute w-100 shadow"
                                      style="display:none; z-index:1056; max-height:220px; overflow-y:auto;"></div>
                             </div>
                             <div class="col-12">
-                                <label class="form-label small">Nome do Passageiro</label>
+                                <label for="f_passNome" class="form-label small">Nome do Passageiro</label>
                                 <input type="text" class="form-control" id="f_passNome" value="Ana Lucia Izidro dos Santos">
                             </div>
                             <div class="col-12">
-                                <label class="form-label small">Documento (CPF/RG/Passaporte)</label>
+                                <label for="f_passDoc" class="form-label small">Documento (CPF/RG/Passaporte)</label>
                                 <input type="text" class="form-control" id="f_passDoc" value="127230642705-2">
                             </div>
                         </div>
@@ -288,23 +258,23 @@
                     <div class="card mb-3"><div class="card-body">
                         <h6 class="text-primary"><i class="bi bi-airplane"></i> Voo de Ida</h6>
                         <div class="row g-2">
-                            <div class="col-12"><label class="form-label small">Data</label>
+                            <div class="col-12"><label for="f_idaData" class="form-label small">Data</label>
                                 <input type="date" class="form-control" id="f_idaData" value="2026-09-22"></div>
-                            <div class="col-4"><label class="form-label small">Hora saída</label>
+                            <div class="col-4"><label for="f_idaHoraSaida" class="form-label small">Hora saída</label>
                                 <input type="time" class="form-control" id="f_idaHoraSaida" value="11:30"></div>
-                            <div class="col-4"><label class="form-label small">Origem (cidade)</label>
+                            <div class="col-4"><label for="f_idaOrigemCidade" class="form-label small">Origem (cidade)</label>
                                 <input type="text" class="form-control" id="f_idaOrigemCidade" value="Porto Alegre"></div>
-                            <div class="col-4"><label class="form-label small">Sigla origem</label>
+                            <div class="col-4"><label for="f_idaOrigemSigla" class="form-label small">Sigla origem</label>
                                 <input type="text" class="form-control text-uppercase" id="f_idaOrigemSigla" value="POA" maxlength="4"></div>
-                            <div class="col-4"><label class="form-label small">Hora chegada</label>
+                            <div class="col-4"><label for="f_idaHoraChegada" class="form-label small">Hora chegada</label>
                                 <input type="time" class="form-control" id="f_idaHoraChegada" value="13:15"></div>
-                            <div class="col-4"><label class="form-label small">Destino (cidade)</label>
+                            <div class="col-4"><label for="f_idaDestinoCidade" class="form-label small">Destino (cidade)</label>
                                 <input type="text" class="form-control" id="f_idaDestinoCidade" value="São Paulo"></div>
-                            <div class="col-4"><label class="form-label small">Sigla destino</label>
+                            <div class="col-4"><label for="f_idaDestinoSigla" class="form-label small">Sigla destino</label>
                                 <input type="text" class="form-control text-uppercase" id="f_idaDestinoSigla" value="GRU" maxlength="4"></div>
-                            <div class="col-6"><label class="form-label small">Nº do voo</label>
+                            <div class="col-6"><label for="f_idaVoo" class="form-label small">Nº do voo</label>
                                 <input type="text" class="form-control text-uppercase" id="f_idaVoo" value="G31235"></div>
-                            <div class="col-6"><label class="form-label small">Duração</label>
+                            <div class="col-6"><label for="f_idaDuracao" class="form-label small">Duração</label>
                                 <input type="text" class="form-control" id="f_idaDuracao" value="1h 45min"></div>
                         </div>
                     </div></div>
@@ -319,23 +289,23 @@
                             </div>
                         </div>
                         <div id="grupoVolta" class="row g-2 mt-1">
-                            <div class="col-12"><label class="form-label small">Data</label>
+                            <div class="col-12"><label for="f_voltaData" class="form-label small">Data</label>
                                 <input type="date" class="form-control" id="f_voltaData" value="2026-09-30"></div>
-                            <div class="col-4"><label class="form-label small">Hora saída</label>
+                            <div class="col-4"><label for="f_voltaHoraSaida" class="form-label small">Hora saída</label>
                                 <input type="time" class="form-control" id="f_voltaHoraSaida" value="17:05"></div>
-                            <div class="col-4"><label class="form-label small">Origem (cidade)</label>
+                            <div class="col-4"><label for="f_voltaOrigemCidade" class="form-label small">Origem (cidade)</label>
                                 <input type="text" class="form-control" id="f_voltaOrigemCidade" value="São Paulo"></div>
-                            <div class="col-4"><label class="form-label small">Sigla origem</label>
+                            <div class="col-4"><label for="f_voltaOrigemSigla" class="form-label small">Sigla origem</label>
                                 <input type="text" class="form-control text-uppercase" id="f_voltaOrigemSigla" value="GRU" maxlength="4"></div>
-                            <div class="col-4"><label class="form-label small">Hora chegada</label>
+                            <div class="col-4"><label for="f_voltaHoraChegada" class="form-label small">Hora chegada</label>
                                 <input type="time" class="form-control" id="f_voltaHoraChegada" value="18:50"></div>
-                            <div class="col-4"><label class="form-label small">Destino (cidade)</label>
+                            <div class="col-4"><label for="f_voltaDestinoCidade" class="form-label small">Destino (cidade)</label>
                                 <input type="text" class="form-control" id="f_voltaDestinoCidade" value="Porto Alegre"></div>
-                            <div class="col-4"><label class="form-label small">Sigla destino</label>
+                            <div class="col-4"><label for="f_voltaDestinoSigla" class="form-label small">Sigla destino</label>
                                 <input type="text" class="form-control text-uppercase" id="f_voltaDestinoSigla" value="POA" maxlength="4"></div>
-                            <div class="col-6"><label class="form-label small">Nº do voo</label>
+                            <div class="col-6"><label for="f_voltaVoo" class="form-label small">Nº do voo</label>
                                 <input type="text" class="form-control text-uppercase" id="f_voltaVoo" value="G31238"></div>
-                            <div class="col-6"><label class="form-label small">Duração</label>
+                            <div class="col-6"><label for="f_voltaDuracao" class="form-label small">Duração</label>
                                 <input type="text" class="form-control" id="f_voltaDuracao" value="1h 45min"></div>
                         </div>
                     </div></div>
@@ -344,13 +314,13 @@
                     <div class="card mb-3"><div class="card-body">
                         <h6 class="text-primary"><i class="bi bi-bag"></i> Bagagens (por trecho)</h6>
                         <div class="row g-2">
-                            <div class="col-3"><label class="form-label small">Item pessoal</label>
+                            <div class="col-3"><label for="f_bagPessoal" class="form-label small">Item pessoal</label>
                                 <input type="number" class="form-control" id="f_bagPessoal" value="1" min="0"></div>
-                            <div class="col-3"><label class="form-label small">Mão (10kg)</label>
+                            <div class="col-3"><label for="f_bagMao" class="form-label small">Mão (10kg)</label>
                                 <input type="number" class="form-control" id="f_bagMao" value="1" min="0"></div>
-                            <div class="col-3"><label class="form-label small">Despachada (23kg)</label>
+                            <div class="col-3"><label for="f_bagDesp" class="form-label small">Despachada (23kg)</label>
                                 <input type="number" class="form-control" id="f_bagDesp" value="0" min="0"></div>
-                            <div class="col-3"><label class="form-label small">Especial</label>
+                            <div class="col-3"><label for="f_bagEsp" class="form-label small">Especial</label>
                                 <input type="number" class="form-control" id="f_bagEsp" value="0" min="0"></div>
                         </div>
                     </div></div>
@@ -359,13 +329,13 @@
                     <div class="card mb-3"><div class="card-body">
                         <h6 class="text-primary"><i class="bi bi-chat-left-text"></i> Mensagem & Valor</h6>
                         <div class="mb-2">
-                            <label class="form-label small">Mensagem ao cliente</label>
+                            <label for="f_mensagem" class="form-label small">Mensagem ao cliente</label>
                             <textarea class="form-control" id="f_mensagem" rows="2">Boa viagem! Recomendamos chegar com antecedência e levar documento com foto.</textarea>
                         </div>
                         <div class="row g-2">
-                            <div class="col-6"><label class="form-label small">Valor total (opcional)</label>
+                            <div class="col-6"><label for="f_valor" class="form-label small">Valor total (opcional)</label>
                                 <input type="text" class="form-control" id="f_valor" value="" placeholder="Ex: R$ 1.250,00"></div>
-                            <div class="col-6"><label class="form-label small">Link do QR Code (só p/ "Outra" cia)</label>
+                            <div class="col-6"><label for="f_link" class="form-label small">Link do QR Code (só p/ "Outra" cia)</label>
                                 <input type="text" class="form-control" id="f_link" value="https://voecomkennedy.tur.br">
                                 <small class="text-muted">GOL, Azul e LATAM geram o link sozinhos.</small></div>
                         </div>
@@ -504,7 +474,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script src="js/storage.js?v=16"></script>
     <script src="js/utils.js?v=11"></script>

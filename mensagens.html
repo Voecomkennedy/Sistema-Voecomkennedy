@@ -10,28 +10,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="css/style.css?v=13">
     <link rel="stylesheet" href="css/messages.css?v=1">
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body>
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary" aria-label="Navegação principal">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html"><img src="icons/icon-192.png" alt="" class="navbar-brand-logo"><span>Voecomkennedy</span></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu"><span class="navbar-toggler-icon"></span></button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html">Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html">Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html">Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html">Check-in</a></li>
-                    <li class="nav-item"><a class="nav-link active" aria-current="page" href="mensagens.html">Mensagens</a></li>
-                </ul>
-                <button class="btn btn-sm btn-outline-light ms-lg-3" type="button" onclick="Auth.logout()">Sair</button>
-            </div>
-        </div>
-    </nav>
+<body class="panel-direction mensagens-page">
+    <div id="panelShell" data-page="mensagens"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
-    <main class="messages-workspace" data-messages-auto="true">
+    <main id="panelMain" class="panel-main messages-workspace" data-messages-auto="true">
         <header class="messages-heading">
             <div><p class="messages-eyebrow">Atendimento e acompanhamento</p><h1>Central de Mensagens</h1><p>Confira a agenda, revise os textos e acompanhe cada etapa.</p></div>
             <button id="messages-reload" class="btn btn-outline-secondary" type="button">Recarregar dados</button>

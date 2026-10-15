@@ -18,45 +18,14 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css?v=13">
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body class="workspace-page people-page">
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html">
-                <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
-                <span>Voecomkennedy</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="pessoas.html" aria-current="page"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
-                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
-                </button>
-            </div>
-        </div>
-    </nav>
+<body class="workspace-page people-page panel-direction">
+    <div id="panelShell" data-page="pessoas"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
     <!-- Main Content -->
-    <div class="container-fluid py-4">
+    <main id="panelMain" class="panel-main container-fluid">
         <header class="page-heading workspace-heading">
             <div>
                 <h1>Clientes e pessoas</h1>
@@ -115,7 +84,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Modal de Cadastro/Edição -->
     <div class="modal fade" id="modalPessoa" tabindex="-1" aria-labelledby="tituloModal" aria-hidden="true">
@@ -328,6 +297,7 @@
     <script>
         let modalPessoa;
         let pessoaEditandoId = null;
+        let pessoaNomeOriginal = null;
 
         // Inicializar
         document.addEventListener('app:ready', () => {
@@ -338,7 +308,9 @@
                 document.getElementById('filtroTipo').value = tipoInicial;
             }
             carregarPessoas();
-            Utils.configurarFormatacaoNome(document.getElementById('nome'));
+            document.getElementById('nome').addEventListener('blur', function () {
+                if (this.value !== pessoaNomeOriginal) Utils.aplicarFormatacaoNome(this);
+            });
 
             // Máscaras
             document.getElementById('cpf').addEventListener('input', function() {
@@ -407,6 +379,7 @@
         // Abrir modal
         function abrirModalPessoa(pessoaId = null) {
             pessoaEditandoId = pessoaId;
+            pessoaNomeOriginal = null;
             StorageManager.abrirEditor('PESSOAS', pessoaId);
 
             if (pessoaId) {
@@ -419,6 +392,7 @@
                 alterarCamposPorTipo();
 
                 document.getElementById('nome').value = pessoa.nome;
+                pessoaNomeOriginal = pessoa.nome;
 
                 if (pessoa.tipo === 'cliente' || pessoa.tipo === 'passageiro') {
                     document.getElementById('cpf').value = pessoa.cpf || '';
@@ -500,6 +474,8 @@
             pessoa.observacoes = document.getElementById('observacoes').value;
 
             if (pessoaEditandoId) {
+                // Uma edição de telefone/documento não reformata um nome legado intacto.
+                if (pessoa.nome === pessoaNomeOriginal) delete pessoa.nome;
                 await StorageManager.gravar('updatePessoa', [pessoaEditandoId, pessoa]);
                 Utils.showSuccess('Pessoa atualizada com sucesso!');
             } else {

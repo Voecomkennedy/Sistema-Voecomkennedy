@@ -58,67 +58,35 @@
             font-size: 0.9em;
         }
     </style>
+    <link rel="stylesheet" href="css/panel-direction.css?v=1">
 </head>
-<body>
+<body class="panel-direction pacotes-page">
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-xl navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.html">
-                <img src="icons/icon-192.png" alt="" class="navbar-brand-logo">
-                <span>Voecomkennedy</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menu de navegação">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html"><i class="bi bi-house-fill" aria-hidden="true"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="vendas.html"><i class="bi bi-cart-fill" aria-hidden="true"></i> Vendas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="balanco.html"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i> Balanço</a></li>
-                    <li class="nav-item"><a class="nav-link" href="cotacoes.html"><i class="bi bi-calculator-fill" aria-hidden="true"></i> Cotações</a></li>
-                    <li class="nav-item"><a class="nav-link" href="pessoas.html"><i class="bi bi-people-fill" aria-hidden="true"></i> Clientes</a></li>
-                    <li class="nav-item"><a class="nav-link" href="checkin.html"><i class="bi bi-clock-fill" aria-hidden="true"></i> Check-in</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-grid-fill" aria-hidden="true"></i> Mais</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="mensagens.html"><i class="bi bi-chat-dots-fill" aria-hidden="true"></i> Mensagens</a></li>
-                            <li><a class="dropdown-item" href="cartao-embarque.html"><i class="bi bi-ticket-perforated-fill" aria-hidden="true"></i> Cartão de embarque</a></li>
-                            <li><a class="dropdown-item" href="backup.html"><i class="bi bi-cloud-arrow-down-fill" aria-hidden="true"></i> Backup</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                <span class="navbar-text me-3" id="cloudStatus" style="font-size:0.82rem; white-space:nowrap;"></span>
-                <button class="btn btn-sm btn-outline-light" onclick="Auth.logout()" title="Sair da conta">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
-                </button>
-            </div>
-        </div>
-    </nav>
+    <div id="panelShell" data-page="pacotes"></div>
+    <script src="js/panel-shell.js?v=1"></script>
 
     <!-- Main Content -->
-    <div class="container-fluid mt-4">
+    <main id="panelMain" class="panel-main container-fluid">
         <div class="alert alert-secondary d-flex flex-wrap justify-content-between align-items-center gap-2">
             <span><strong>Módulo legado:</strong> preservado para consultar cadastros antigos. Novos pacotes devem ser registrados em Vendas usando a opção “Pacote”.</span>
             <a href="vendas.html" class="btn btn-sm btn-primary">Ir para Vendas</a>
         </div>
         <div class="row mb-4">
             <div class="col-12">
-                <h2 class="mb-3">
-                    <i class="bi bi-box-fill text-primary"></i> Gerenciamento de Pacotes
-                </h2>
+                <h1>Pacotes do legado</h1>
             </div>
         </div>
 
         <!-- Filtros -->
         <div class="card mb-4">
             <div class="card-body">
-                <div class="row g-3">
+                <div class="row g-3 panel-filter-grid">
                     <div class="col-md-4">
-                        <label class="form-label">Buscar</label>
+                        <label for="busca" class="form-label">Buscar</label>
                         <input type="text" class="form-control" id="busca" placeholder="Cliente, voucher ou destino...">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Período</label>
+                        <label for="filtroPeriodo" class="form-label">Período</label>
                         <select class="form-select" id="filtroPeriodo">
                             <option value="todos">Todos</option>
                             <option value="hoje">Hoje</option>
@@ -128,7 +96,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Status</label>
+                        <label for="filtroStatus" class="form-label">Status</label>
                         <select class="form-select" id="filtroStatus">
                             <option value="todos">Todos</option>
                             <option value="Pendente">Pendente</option>
@@ -138,7 +106,7 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Ordenar por</label>
+                        <label for="ordenacao" class="form-label">Ordenar por</label>
                         <select class="form-select" id="ordenacao">
                             <option value="recente">Mais Recentes</option>
                             <option value="antigo">Mais Antigos</option>
@@ -176,7 +144,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Modal Formulário de Pacote -->
     <div class="modal fade" id="pacoteModal" tabindex="-1" data-bs-backdrop="static">
@@ -198,11 +166,11 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label">Número do Voucher *</label>
+                                        <label for="numeroVoucher" class="form-label">Número do Voucher *</label>
                                         <input type="text" class="form-control" id="numeroVoucher" readonly>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Status *</label>
+                                        <label for="status" class="form-label">Status *</label>
                                         <select class="form-select" id="status" required>
                                             <option value="">Selecione...</option>
                                             <option value="Pendente">Pendente</option>
@@ -212,7 +180,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Forma de Pagamento</label>
+                                        <label for="formaPagamentoReserva" class="form-label">Forma de Pagamento</label>
                                         <input type="text" class="form-control" id="formaPagamentoReserva" placeholder="Ex: PIX, Cartão...">
                                     </div>
                                 </div>
@@ -227,7 +195,7 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-12">
-                                        <label class="form-label">Cliente Responsável *</label>
+                                        <label for="clienteId" class="form-label">Cliente Responsável *</label>
                                         <select class="form-select" id="clienteId" required>
                                             <option value="">Selecione o cliente...</option>
                                         </select>
@@ -268,11 +236,11 @@
                             <div class="card-body">
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Código Web Check-in</label>
+                                        <label for="codigoWebCheckinIda" class="form-label">Código Web Check-in</label>
                                         <input type="text" class="form-control" id="codigoWebCheckinIda">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Tipo de Voo *</label>
+                                        <label for="tipoVooIda" class="form-label">Tipo de Voo *</label>
                                         <select class="form-select" id="tipoVooIda" onchange="toggleConexaoIda()" required>
                                             <option value="">Selecione...</option>
                                             <option value="Direto">Direto</option>
@@ -287,51 +255,51 @@
                                     <h6 class="text-primary mb-3">Trecho 1</h6>
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Companhia Aérea *</label>
+                                            <label for="companhiaIda1" class="form-label">Companhia Aérea *</label>
                                             <select class="form-select" id="companhiaIda1" required>
                                                 <option value="">Selecione...</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Número do Voo *</label>
+                                            <label for="numeroVooIda1" class="form-label">Número do Voo *</label>
                                             <input type="text" class="form-control" id="numeroVooIda1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Origem (IATA) *</label>
+                                            <label for="origemIda1" class="form-label">Origem (IATA) *</label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="origemIda1" required maxlength="3" style="text-transform: uppercase;">
                                                 <div id="autocomplete-origemIda1" class="autocomplete-dropdown" style="display: none;"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Destino (IATA) *</label>
+                                            <label for="destinoIda1" class="form-label">Destino (IATA) *</label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="destinoIda1" required maxlength="3" style="text-transform: uppercase;">
                                                 <div id="autocomplete-destinoIda1" class="autocomplete-dropdown" style="display: none;"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Data Partida *</label>
+                                            <label for="dataPartidaIda1" class="form-label">Data Partida *</label>
                                             <input type="date" class="form-control" id="dataPartidaIda1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Hora Partida *</label>
+                                            <label for="horaPartidaIda1" class="form-label">Hora Partida *</label>
                                             <input type="time" class="form-control" id="horaPartidaIda1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Data Chegada *</label>
+                                            <label for="dataChegadaIda1" class="form-label">Data Chegada *</label>
                                             <input type="date" class="form-control" id="dataChegadaIda1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Hora Chegada *</label>
+                                            <label for="horaChegadaIda1" class="form-label">Hora Chegada *</label>
                                             <input type="time" class="form-control" id="horaChegadaIda1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Duração</label>
+                                            <label for="duracaoIda1" class="form-label">Duração</label>
                                             <input type="text" class="form-control" id="duracaoIda1" placeholder="Ex: 2h 30min">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Classe *</label>
+                                            <label for="classeIda1" class="form-label">Classe *</label>
                                             <select class="form-select" id="classeIda1" required>
                                                 <option value="">Selecione...</option>
                                                 <option value="Econômica">Econômica</option>
@@ -347,51 +315,51 @@
                                     <h6 class="text-primary mb-3">Trecho 2 (Conexão)</h6>
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Companhia Aérea</label>
+                                            <label for="companhiaIda2" class="form-label">Companhia Aérea</label>
                                             <select class="form-select" id="companhiaIda2">
                                                 <option value="">Selecione...</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Número do Voo</label>
+                                            <label for="numeroVooIda2" class="form-label">Número do Voo</label>
                                             <input type="text" class="form-control" id="numeroVooIda2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Origem (IATA)</label>
+                                            <label for="origemIda2" class="form-label">Origem (IATA)</label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="origemIda2" maxlength="3" style="text-transform: uppercase;">
                                                 <div id="autocomplete-origemIda2" class="autocomplete-dropdown" style="display: none;"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Destino (IATA)</label>
+                                            <label for="destinoIda2" class="form-label">Destino (IATA)</label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="destinoIda2" maxlength="3" style="text-transform: uppercase;">
                                                 <div id="autocomplete-destinoIda2" class="autocomplete-dropdown" style="display: none;"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Data Partida</label>
+                                            <label for="dataPartidaIda2" class="form-label">Data Partida</label>
                                             <input type="date" class="form-control" id="dataPartidaIda2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Hora Partida</label>
+                                            <label for="horaPartidaIda2" class="form-label">Hora Partida</label>
                                             <input type="time" class="form-control" id="horaPartidaIda2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Data Chegada</label>
+                                            <label for="dataChegadaIda2" class="form-label">Data Chegada</label>
                                             <input type="date" class="form-control" id="dataChegadaIda2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Hora Chegada</label>
+                                            <label for="horaChegadaIda2" class="form-label">Hora Chegada</label>
                                             <input type="time" class="form-control" id="horaChegadaIda2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Duração</label>
+                                            <label for="duracaoIda2" class="form-label">Duração</label>
                                             <input type="text" class="form-control" id="duracaoIda2" placeholder="Ex: 2h 30min">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Classe</label>
+                                            <label for="classeIda2" class="form-label">Classe</label>
                                             <select class="form-select" id="classeIda2">
                                                 <option value="">Selecione...</option>
                                                 <option value="Econômica">Econômica</option>
@@ -412,11 +380,11 @@
                             <div class="card-body">
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Código Web Check-in</label>
+                                        <label for="codigoWebCheckinVolta" class="form-label">Código Web Check-in</label>
                                         <input type="text" class="form-control" id="codigoWebCheckinVolta">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Tipo de Voo *</label>
+                                        <label for="tipoVooVolta" class="form-label">Tipo de Voo *</label>
                                         <select class="form-select" id="tipoVooVolta" onchange="toggleConexaoVolta()" required>
                                             <option value="">Selecione...</option>
                                             <option value="Direto">Direto</option>
@@ -431,51 +399,51 @@
                                     <h6 class="text-primary mb-3">Trecho 1</h6>
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Companhia Aérea *</label>
+                                            <label for="companhiaVolta1" class="form-label">Companhia Aérea *</label>
                                             <select class="form-select" id="companhiaVolta1" required>
                                                 <option value="">Selecione...</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Número do Voo *</label>
+                                            <label for="numeroVooVolta1" class="form-label">Número do Voo *</label>
                                             <input type="text" class="form-control" id="numeroVooVolta1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Origem (IATA) *</label>
+                                            <label for="origemVolta1" class="form-label">Origem (IATA) *</label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="origemVolta1" required maxlength="3" style="text-transform: uppercase;">
                                                 <div id="autocomplete-origemVolta1" class="autocomplete-dropdown" style="display: none;"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Destino (IATA) *</label>
+                                            <label for="destinoVolta1" class="form-label">Destino (IATA) *</label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="destinoVolta1" required maxlength="3" style="text-transform: uppercase;">
                                                 <div id="autocomplete-destinoVolta1" class="autocomplete-dropdown" style="display: none;"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Data Partida *</label>
+                                            <label for="dataPartidaVolta1" class="form-label">Data Partida *</label>
                                             <input type="date" class="form-control" id="dataPartidaVolta1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Hora Partida *</label>
+                                            <label for="horaPartidaVolta1" class="form-label">Hora Partida *</label>
                                             <input type="time" class="form-control" id="horaPartidaVolta1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Data Chegada *</label>
+                                            <label for="dataChegadaVolta1" class="form-label">Data Chegada *</label>
                                             <input type="date" class="form-control" id="dataChegadaVolta1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Hora Chegada *</label>
+                                            <label for="horaChegadaVolta1" class="form-label">Hora Chegada *</label>
                                             <input type="time" class="form-control" id="horaChegadaVolta1" required>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Duração</label>
+                                            <label for="duracaoVolta1" class="form-label">Duração</label>
                                             <input type="text" class="form-control" id="duracaoVolta1" placeholder="Ex: 2h 30min">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Classe *</label>
+                                            <label for="classeVolta1" class="form-label">Classe *</label>
                                             <select class="form-select" id="classeVolta1" required>
                                                 <option value="">Selecione...</option>
                                                 <option value="Econômica">Econômica</option>
@@ -491,51 +459,51 @@
                                     <h6 class="text-primary mb-3">Trecho 2 (Conexão)</h6>
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Companhia Aérea</label>
+                                            <label for="companhiaVolta2" class="form-label">Companhia Aérea</label>
                                             <select class="form-select" id="companhiaVolta2">
                                                 <option value="">Selecione...</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Número do Voo</label>
+                                            <label for="numeroVooVolta2" class="form-label">Número do Voo</label>
                                             <input type="text" class="form-control" id="numeroVooVolta2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Origem (IATA)</label>
+                                            <label for="origemVolta2" class="form-label">Origem (IATA)</label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="origemVolta2" maxlength="3" style="text-transform: uppercase;">
                                                 <div id="autocomplete-origemVolta2" class="autocomplete-dropdown" style="display: none;"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Destino (IATA)</label>
+                                            <label for="destinoVolta2" class="form-label">Destino (IATA)</label>
                                             <div class="position-relative">
                                                 <input type="text" class="form-control" id="destinoVolta2" maxlength="3" style="text-transform: uppercase;">
                                                 <div id="autocomplete-destinoVolta2" class="autocomplete-dropdown" style="display: none;"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Data Partida</label>
+                                            <label for="dataPartidaVolta2" class="form-label">Data Partida</label>
                                             <input type="date" class="form-control" id="dataPartidaVolta2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Hora Partida</label>
+                                            <label for="horaPartidaVolta2" class="form-label">Hora Partida</label>
                                             <input type="time" class="form-control" id="horaPartidaVolta2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Data Chegada</label>
+                                            <label for="dataChegadaVolta2" class="form-label">Data Chegada</label>
                                             <input type="date" class="form-control" id="dataChegadaVolta2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Hora Chegada</label>
+                                            <label for="horaChegadaVolta2" class="form-label">Hora Chegada</label>
                                             <input type="time" class="form-control" id="horaChegadaVolta2">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Duração</label>
+                                            <label for="duracaoVolta2" class="form-label">Duração</label>
                                             <input type="text" class="form-control" id="duracaoVolta2" placeholder="Ex: 2h 30min">
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Classe</label>
+                                            <label for="classeVolta2" class="form-label">Classe</label>
                                             <select class="form-select" id="classeVolta2">
                                                 <option value="">Selecione...</option>
                                                 <option value="Econômica">Econômica</option>
@@ -556,7 +524,7 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label">Mochila/Bolsa Pessoal</label>
+                                        <label for="bagagemPessoal" class="form-label">Mochila/Bolsa Pessoal</label>
                                         <select class="form-select" id="bagagemPessoal">
                                             <option value="">Selecione...</option>
                                             <option value="Inclusa">Inclusa</option>
@@ -564,7 +532,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Bagagem de Mão</label>
+                                        <label for="bagagemMao" class="form-label">Bagagem de Mão</label>
                                         <select class="form-select" id="bagagemMao">
                                             <option value="">Selecione...</option>
                                             <option value="Inclusa">Inclusa</option>
@@ -572,7 +540,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Bagagem Despachada</label>
+                                        <label for="bagagemDespachada" class="form-label">Bagagem Despachada</label>
                                         <select class="form-select" id="bagagemDespachada">
                                             <option value="">Selecione...</option>
                                             <option value="Inclusa">Inclusa</option>
@@ -592,11 +560,11 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-8">
-                                        <label class="form-label">Nome do Hotel *</label>
+                                        <label for="nomeHotel" class="form-label">Nome do Hotel *</label>
                                         <input type="text" class="form-control" id="nomeHotel" required>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Categoria</label>
+                                        <label for="categoriaHotel" class="form-label">Categoria</label>
                                         <select class="form-select" id="categoriaHotel">
                                             <option value="">Selecione...</option>
                                             <option value="Não informar">Não informar</option>
@@ -607,15 +575,15 @@
                                         </select>
                                     </div>
                                     <div class="col-md-12">
-                                        <label class="form-label">Endereço Completo</label>
+                                        <label for="enderecoHotel" class="form-label">Endereço Completo</label>
                                         <input type="text" class="form-control" id="enderecoHotel">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">E-mail do Hotel</label>
+                                        <label for="emailHotel" class="form-label">E-mail do Hotel</label>
                                         <input type="email" class="form-control" id="emailHotel">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Telefone do Hotel</label>
+                                        <label for="telefoneHotel" class="form-label">Telefone do Hotel</label>
                                         <input type="tel" class="form-control" id="telefoneHotel">
                                     </div>
                                 </div>
@@ -630,11 +598,11 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label class="form-label">Número de Quartos *</label>
+                                        <label for="numeroQuartos" class="form-label">Número de Quartos *</label>
                                         <input type="number" class="form-control" id="numeroQuartos" min="1" value="1" required>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Tipo de Quarto *</label>
+                                        <label for="tipoQuarto" class="form-label">Tipo de Quarto *</label>
                                         <select class="form-select" id="tipoQuarto" required>
                                             <option value="">Selecione...</option>
                                             <option value="Standard">Standard</option>
@@ -643,7 +611,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Regime *</label>
+                                        <label for="regime" class="form-label">Regime *</label>
                                         <select class="form-select" id="regime" required>
                                             <option value="">Selecione...</option>
                                             <option value="Café da Manhã">Café da Manhã</option>
@@ -653,7 +621,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Tipo de Cama</label>
+                                        <label for="tipoCama" class="form-label">Tipo de Cama</label>
                                         <select class="form-select" id="tipoCama">
                                             <option value="">Selecione...</option>
                                             <option value="Não informar">Não informar</option>
@@ -663,15 +631,15 @@
                                         </select>
                                     </div>
                                     <div class="col-md-12">
-                                        <label class="form-label">Descrição Completa do Quarto *</label>
+                                        <label for="descricaoQuarto" class="form-label">Descrição Completa do Quarto *</label>
                                         <textarea class="form-control" id="descricaoQuarto" rows="3" required placeholder="Descreva o quarto, amenidades, vista, etc."></textarea>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Data de Check-in *</label>
+                                        <label for="dataCheckin" class="form-label">Data de Check-in *</label>
                                         <input type="date" class="form-control" id="dataCheckin" onchange="calcularNoites()" required>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Horário Check-in</label>
+                                        <label for="horarioCheckin" class="form-label">Horário Check-in</label>
                                         <select class="form-select" id="horarioCheckin">
                                             <option value="">Selecione...</option>
                                             <option value="12:00">12:00</option>
@@ -682,11 +650,11 @@
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Data de Check-out *</label>
+                                        <label for="dataCheckout" class="form-label">Data de Check-out *</label>
                                         <input type="date" class="form-control" id="dataCheckout" onchange="calcularNoites()" required>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">Horário Check-out</label>
+                                        <label for="horarioCheckout" class="form-label">Horário Check-out</label>
                                         <select class="form-select" id="horarioCheckout">
                                             <option value="">Selecione...</option>
                                             <option value="10:00">10:00</option>
@@ -729,7 +697,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-12">
-                                        <label class="form-label">Passeios Inclusos</label>
+                                        <label for="passeiosInclusos" class="form-label">Passeios Inclusos</label>
                                         <textarea class="form-control" id="passeiosInclusos" rows="3" placeholder="Descreva os passeios incluídos no pacote"></textarea>
                                     </div>
                                 </div>
@@ -744,19 +712,19 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label">Valor de Venda (R$) *</label>
+                                        <label for="valorVenda" class="form-label">Valor de Venda (R$) *</label>
                                         <input type="number" class="form-control" id="valorVenda" step="0.01" required onchange="aplicarRegrasParcelas()">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Valor de Custo (R$) *</label>
+                                        <label for="valorCusto" class="form-label">Valor de Custo (R$) *</label>
                                         <input type="number" class="form-control" id="valorCusto" step="0.01" required>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Margem de Lucro (%)</label>
+                                        <label for="margemLucro" class="form-label">Margem de Lucro (%)</label>
                                         <input type="number" class="form-control" id="margemLucro" step="0.01" placeholder="Informar manualmente">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Forma de Pagamento *</label>
+                                        <label for="formaPagamento" class="form-label">Forma de Pagamento *</label>
                                         <select class="form-select" id="formaPagamento" onchange="toggleParcelas()" required>
                                             <option value="">Selecione...</option>
                                             <option value="PIX">PIX</option>
@@ -767,7 +735,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-6" id="divParcelas" style="display: none;">
-                                        <label class="form-label">Número de Parcelas</label>
+                                        <label for="parcelas" class="form-label">Número de Parcelas</label>
                                         <select class="form-select" id="parcelas">
                                             <option value="">Selecione...</option>
                                             <option value="1">1x (à vista) - Taxa: 3,08%</option>
@@ -786,7 +754,7 @@
                                         </small>
                                     </div>
                                     <div class="col-md-12">
-                                        <label class="form-label">Fornecedor/Operadora</label>
+                                        <label for="fornecedorId" class="form-label">Fornecedor/Operadora</label>
                                         <select class="form-select" id="fornecedorId">
                                             <option value="">Selecione...</option>
                                         </select>
@@ -811,7 +779,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6" id="divDataVenda" style="display: none;">
-                                        <label class="form-label">Data da Venda</label>
+                                        <label for="dataVenda" class="form-label">Data da Venda</label>
                                         <input type="date" class="form-control" id="dataVenda">
                                     </div>
                                 </div>

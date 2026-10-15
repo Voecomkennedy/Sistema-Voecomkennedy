@@ -6,6 +6,7 @@
   const esc = x => String(x ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm = x => String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
   const money = n => Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const pixOnlyNote = 'Prefere pagar no cartão? Solicite uma simulação de parcelamento.';
   function number(x){if(typeof x==='number')return x;const s=String(x??'').replace(/R\$|\s/g,'');return s.includes(',')?Number(s.replace(/\./g,'').replace(',','.')):Number(s);}
   function date(iso,format={day:'2-digit',month:'2-digit',year:'numeric'}){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||''))return '';
@@ -38,6 +39,7 @@
     return rows;
   }
   function cardForOption(d,o,config){
+    if(d.somentePix===true)return null;
     const base=number(d.valCartaoBase),pix=number(d.valTotalPix);
     if(!d.valCartaoBase||!Number.isFinite(base)||base<=0)return null;
     // Existing calculator applies the chosen Pix total as the card base. Do not
@@ -58,6 +60,7 @@
     return {label:n>1?n+'x de '+money(total/n):money(total),sub:'total '+money(total)+(d.comJuros===false?' · sem juros':'')};
   }
   function cardFromForm(d){
+    if(d.somentePix===true)return null;
     if(!d.valCartaoBase)return null;
     const n=Number(d.parcelas);
     if(n>1&&d.valParcela)return {label:n+'x de '+d.valParcela,sub:'total '+(d.valCartaoFinal||d.valCartaoBase)+(d.comJuros===false?' · sem juros':'')};
@@ -103,8 +106,8 @@
     const card=cardFromForm(d);
     const values=comparison?Array.from({length:Math.ceil(rows.length/2)},(_,i)=>'<section class="block price-section" data-price-mode="comparison">'+title(i?'Investimento · outras opções':'Investimento','valores em reais')+'<div class="opts">'+rows.slice(i*2,i*2+2).map((r,k)=>option(r,i*2+k)).join('')+'</div></section>').join(''):
       '<section class="block price-section" data-price-mode="standard">'+title('Investimento','valores em reais')+'<div class="one">'+
-      (d.valPix?'<div><div class="ot">'+esc(payment.label)+'</div><div class="v xl">'+esc(d.valPix)+'</div><div class="s">'+esc(payment.basis)+'</div></div>':'')+
-      (d.valTotalPix?'<div><div class="ot">Total no Pix</div><div class="v">'+esc(d.valTotalPix)+'</div><div class="s">Todos os passageiros</div></div>':'')+
+      (d.valPix?'<div><div class="ot">'+esc(payment.label)+'</div><div class="v xl">'+esc(d.somentePix===true?money(number(d.valPix)):d.valPix)+'</div><div class="s">'+esc(payment.basis)+'</div></div>':'')+
+      (d.valTotalPix?'<div><div class="ot">Total no Pix</div><div class="v">'+esc(d.somentePix===true?money(number(d.valTotalPix)):d.valTotalPix)+'</div><div class="s">Todos os passageiros</div></div>':'')+
       (card?'<div><div class="ot">Cartão de crédito</div><div class="v">'+esc(card.label)+'</div><div class="s">'+esc(card.sub)+'</div></div>':'')+'</div></section>';
     const hotel=d.hotelNome?'<section class="block">'+title('Hospedagem')+'<div class="hotel"><h3>'+esc(d.hotelNome)+'</h3>'+[d.hotelCheckin?'Check-in: '+(date(d.hotelCheckin)||d.hotelCheckin):'',d.hotelCheckout?'Check-out: '+(date(d.hotelCheckout)||d.hotelCheckout):'',d.hotelNoites?d.hotelNoites+' noite(s)':'',d.hotelRegime].filter(Boolean).map(esc).join(' · ')+(safeLink(d.linkHotel)?'<br><a href="'+esc(safeLink(d.linkHotel))+'">Ver fotos e detalhes do hotel</a>':'')+'</div></section>':'';
     const observations=String(d.obs||'').split(/\n+/).filter(Boolean).map(x=>'<p class="user-note">'+esc(x)+'</p>').join('');
@@ -113,11 +116,11 @@
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Proposta · ${esc(d.cliente)}</title><link rel="stylesheet" href="${esc(base+'assets/proposal-a4.css')}"></head><body>
       <div class="print-tools"><button id="print-proposal" type="button" disabled>Salvar / imprimir PDF</button><span id="print-status">Preparando páginas A4…</span></div>
       <div class="page"><header class="top"><div class="bar"><div class="brand">VOECOMKENNEDY<small>PASSAGENS AÉREAS</small></div><div class="meta">Proposta comercial<b>${esc(d.geradoEm?'Emitida em '+d.geradoEm:'')}</b></div></div><div class="hero"><div><div class="eyebrow">${d.somenteIda?'Somente ida':d.multitrecho?'Múltiplos destinos':'Ida e volta'}</div><div class="route">${esc(out.city||out.code)}<span>→</span>${esc(dest.city||dest.code)}</div><div class="codes">${esc(out.code)} · ${esc(dest.code)}</div></div><div class="client"><span class="eyebrow">Preparada para</span><div class="name">${esc(d.cliente)}</div></div></div><div class="chips">${[paxLabel,range,d.cia,d.classe].filter(Boolean).map(x=>'<div class="chip">'+esc(x)+'</div>').join('')}</div></header>
-      <main><div class="page-content"><div class="block">${title('Itinerário','horários locais de cada aeroporto')}</div>${leg('Ida',out,dest)}${d.somenteIda?'':leg('Volta',backOut,backDest)}${hotel}${values}${payment.note?'<div class="block user-note">'+esc(payment.note)+'</div>':''}
+      <main><div class="page-content"><div class="block">${title('Itinerário','horários locais de cada aeroporto')}</div>${leg('Ida',out,dest)}${d.somenteIda?'':leg('Volta',backOut,backDest)}${hotel}${values}${d.somentePix===true?'<div class="block user-note">'+esc(pixOnlyNote)+'</div>':''}${payment.note?'<div class="block user-note">'+esc(payment.note)+'</div>':''}
       <section class="block">${title('Próximos passos')}<div class="steps"><div class="step"><div class="k">1</div><div><b>Confirme a opção</b><p>Informe a opção escolhida e a forma de pagamento pelo WhatsApp.</p></div></div><div class="step"><div class="k">2</div><div><b>Confira os dados</b><p>Envie os dados dos passageiros como constam no documento de viagem.</p></div></div><div class="step"><div class="k">3</div><div><b>Receba sua emissão</b><p>Após a confirmação, enviamos os bilhetes e localizadores.</p></div></div></div></section>${note}</div></main>
       <footer><div class="fb">VOECOMKENNEDY<small>CNPJ 56.913.032/0001-32</small></div><div class="fc"><span>Atendimento</span>WhatsApp (62) 99644-8671<div class="page-number"></div></div></footer></div>
       <script src="${esc(base+'js/proposal-print.js')}"></script></body></html>`;
   }
-  const api={render,options,dayDelta,cardForOption,getLogo};
+  const api={render,options,dayDelta,cardForOption,getLogo,pixOnlyNote};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.ProposalPDF=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -6,6 +6,7 @@
     let selectionVersion = 0;
     let ready = false;
     let saving = false;
+    let clientPicker = null;
     const $ = id => document.getElementById(id);
     const frame = () => $('quadroProposta').contentWindow;
     const whenFrameReady = () => frame()?.restaurarProposta
@@ -60,6 +61,11 @@
 
     function refreshClients() {
         const select = $('clienteProposta');
+        if (window.ClientPicker) {
+            clientPicker = window.ClientPicker.attach(select);
+            clientPicker.refresh(StorageManager.getClientes());
+            return;
+        }
         const selected = select.value;
         select.replaceChildren(new Option('Selecione um cliente', ''));
         StorageManager.getClientes().slice().sort((a, b) =>
@@ -170,7 +176,8 @@
         const contact = StorageManager.getClientes().find(c => String(c.id) === String(id));
         if (!contact) return false;
         refreshClients();
-        $('clienteProposta').value = contact.id;
+        if (clientPicker) clientPicker.select(contact.id);
+        else $('clienteProposta').value = contact.id;
         setClientName();
         return true;
     };
@@ -183,6 +190,7 @@
         showMode(null);
         refreshClients();
         $('clienteProposta').value = '';
+        clientPicker?.sync();
         $('editorProposta').open = true;
         frame()?.limparProposta?.();
         setClientName();
@@ -199,7 +207,8 @@
         currentBase = fingerprint(quote);
         showMode(quote);
         refreshClients();
-        $('clienteProposta').value = quote.clienteId || '';
+        if (clientPicker) clientPicker.select(quote.clienteId || '');
+        else $('clienteProposta').value = quote.clienteId || '';
         $('editorProposta').open = true;
         const editor = await whenFrameReady();
         if (version !== selectionVersion) return;

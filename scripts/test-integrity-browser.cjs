@@ -469,13 +469,40 @@ const mockSource = `window.getSupabaseClient=()=>({rpc(name,args){return fetch('
    await p.reload();await p.waitForFunction(()=>document.documentElement.dataset.appAutenticado==='true');
    assert.equal(await p.evaluate(()=>StorageManager.getCotacoes().length),1);
   });
+  await test('Pix-only native form saves, downloads an actual PDF and reopens from durable storage without card rates',async c=>{
+   rows.set(A,{user_id:A,versao:1,conteudo:{...empty(),emissao_pessoas:[{id:'client-1',tipo:'cliente',nome:'Contato Sintético'}]}});
+   await appContext(c);const p=await appPage(c,'cotacoes');
+   await p.waitForFunction(()=>document.getElementById('quadroProposta').contentWindow.TimingUI?.ready===true);
+   await fillNativeProposal(p,2,'Pix exclusivo sintético');
+   const f=p.frameLocator('#quadroProposta');
+   await f.locator('#p-val-cartao').fill('');await f.locator('#p-parcelas').selectOption('');
+   await p.evaluate(()=>{document.getElementById('quadroProposta').contentWindow.document.getElementById('p-com-juros').checked=true});
+   await f.locator('#p-somente-pix').check();
+   assert.equal(await f.locator('#p-parcelas').isVisible(),false);
+   const download=p.waitForEvent('download');await f.locator('button[onclick="gerarProposta()"]').click();
+   const file=await download;assert.equal(await file.failure(),null);
+   const bytes=fs.readFileSync(await file.path());assert.equal(bytes.subarray(0,4).toString(),'%PDF');
+   const quotes=await p.evaluate(()=>StorageManager.getCotacoes());assert.equal(quotes.length,1);
+   assert.equal(quotes[0].propostaCompleta.somentePix,true);assert.equal(quotes[0].numParcelas,null);
+   const evidence=process.env.VCK_PIX_EVIDENCE;
+   if(evidence){
+    fs.mkdirSync(evidence,{recursive:true});await file.saveAs(path.join(evidence,'cotacao-pix-download-nativo.pdf'));
+    await f.locator('#p-somente-pix').locator('xpath=ancestor::div[contains(@class,"card")][1]').screenshot({path:path.join(evidence,'editor-pix-exclusivo.png')});
+   }
+   await p.reload();await p.waitForFunction(()=>document.documentElement.dataset.appAutenticado==='true' && document.getElementById('quadroProposta').contentWindow.TimingUI?.ready===true);
+   await p.evaluate(id=>editarPropostaCompleta(id),quotes[0].id);
+   assert.equal(await f.locator('#p-somente-pix').isChecked(),true);
+   await f.locator('#p-somente-pix').uncheck();assert.equal(await f.locator('#p-parcelas').isEnabled(),true);
+   await p.evaluate(()=>novaPropostaCompleta());assert.equal(await f.locator('#p-somente-pix').isChecked(),false);
+   assert.equal(await p.evaluate(()=>StorageManager.getCotacoes().length),1);
+  });
   await test('contact save after Novo preserves contact without retargeting the new form',async c=>{
    rows.set(A,{user_id:A,versao:1,conteudo:{...empty(),emissao_pessoas:[{id:'client-1',tipo:'cliente',nome:'Contato Sintético'}]}});
    await appContext(c);const p=await appPage(c,'cotacoes');await p.waitForFunction(()=>typeof document.getElementById('quadroProposta').contentWindow?.coletarDadosProposta==='function' && document.getElementById('quadroProposta').contentWindow.TimingUI?.ready===true);
    await p.evaluate(()=>{
     const save=StorageManager.gravar;window.__restoreSave=()=>{StorageManager.gravar=save};
     StorageManager.gravar=function(method,args,options){return method==='addPessoa'?new Promise(resolve=>{window.__resumeContact=()=>resolve(save.call(this,method,args,options))}):save.call(this,method,args,options)};
-    abrirCadastroContatoProposta();document.getElementById('contatoPropostaNome').value='Novo';document.getElementById('contatoPropostaSobrenome').value='Contato';document.getElementById('contatoPropostaWhatsapp').value='61999990000';
+    abrirCadastroContatoProposta();document.getElementById('contatoPropostaNome').value='Novo Contato';document.getElementById('contatoPropostaWhatsapp').value='61999990000';
     window.__contact=salvarContatoProposta();novaPropostaCompleta();
    });
    await p.evaluate(async()=>{__resumeContact();await __contact;__restoreSave()});

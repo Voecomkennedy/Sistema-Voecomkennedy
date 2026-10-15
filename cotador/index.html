@@ -2105,7 +2105,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
         </div>
       </div>
       <!-- Parcelamento -->
-      <div style="background:#F6FAFD;border:1px solid #B3CFE5;border-radius:7px;padding:12px 14px">
+      <div id="calc-cartao-fields" style="background:#F6FAFD;border:1px solid #B3CFE5;border-radius:7px;padding:12px 14px">
         <div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1A3D63;margin-bottom:10px">Parcelamento no Cartão</div>
         <div class="field-row-3" style="align-items:end">
           <div>
@@ -2267,6 +2267,12 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
         <input type="text" id="p-val-pix-pessoa" placeholder="R$ 1.336,00" readonly style="background:#F6FAFD;cursor:default">
       </div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin:8px 0 14px;cursor:pointer">
+      <input type="checkbox" id="p-somente-pix" onchange="toggleSomentePix()" aria-controls="p-cartao-fields" aria-describedby="p-somente-pix-ajuda" style="width:16px;height:16px;flex-shrink:0">
+      Mostrar somente valor no Pix
+    </label>
+    <p id="p-somente-pix-ajuda" class="label-hint" hidden>Prefere pagar no cartão? Solicite uma simulação de parcelamento.</p>
+    <div id="p-cartao-fields">
     <!-- Cartao -->
     <div class="field-row">
       <div class="field">
@@ -2318,6 +2324,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
           <div id="juros-parcela-display" style="font-size:.9rem;font-weight:800;color:#0A1931"></div>
         </div>
       </div>
+    </div>
     </div>
     <div class="field" style="margin-top:14px">
       <label for="p-obs">Observacoes <span class="label-hint">(tarifas dinamicas, validade etc.)</span></label>
@@ -3473,6 +3480,7 @@ function restaurarProposta(d) {
   sv('p-hotel-nome', d.hotelNome); sv('p-hotel-regime', d.hotelRegime); sv('p-link-hotel', d.linkHotel);
   sv('p-val-total-pix', d.valTotalPix); sv('p-val-cartao', d.valCartaoBase); sv('p-parcelas', d.parcelas);
   sc('p-com-juros', d.comJuros !== false); toggleJurosUI();
+  sc('p-somente-pix', d.somentePix === true); toggleSomentePix();
   sv('p-obs', d.obs); sv('p-link-aereo', d.linkAereo);
   sv('p-adultos', d.adultos || 1); sv('p-criancas', d.criancas || 0); sv('p-bebes', d.bebes || 0);
   sv('p-bebe-cobranca', d.babyPricing?.mode || (d.bebes ? 'revisar' : 'isento'));
@@ -4830,26 +4838,30 @@ function calcCotacao() {
   }
 
   // Parcelamento
-  const maxParcelas = custoTotalPix < 1500 ? 5 : 12;
-  const selectParc = document.getElementById('p-calc-parcelas');
-  let numParc = parseInt(selectParc.value);
-  for (let i = 0; i < selectParc.options.length; i++) {
-    const v = parseInt(selectParc.options[i].value);
-    selectParc.options[i].disabled = v > maxParcelas;
+  const somentePix = document.getElementById('p-somente-pix').checked;
+  let numParc = '';
+  if (!somentePix) {
+    const maxParcelas = custoTotalPix < 1500 ? 5 : 12;
+    const selectParc = document.getElementById('p-calc-parcelas');
+    numParc = parseInt(selectParc.value);
+    for (let i = 0; i < selectParc.options.length; i++) {
+      const v = parseInt(selectParc.options[i].value);
+      selectParc.options[i].disabled = v > maxParcelas;
+    }
+    if (numParc > maxParcelas) { selectParc.value = String(maxParcelas); numParc = maxParcelas; }
+
+    if (!window.CardRatesService?.ready) { document.getElementById('calc-resultado-box').style.display = 'none'; return; }
+    const totalCartao = currentCardTotal(custoTotalPix, numParc);
+    const parcela     = totalCartao / numParc;
+
+    document.getElementById('calc-parcela-valor').textContent   = calcFmt(parcela);
+    document.getElementById('calc-total-parcelado').textContent = calcFmt(totalCartao);
+    document.getElementById('calc-max-parcelas-nota').textContent =
+      custoTotalPix < 1500 ? 'Máx. 5x (valor < R$ 1.500)' : 'Máx. 12x';
   }
-  if (numParc > maxParcelas) { selectParc.value = String(maxParcelas); numParc = maxParcelas; }
-
-  if (!window.CardRatesService?.ready) { document.getElementById('calc-resultado-box').style.display = 'none'; return; }
-  const totalCartao = currentCardTotal(custoTotalPix, numParc);
-  const parcela     = totalCartao / numParc;
-
-  // Exibir
+  // Exibir Pix independentemente da disponibilidade das taxas de cartão.
   document.getElementById('calc-total-pix').textContent       = calcFmt(custoTotalPix);
   document.getElementById('calc-por-pessoa').textContent      = calcFmt(custoPorPessoa);
-  document.getElementById('calc-parcela-valor').textContent   = calcFmt(parcela);
-  document.getElementById('calc-total-parcelado').textContent = calcFmt(totalCartao);
-  document.getElementById('calc-max-parcelas-nota').textContent =
-    custoTotalPix < 1500 ? 'Máx. 5x (valor < R$ 1.500)' : 'Máx. 12x';
   document.getElementById('calc-resultado-box').style.display = '';
   // Mostrar toggle de bagagem adicional (apenas no modo normal, sem comparativo)
   const bagToggleWrap = document.getElementById('calc-bag-toggle-wrap');
@@ -5111,6 +5123,17 @@ function toggleJurosUI() {
   txt.textContent = checked ? 'Com Juros' : 'Sem Juros';
   txt.style.color = checked ? '#15803d' : '#b91c1c';
 }
+function toggleSomentePix() {
+  const somentePix = document.getElementById('p-somente-pix').checked;
+  const fields = document.getElementById('p-cartao-fields');
+  fields.hidden = somentePix;
+  fields.querySelectorAll('input, select, button').forEach(el => { el.disabled = somentePix; });
+  document.getElementById('p-somente-pix-ajuda').hidden = !somentePix;
+  document.getElementById('calc-cartao-fields').hidden = somentePix;
+  document.getElementById('p-calc-parcelas').disabled = somentePix;
+  calcCotacao();
+  calcJurosCartao();
+}
 function calcJurosCartao() {
   const baseStr = document.getElementById('p-val-cartao').value;
   const base = parseBRL(baseStr);
@@ -5121,7 +5144,7 @@ function calcJurosCartao() {
   const titulo = document.getElementById('juros-resultado-titulo');
   const totalLabel = document.getElementById('juros-total-label');
 
-  if (!parcStr || isNaN(base) || base <= 0) { box.style.display = 'none'; return; }
+  if (document.getElementById('p-somente-pix').checked || !parcStr || isNaN(base) || base <= 0) { box.style.display = 'none'; return; }
   const n = parseInt(parcStr);
   let total, parcela;
   if (_restoredCard?.signature === cardSignature()) {
@@ -5235,11 +5258,15 @@ function coletarDadosProposta() {
   } catch (error) { showToast(error.message); return; }
 
   // Calcular juros do cartao
+  const somentePix = document.getElementById('p-somente-pix').checked;
+  if (somentePix && !(parseBRL(valTotalPix) > 0 && Number.isFinite(parseBRL(valTotalPix)))) {
+    showToast('Informe um valor total no Pix válido.'); return;
+  }
   const valCartaoBase = document.getElementById('p-val-cartao').value.trim();
   const parcStr = document.getElementById('p-parcelas').value;
   const comJuros = document.getElementById('p-com-juros').checked;
   let valCartaoFinal = '', valParcela = '', juroInfo = null;
-  if (parcStr && valCartaoBase) {
+  if (!somentePix && parcStr && valCartaoBase) {
     const n = parseInt(parcStr);
     const baseNum = parseBRL(valCartaoBase);
     if (!isNaN(baseNum) && baseNum > 0) {
@@ -5336,6 +5363,7 @@ function coletarDadosProposta() {
     linkHotel: document.getElementById('p-link-hotel').value.trim(),
     valPix:      valPixPessoa,
     valTotalPix: valTotalPix,
+    somentePix,
     valCartaoBase: valCartaoBase,
     valCartaoFinal: valCartaoFinal,
     valParcela:  valParcela,
@@ -5463,6 +5491,8 @@ function limparProposta(restaurando = false) {
   document.getElementById('p-parceira-volta-ativo').checked = false; toggleParceiraVolta();
   document.getElementById('p-classe').value = 'Economica';
   document.getElementById('p-parcelas').value = '';
+  document.getElementById('p-somente-pix').checked = false;
+  toggleSomentePix();
   document.getElementById('p-adultos').value = '1';
   document.getElementById('p-criancas').value = '0';
   document.getElementById('p-bebes').value = '0';
@@ -6063,10 +6093,10 @@ document.addEventListener('DOMContentLoaded', refreshCardRates);
 <script src="js/timing-form.js?v=20261003-1"></script>
 <script src="js/airline-logos.js?v=20260924-1"></script>
 <script src="js/passenger-pricing.js?v=20261003-1"></script>
-<script src="js/proposal-pdf.js?v=20261009-1"></script>
+<script src="js/proposal-pdf.js?v=20261015-pix1"></script>
 <script src="assets/vendor/pdfmake.min.js"></script>
 <script src="assets/vendor/vfs_fonts.js"></script>
-<script src="js/proposal-download.js?v=20261003-4"></script>
+<script src="js/proposal-download.js?v=20261015-pix1"></script>
 <script>
 if (new URLSearchParams(location.search).get('embedded') === '1') {
   document.documentElement.classList.add('embedded-proposta');

@@ -32,6 +32,7 @@
     }
 
     function card(d) {
+        if (d.somentePix === true) return null;
         if (!positive(d.valCartaoBase)) return null;
         const total = positive(d.valCartaoFinal) ? d.valCartaoFinal : d.valCartaoBase;
         const installments = Number(d.parcelas);
@@ -126,6 +127,7 @@
             appendCard(card(d));
         }
         if (payment.note) lines.push(payment.note);
+        if (d.somentePix === true) lines.push(pdf.pixOnlyNote);
 
         if (text(d.hotelNome)) {
             lines.push('', '*HOSPEDAGEM*', text(d.hotelNome));

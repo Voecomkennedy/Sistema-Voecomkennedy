@@ -2,6 +2,7 @@
 (function (root) {
   'use strict';
   const pricing = typeof module === 'object' && module.exports ? require('./passenger-pricing.js') : root.PassengerPricing;
+  const proposal = typeof module === 'object' && module.exports ? require('./proposal-pdf.js') : root.ProposalPDF;
   const N='#0A1931', B='#1A3D63', S='#4A7FA7', K='#B3CFE5', P='#F6FAFD', M='#677787', L='#DCE6ED';
   const T=(value,extra={})=>({text:Array.isArray(value)?value:String(value??''),...extra});
   const brl=n=>Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -97,22 +98,23 @@
   function options(d,config) {
     const payment=pricing.presentation(d);
     const note=payment.note?[T(payment.note,{font:'InterSemi',fontSize:8,color:B,margin:[0,8,0,2]})]:[];
-    const rows=root.ProposalPDF?.options?root.ProposalPDF.options(d):[];
+    if(d.somentePix===true)note.unshift(T(proposal.pixOnlyNote,{font:'InterSemi',fontSize:8,color:B,margin:[0,8,0,2]}));
+    const rows=proposal?.options?proposal.options(d):[];
     if(!rows.length) {
       const pax=Number(d.totalPax)||1;
-      const card=d.valCartaoBase?(Number(d.parcelas)>1&&d.valParcela?
+      const card=d.somentePix!==true&&d.valCartaoBase?(Number(d.parcelas)>1&&d.valParcela?
         d.parcelas+'x de '+moneyInput(d.valParcela):moneyInput(d.valCartaoFinal||d.valCartaoBase)):'';
-      const sub=d.valCartaoBase?'total '+moneyInput(d.valCartaoFinal||d.valCartaoBase)+(d.comJuros===false?' · sem juros':''):'';
-      return [{table:{widths:[171,171,173],heights:()=>79,body:[[
+      const sub=card?'total '+moneyInput(d.valCartaoFinal||d.valCartaoBase)+(d.comJuros===false?' · sem juros':''):'';
+      return [{table:{widths:d.somentePix===true?[257,258]:[171,171,173],heights:()=>79,body:[[
         priceCard(payment.label,moneyInput(d.valPix),payment.basis,true),
         priceCard('Total no Pix',moneyInput(d.valTotalPix),'Todos os passageiros'),
-        priceCard('Cartão de crédito',card,sub)
+        ...(d.somentePix===true?[]:[priceCard('Cartão de crédito',card,sub)])
       ]]},layout:{...shadeLayout,hLineColor:()=>K,vLineColor:()=>K}},...note];
     }
     const cards=[];
     for(let i=0;i<rows.length;i+=2) {
       const cells=rows.slice(i,i+2).map((o,j)=>{
-        const card=root.ProposalPDF.cardForOption(d,o,{cardDivisor:config.cardDivisor});
+        const card=proposal.cardForOption(d,o,{cardDivisor:config.cardDivisor});
         return {stack:[
           T('OPÇÃO '+(i+j+1)+(o.selected?' · SELECIONADA':''),{font:'InterBold',fontSize:6.8,color:S,characterSpacing:1.2}),
           T(o.label,{font:'MontserratBold',fontSize:10,color:N,margin:[0,5,0,2]}),
@@ -124,7 +126,7 @@
         ],fillColor:P,margin:[13,12,13,12]};
       });
       if(cells.length===1)cells.push({text:''});
-      cards.push({table:{widths:[257,258],heights:()=>145,body:[cells],dontBreakRows:true},layout:{...shadeLayout,hLineColor:()=>K,vLineColor:()=>K},margin:[0,0,0,8]});
+      cards.push({table:{widths:[257,258],heights:()=>d.somentePix===true?120:145,body:[cells],dontBreakRows:true},layout:{...shadeLayout,hLineColor:()=>K,vLineColor:()=>K},margin:[0,0,0,8]});
     }
     return [...cards,...note];
   }
@@ -196,7 +198,7 @@
       ],fillColor:P}]]},layout:shadeLayout,margin:[0,0,0,5]});
     }
     content.push(section('Investimento','valores em reais'),...options(d,config),section('Próximos passos'));
-    content.push({columns:[
+    content.push({unbreakable:d.somentePix===true,columns:[
       step('1','Confirme a opção','Informe a opção escolhida e a forma de pagamento pelo WhatsApp.'),
       step('2','Confira os dados','Envie os dados dos passageiros como constam no documento de viagem.'),
       step('3','Receba sua emissão','Após a confirmação, enviamos os bilhetes e localizadores.')

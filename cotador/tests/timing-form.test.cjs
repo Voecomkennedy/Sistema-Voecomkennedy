@@ -11,7 +11,7 @@ async function app() {
     beforeParse(w) { require('../../tests/fixtures/card-rates.cjs').install(w); w.HTMLElement.prototype.scrollIntoView = () => {}; w.alert = () => {}; }
   });
   const {window:w} = dom;
-  for(const file of ['passenger-pricing.js','airport-timezones.js','flight-time.js','timing-form.js']) w.eval(fs.readFileSync(path.join(root,'js',file),'utf8'));
+  for(const file of ['passenger-pricing.js','airport-timezones.js','flight-time.js','date-fields.js','timing-form.js']) w.eval(fs.readFileSync(path.join(root,'js',file),'utf8'));
   if(w.document.readyState === 'loading') await new Promise(resolve=>w.document.addEventListener('DOMContentLoaded',resolve,{once:true}));
   const el=id=>w.document.getElementById(id);
   const set=(id,v)=>{if(el(id).type==='checkbox')el(id).checked=v;else el(id).value=v;el(id).dispatchEvent(new w.Event('input',{bubbles:true}));el(id).dispatchEvent(new w.Event('change',{bubbles:true}));};
@@ -89,9 +89,9 @@ test('date-line round trip can start its return on the previous local calendar d
  a.set('p-hora-dep-v','15:00');assert.equal(a.w.TimingUI.validate('proposta'),false);
  }finally{await Promise.resolve();a.dom.window.close();}
 });
-test('fresh and reset proposal dates use the device local day, while manual and restored dates stay owned',async()=>{
+test('fresh and reset proposal dates use the Brazilian day, while manual and restored dates stay owned',async()=>{
  const a=await app();try{
- const now=new Date(), today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+ const today=a.w.DateFields.today();
  assert.equal(a.el('p-data-ida').value,today);
  assert.equal(a.el('p-data-volta').value,today);
  a.set('p-data-ida','2027-01-10');
@@ -119,5 +119,53 @@ test('direct overnight date is inferred, and connection defaults never fabricate
  assert.equal(a.w.TimingUI.validate('proposta'),true);
  a.set('p-conexao-ida1-chegada-data','2026-10-27');
  assert.equal(a.w.TimingUI.validate('proposta'),false);
+ }finally{a.dom.window.close();}
+});
+
+test('partial and oversized years retain the typed value, explain the year and do not overwrite manual arrivals',async()=>{
+ const a=await app();try{
+ route(a);a.set('p-data-chegada-ida','2027-02-23');
+ a.set('p-data-ida','0026-12-15');
+ assert.equal(a.el('p-data-ida').value,'0026-12-15');assert.equal(a.el('p-data-chegada-ida').value,'2027-02-23');
+ assert.equal(a.w.TimingUI.validate('proposta'),false);assert.equal(a.w.document.activeElement.id,'p-data-ida');
+ assert.match(a.el('p-data-ida').validationMessage,/15\/12\/2026/);
+ a.set('p-data-ida','20266-12-15');assert.equal(a.w.TimingUI.validate('proposta'),false);
+ assert.match(a.el('p-data-ida').validationMessage,/quatro dígitos/);
+ }finally{a.dom.window.close();}
+});
+test('December to January keeps explicit years and a wrong return focuses departure with a suggestion',async()=>{
+ const a=await app();try{
+ for(const[k,v]of Object.entries({'p-orig':'BSB','p-dest':'GRU','p-data-ida':'2026-12-15','p-data-chegada-ida':'2026-12-15','p-hora-dep':'10:00','p-hora-cheg':'12:00','p-data-volta':'2027-01-01','p-data-chegada-volta':'2027-01-01','p-hora-dep-v':'10:00','p-hora-cheg-v':'12:00'}))a.set(k,v);
+ assert.equal(a.w.TimingUI.validate('proposta'),true);
+ a.set('p-data-volta','2026-01-01');a.set('p-data-chegada-volta','2026-01-01');
+ assert.equal(a.w.TimingUI.validate('proposta'),false);assert.equal(a.w.document.activeElement.id,'p-data-volta',a.el('p-duracao-ida-status').textContent+' / '+a.el('p-duracao-volta-status').textContent);
+ assert.match(a.el('p-data-volta').validationMessage,/01\/01\/2027/);assert.equal(a.el('p-data-volta').value,'2026-01-01');
+ }finally{a.dom.window.close();}
+});
+test('new past travel is blocked while a restored historical proposal remains editable',async()=>{
+ const a=await app();try{
+ const fields={'p-orig':'BSB','p-dest':'GRU','p-somente-ida':true,'p-data-ida':'2020-02-29','p-data-chegada-ida':'2020-02-29','p-hora-dep':'10:00','p-hora-cheg':'12:00'};
+ for(const[k,v]of Object.entries(fields))a.set(k,v);
+ assert.equal(a.w.TimingUI.validate('proposta'),false);assert.match(a.el('p-data-ida').validationMessage,/nova viagem/);
+ const snapshot=a.w.TimingUI.snapshot('proposta');a.w.TimingUI.restore('proposta',snapshot);
+ assert.equal(a.w.TimingUI.validate('proposta'),true);
+ a.set('p-data-ida','2021-02-29');assert.equal(a.w.TimingUI.validate('proposta'),false);
+ }finally{a.dom.window.close();}
+});
+test('a manually reviewed duration cannot bypass explicit impossible chronology',async()=>{
+ const a=await app();try{
+ route(a);a.set('p-hora-cheg','00:00');a.set('p-data-chegada-ida','2027-02-21');
+ a.set('p-duracao-ida-manual',true);a.set('p-duracao-ida','10h 00m');
+ assert.equal(a.w.TimingUI.validate('proposta'),false);assert.match(a.el('p-data-chegada-ida').validationMessage,/posterior/);
+ }finally{a.dom.window.close();}
+});
+
+test('manual unknown-zone durations still respect local return chronology at the same airport',async()=>{
+ const a=await app();try{
+ for(const[k,v]of Object.entries({'p-orig':'Origem sem fuso','p-dest':'Destino sem fuso','p-data-ida':'2026-12-15','p-data-chegada-ida':'2026-12-15','p-hora-dep':'10:00','p-hora-cheg':'12:00','p-data-volta':'2026-01-01','p-data-chegada-volta':'2026-01-01','p-hora-dep-v':'10:00','p-hora-cheg-v':'12:00'}))a.set(k,v);
+ for(const direction of ['ida','volta']){a.set('p-duracao-'+direction+'-manual',true);a.set('p-duracao-'+direction,'2h 00m');}
+ assert.equal(a.w.TimingUI.validate('proposta'),false);assert.equal(a.w.document.activeElement.id,'p-data-volta',a.el('p-duracao-ida-status').textContent+' / '+a.el('p-duracao-volta-status').textContent);
+ a.set('p-data-volta','2027-01-01');a.set('p-data-chegada-volta','2027-01-01');a.set('p-duracao-volta-manual',true);a.set('p-duracao-volta','2h 00m');
+ assert.equal(a.w.TimingUI.validate('proposta'),true);
  }finally{a.dom.window.close();}
 });

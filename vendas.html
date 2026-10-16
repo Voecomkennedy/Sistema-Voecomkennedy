@@ -269,23 +269,23 @@
                                 <div class="position-relative">
                                     <input type="text" class="form-control" id="buscaCliente"
                                            placeholder="Digite o nome do cliente..." autocomplete="off"
-                                           oninput="filtrarClientes(this.value)"
+                                           oninput="invalidarSelecaoCliente(); filtrarClientes(this.value)"
                                            onfocus="filtrarClientes(this.value)">
                                     <input type="hidden" id="clienteId" required>
                                     <div id="listaClientesResultado" class="list-group position-absolute w-100 shadow"
                                          style="display:none; z-index:1000; max-height:240px; overflow-y:auto;"></div>
                                 </div>
+                                <p id="avisoClienteCotacao" class="small text-muted mt-2" aria-live="polite"></p>
                                 <small class="text-muted">
-                                    Não encontrou?
                                     <button type="button" class="btn btn-link btn-sm p-0 align-baseline"
-                                            onclick="abrirCadastroClienteRapido()">
+                                            id="botaoCadastroCliente" onclick="abrirCadastroClienteRapido()">
                                         cadastrar novo cliente
                                     </button>
                                 </small>
                                 <div id="cadastroClienteRapido" class="border rounded bg-light p-3 mt-3"
                                      style="display:none;">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <strong>Novo cliente responsável</strong>
+                                        <strong id="tituloCadastroCliente">Novo cliente responsável</strong>
                                         <button type="button" class="btn-close"
                                                 onclick="cancelarCadastroClienteRapido()"
                                                 aria-label="Fechar cadastro rápido"></button>
@@ -603,15 +603,15 @@
                                        oninput="Utils.aplicarMascaraMoeda(this); calcularMargem();">
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label for="valorLucro" class="form-label">Lucro da Venda (R$) *</label>
-                                <input type="text" inputmode="numeric" class="form-control" id="valorLucro" required placeholder="0,00"
+                                <label for="valorCusto" class="form-label">Custo da Venda (R$) *</label>
+                                <input type="text" inputmode="numeric" class="form-control" id="valorCusto" required placeholder="0,00"
                                        oninput="Utils.aplicarMascaraMoeda(this); calcularMargem();">
-                                <small class="text-muted">Informe diretamente quanto você lucrou.</small>
+                                <small class="text-muted">Informe o custo total desta venda.</small>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <label for="valorCusto" class="form-label">Custo Calculado (R$)</label>
-                                <input type="text" class="form-control bg-light" id="valorCusto" readonly tabindex="-1" aria-readonly="true">
-                                <small class="text-muted">Venda menos lucro. Salvo para manter os relatórios atuais.</small>
+                                <label for="valorLucro" class="form-label">Lucro Calculado (R$)</label>
+                                <input type="text" class="form-control bg-light" id="valorLucro" readonly tabindex="-1" aria-readonly="true">
+                                <small class="text-muted" id="avisoFinanceiro">Valor de venda menos custo.</small>
                             </div>
                             <div class="col-md-3 mb-3">
                                 <label for="valorMilhas" class="form-label">Valor pago no milheiro (R$)</label>
@@ -624,7 +624,7 @@
                         <div class="row">
                             <div class="col-12 mb-3">
                                 <div class="alert alert-info">
-                                    <strong>Lucro informado:</strong> <span id="lucroCalculado">R$ 0,00</span> |
+                                    <strong>Lucro:</strong> <span id="lucroCalculado">R$ 0,00</span> |
                                     <strong>Margem:</strong> <span id="margemCalculada">0%</span>
                                 </div>
                             </div>
@@ -832,7 +832,8 @@
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
     <script src="js/storage.js?v=16"></script>
-    <script src="js/utils.js?v=11"></script>
+    <script src="cotador/js/date-fields.js?v=1"></script>
+    <script src="js/utils.js?v=12"></script>
 
     <script>
         let modalVenda;
@@ -843,6 +844,8 @@
         let vendaSalvaNoFormularioId = null;
         let cotacaoOrigemId = null;
         let cotacaoCarregamentoTimer = null;
+        let clienteCadastroEditandoId = null;
+        let financeiroHistorico = null;
         let aeroportos = AEROPORTOS_IATA; // Usar lista de aeroportos do arquivo JS
         console.log(`${aeroportos.length} aeroportos carregados`);
 
@@ -1189,6 +1192,8 @@
             cotacaoOrigemId = atual.id;
             document.getElementById('tituloModal').innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Nova Venda (de Cotação)';
             if (cotacao.clienteId) definirClientePorId(cotacao.clienteId);
+            atualizarVinculoCliente();
+            StorageManager.abrirEditor('COTACOES', cotacao.id);
 
             // Dados do voo
             document.getElementById('origem').value = cotacao.origem || '';
@@ -1218,7 +1223,7 @@
 
             // Valores - usar o valor calculado da cotação
             document.getElementById('valorVenda').value = Utils.numeroParaMoeda(cotacao.valorTotalPix);
-            document.getElementById('valorLucro').value = ''; // Usuário informa o lucro desejado
+            document.getElementById('valorCusto').value = ''; // Custo precisa ser conferido na emissão
             calcularMargem();
 
             // Passageiros
@@ -1269,6 +1274,7 @@
 
         // Filtra os clientes pelo que foi digitado (em QUALQUER parte do nome ou CPF)
         function filtrarClientes(termo) {
+            if (document.getElementById('buscaCliente').readOnly) return;
             const lista = document.getElementById('listaClientesResultado');
             const termoNorm = _normalizar(termo).trim();
 
@@ -1302,6 +1308,12 @@
         function selecionarCliente(id) {
             const cliente = _clientesCache.find(c => String(c.id) === String(id));
             if (!cliente) return;
+            const vinculado = clienteVinculadoCotacao();
+            if (vinculado && String(vinculado.id) !== String(cliente.id)) {
+                erroVinculoCliente('Esta cotação está vinculada a ' + vinculado.nome + '. Complete esse cadastro para preservar o vínculo.');
+                return;
+            }
+            document.getElementById('buscaCliente').setCustomValidity('');
             document.getElementById('clienteId').value = cliente.id;
             document.getElementById('buscaCliente').value = cliente.nome + (cliente.cpf ? ` - ${Utils.formatCPF(cliente.cpf)}` : '');
             document.getElementById('listaClientesResultado').style.display = 'none';
@@ -1311,17 +1323,25 @@
             const bloco = document.getElementById('cadastroClienteRapido');
             if (!bloco) return;
 
+            const vinculado = clienteVinculadoCotacao();
+            clienteCadastroEditandoId = vinculado?.id ?? null;
+            if (vinculado) StorageManager.abrirEditor('PESSOAS', vinculado.id);
+            document.getElementById('tituloCadastroCliente').textContent = vinculado ? 'Completar cadastro do cliente vinculado' : 'Novo cliente responsável';
+            for (const [campo, chave] of Object.entries({novoClienteCpf:'cpf', novoClienteNascimento:'dataNascimento', novoClienteTelefone:'telefone', novoClienteEmail:'email'})) {
+                document.getElementById(campo).value = vinculado?.[chave] || '';
+            }
             const nomeAtual = document.getElementById('buscaCliente').value
                 .replace(/\s-\s\d{3}\.\d{3}\.\d{3}-\d{2}$/, '')
                 .trim();
 
-            document.getElementById('novoClienteNome').value = nomeAtual || '';
+            document.getElementById('novoClienteNome').value = vinculado?.nome || nomeAtual || '';
             document.getElementById('listaClientesResultado').style.display = 'none';
             bloco.style.display = 'block';
             document.getElementById('novoClienteNome').focus();
         }
 
         function cancelarCadastroClienteRapido() {
+            clienteCadastroEditandoId = null;
             const bloco = document.getElementById('cadastroClienteRapido');
             if (!bloco) return;
 
@@ -1349,14 +1369,22 @@
                 return;
             }
 
-            const cliente = await StorageManager.gravar('addPessoa', [{
+            const dados = {
                 tipo: 'cliente',
                 nome,
                 cpf,
                 dataNascimento: document.getElementById('novoClienteNascimento').value,
                 telefone: document.getElementById('novoClienteTelefone').value,
                 email: document.getElementById('novoClienteEmail').value
-            }]);
+            };
+            let cliente;
+            const editando = clienteCadastroEditandoId !== null;
+            try {
+                cliente = editando
+                    ? await StorageManager.gravar('updatePessoa', [clienteCadastroEditandoId, dados])
+                    : await StorageManager.gravar('addPessoa', [dados]);
+                if (!cliente) throw new Error('O cliente não foi encontrado. Confira o vínculo antes de continuar.');
+            } catch (error) { Utils.showError(error.message); return; }
 
             carregarClientes();
             if (typeof carregarPassageirosCache === 'function') {
@@ -1364,13 +1392,40 @@
             }
             selecionarCliente(cliente.id);
             cancelarCadastroClienteRapido();
-            Utils.showSuccess('Cliente cadastrado e selecionado na venda.');
+            atualizarVinculoCliente();
+            Utils.showSuccess(editando ? 'Cadastro atualizado. O vínculo da cotação foi preservado.' : 'Cliente cadastrado e selecionado na venda.');
+        }
+
+        function clienteVinculadoCotacao() {
+            const cotacao = cotacaoOrigemId === null ? null : StorageManager.getCotacaoById(cotacaoOrigemId);
+            return cotacao?.clienteId ? StorageManager.getPessoas().find(p => String(p.id) === String(cotacao.clienteId)) : null;
+        }
+        function atualizarVinculoCliente() {
+            const cliente = clienteVinculadoCotacao();
+            const campo = document.getElementById('buscaCliente');
+            campo.readOnly = !!cliente;
+            campo.setCustomValidity('');
+            document.getElementById('avisoClienteCotacao').textContent = cliente
+                ? `Cliente vinculado: ${cliente.nome}. Para completar nome e documentos, atualize este cadastro.` : '';
+            document.getElementById('botaoCadastroCliente').textContent = cliente ? 'Completar cadastro do cliente vinculado' : 'Cadastrar novo cliente';
+        }
+        function invalidarSelecaoCliente() {
+            if (!clienteVinculadoCotacao()) document.getElementById('clienteId').value = '';
+            document.getElementById('buscaCliente').setCustomValidity('Selecione um cliente da lista.');
+        }
+        function erroVinculoCliente(message) {
+            const campo = document.getElementById('buscaCliente');
+            campo.setCustomValidity(message);
+            document.getElementById('avisoClienteCotacao').textContent = message;
+            campo.focus(); campo.reportValidity();
+            Utils.showError(message);
         }
 
         // Define o cliente programaticamente (usado ao editar venda ou carregar cotação)
         function definirClientePorId(id) {
             carregarClientes(); // garante cache atualizado
             const cliente = _clientesCache.find(c => String(c.id) === String(id));
+            document.getElementById('buscaCliente').setCustomValidity('');
             const hidden = document.getElementById('clienteId');
             const busca = document.getElementById('buscaCliente');
             if (cliente) {
@@ -1837,7 +1892,7 @@
                 // Em nova venda manual, sugere o momento atual. Em edição,
                 // campo vazio significa que a data histórica precisa ser conferida.
                 if (!vendaEditandoId) {
-                    const agoraLocal = Utils.dataHoraLocalParaInputs();
+                    const agoraLocal = Utils.dataHoraBrasilParaInputs();
                     if (!inputData.value) inputData.value = agoraLocal.data;
                     if (!inputHora.value) inputHora.value = agoraLocal.hora;
                 }
@@ -1865,6 +1920,7 @@
             if (cotacaoCarregamentoTimer !== null) clearTimeout(cotacaoCarregamentoTimer);
             cotacaoCarregamentoTimer = null;
             cotacaoOrigemId = null;
+            atualizarVinculoCliente();
             localStorage.removeItem('cotacao_para_venda');
             const url = new URL(window.location.href);
             if (url.searchParams.has('from_cotacao')) {
@@ -1875,6 +1931,7 @@
 
         function prepararFormularioVendaLimpo() {
             vendaSalvaNoFormularioId = null;
+            financeiroHistorico = null;
             limparVinculoCotacao();
             document.getElementById('formVenda').reset();
             document.getElementById('vendaId').value = '';
@@ -1896,13 +1953,14 @@
             document.getElementById('dataVendaAutomatica').checked = true;
             document.getElementById('statusPagamento').value = 'recebido';
             document.getElementById('valorRecebido').value = '0,00';
-            document.getElementById('dataPagamento').value = Utils.dataHoraLocalParaInputs().data;
+            document.getElementById('dataPagamento').value = Utils.dataHoraBrasilParaInputs().data;
             document.getElementById('dataPagamentoDesconhecida').checked = false;
             atualizarCamposLinksRastreamento([]);
             toggleParcelas();
             toggleDataVenda();
             calcularMargem();
             toggleValorRecebido();
+            [...document.querySelectorAll('#formVenda input[type=date]')].forEach(el => DateFields.setError(el, ''));
         }
 
         function toggleValorRecebido() {
@@ -1941,7 +1999,7 @@
             const campoRecebido = document.getElementById('valorRecebido');
             const campoDataPagamento = document.getElementById('dataPagamento');
             const dataDesconhecida = document.getElementById('dataPagamentoDesconhecida').checked;
-            const hoje = Utils.dataHoraLocalParaInputs().data;
+            const hoje = Utils.dataHoraBrasilParaInputs().data;
             let erro = '';
             if (recebido > venda) erro = 'O valor recebido não pode ser maior que o valor da venda.';
             else if (status === 'recebido' && recebido !== venda) erro = 'Pagamento recebido deve ter o mesmo valor da venda.';
@@ -1963,14 +2021,20 @@
             const ida = document.getElementById('dataEmbarque');
             const volta = document.getElementById('dataVolta');
             const dataManual = document.getElementById('dataVendaManual');
-            volta.setCustomValidity(ida.value && volta.value && volta.value < ida.value
-                ? 'A data de volta não pode ser anterior à data de ida.'
-                : '');
-            const hoje = Utils.dataHoraLocalParaInputs().data;
-            const manualFutura = !document.getElementById('dataVendaAutomatica').checked && dataManual.value > hoje;
-            dataManual.setCustomValidity(manualFutura ? 'A data da venda não pode estar no futuro.' : '');
-            return !volta.validationMessage && !dataManual.validationMessage;
+            const hoje = DateFields.today();
+            DateFields.validate(ida, {required:true, min:vendaEditandoId ? '' : hoje, label:'A ida de uma nova viagem'});
+            DateFields.validate(volta);
+            DateFields.order(volta, ida.value, 'A data de volta não pode ser anterior à ida.');
+            if (document.getElementById('dataVendaAutomatica').checked) DateFields.setError(dataManual,'');
+            else DateFields.validate(dataManual, {required:true, max:hoje, label:'A data da venda'});
+            const status = document.getElementById('statusPagamento').value;
+            const exigePagamento = ['recebido','parcial'].includes(status) && !document.getElementById('dataPagamentoDesconhecida').checked;
+            DateFields.validate(document.getElementById('dataPagamento'), {required:exigePagamento, max:hoje, label:'A data do pagamento'});
+            return [ida,volta,dataManual].every(el => !el.validationMessage);
         }
+        document.getElementById('formVenda').addEventListener('input', event => {
+            if (event.target.type === 'date') validarDatasVenda();
+        });
 
         // Calcular margem em tempo real
         function calcularMargem() {
@@ -1978,18 +2042,16 @@
             const campoLucro = document.getElementById('valorLucro');
             const campoCusto = document.getElementById('valorCusto');
             const vendaCentavos = StorageManager.numeroParaCentavos(campoVenda.value);
-            const lucroCentavos = StorageManager.numeroParaCentavos(campoLucro.value);
-            const lucroMaiorQueVenda = lucroCentavos > vendaCentavos;
-            const custoCentavos = lucroMaiorQueVenda ? 0 : vendaCentavos - lucroCentavos;
+            const custoCentavos = StorageManager.numeroParaCentavos(campoCusto.value);
+            const preservado = financeiroHistorico && campoVenda.value === financeiroHistorico.venda && campoCusto.value === financeiroHistorico.custo;
+            const lucroCentavos = preservado && Number.isFinite(financeiroHistorico.registro.valorLucro)
+                ? StorageManager.numeroParaCentavos(financeiroHistorico.registro.valorLucro) : vendaCentavos - custoCentavos;
             const valorVenda = StorageManager.centavosParaNumero(vendaCentavos);
             const lucro = StorageManager.centavosParaNumero(lucroCentavos);
-
-            campoLucro.setCustomValidity(
-                lucroMaiorQueVenda ? 'O lucro não pode ser maior que o valor da venda.' : ''
-            );
-            campoCusto.value = Utils.numeroParaMoeda(
-                StorageManager.centavosParaNumero(custoCentavos)
-            );
+            campoLucro.setCustomValidity('');
+            campoLucro.value = Utils.numeroParaMoeda(lucro);
+            document.getElementById('avisoFinanceiro').textContent = preservado
+                ? 'Valores históricos preservados. Editar venda ou custo recalcula o lucro.' : 'Valor de venda menos custo. Custo maior que a venda registra prejuízo.';
 
             // Aplicar regras de parcelamento quando o valor mudar
             const formaPagamento = document.getElementById('formaPagamento').value;
@@ -2070,7 +2132,10 @@
                         StorageManager.numeroParaCentavos(venda.valorVenda) -
                         StorageManager.numeroParaCentavos(venda.valorCusto)
                     );
-                document.getElementById('valorLucro').value = Utils.numeroParaMoeda(lucroRegistrado);
+                document.getElementById('valorCusto').value = Utils.numeroParaMoeda(
+                    Number.isFinite(venda.valorCusto) ? venda.valorCusto : venda.valorVenda - lucroRegistrado
+                );
+                financeiroHistorico = {registro: venda, venda: document.getElementById('valorVenda').value, custo: document.getElementById('valorCusto').value};
                 document.getElementById('valorMilhas').value = venda.valorMilhas ? Utils.numeroParaMoeda(venda.valorMilhas) : '';
                 document.getElementById('formaPagamento').value = venda.formaPagamento;
                 document.getElementById('statusPagamento').value = venda.statusPagamento || 'nao_informado';
@@ -2146,14 +2211,17 @@
                 const clienteId = document.getElementById('clienteId').value;
                 if (!cotacao || cotacao.status === 'convertida' || vendaEditandoId ||
                     (cotacao.clienteId && String(cotacao.clienteId) !== String(clienteId))) {
-                    Utils.showError('O vínculo com a cotação mudou. Reabra a cotação ou use Nova venda para registrar uma venda independente.');
+                    erroVinculoCliente('O vínculo com a cotação mudou. Confira o cliente vinculado. Complete o cadastro original ou reabra a cotação; o preenchimento foi mantido.');
                     return;
                 }
             }
+            document.getElementById('buscaCliente').setCustomValidity(document.getElementById('clienteId').value ? '' : 'Selecione um cliente cadastrado da lista.');
             calcularMargem();
-            validarDatasVenda();
             validarValoresFinanceiros();
+            validarDatasVenda();
             if (!form.checkValidity()) {
+                const invalido = [...form.elements].find(el => el.willValidate && !el.validity.valid);
+                if (invalido) DateFields.focus(invalido);
                 form.reportValidity();
                 return;
             }
@@ -2190,7 +2258,7 @@
 
             if (dataAutomatica) {
                 // Usar data/hora atual
-                const agoraLocal = Utils.dataHoraLocalParaInputs();
+                const agoraLocal = Utils.dataHoraBrasilParaInputs();
                 dataVenda = agoraLocal.data;
                 horaVenda = agoraLocal.hora;
             } else {
@@ -2260,6 +2328,12 @@
                 horaVenda: horaVenda
             };
 
+            if (financeiroHistorico && document.getElementById('valorVenda').value === financeiroHistorico.venda && document.getElementById('valorCusto').value === financeiroHistorico.custo) {
+                for (const campo of ['valorVenda','valorCusto','valorLucro']) {
+                    if (Object.hasOwn(financeiroHistorico.registro, campo)) venda[campo] = financeiroHistorico.registro[campo];
+                    else delete venda[campo];
+                }
+            }
             const conversaoPendente = cotacaoOrigemId === null ? null : StorageManager.getTodasVendas().find(item => String(item.cotacaoOrigemId || '') === String(cotacaoOrigemId));
             const possiveisDuplicadas = conversaoPendente ? [] : StorageManager.findPossiveisVendasDuplicadas(
                 venda,
@@ -2340,7 +2414,7 @@
             document.getElementById('movimentoStatusVenda').value = StorageManager.normalizarStatusVenda(venda);
             document.getElementById('movimentoReembolsoCliente').value = Utils.numeroParaMoeda(venda.valorReembolsadoCliente || 0);
             document.getElementById('movimentoEstornoFornecedor').value = Utils.numeroParaMoeda(venda.valorEstornadoFornecedor || 0);
-            document.getElementById('movimentoData').value = venda.dataMovimentoFinanceiro || Utils.dataHoraLocalParaInputs().data;
+            document.getElementById('movimentoData').value = venda.dataMovimentoFinanceiro || Utils.dataHoraBrasilParaInputs().data;
             document.getElementById('movimentoMotivo').value = venda.motivoCancelamento || '';
             validarMovimentoFinanceiro();
             modalMovimentoFinanceiro.show();
@@ -2382,7 +2456,7 @@
             const id = document.getElementById('movimentoVendaId').value;
             const data = document.getElementById('movimentoData').value;
             const motivo = document.getElementById('movimentoMotivo').value.trim();
-            const hoje = Utils.dataHoraLocalParaInputs().data;
+            const hoje = Utils.dataHoraBrasilParaInputs().data;
             if (!validarMovimentoFinanceiro()) return;
             if (!data || data > hoje) {
                 Utils.showError('Informe uma data válida, que não esteja no futuro.');

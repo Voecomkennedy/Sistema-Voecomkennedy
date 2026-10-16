@@ -66,7 +66,7 @@ function completeSale(w, clientId = person.id) {
     w.definirClientePorId(clientId);
     for (const [id, value] of Object.entries({
         origem: 'BSB', destino: 'POA', dataEmbarque: '2027-10-27', horaEmbarque: '10:10',
-        quantidadePassageiros: '1', valorVenda: 'R$ 1.500,00', valorLucro: 'R$ 100,00',
+        quantidadePassageiros: '1', valorVenda: 'R$ 1.500,00', valorCusto: 'R$ 1.400,00',
         formaPagamento: 'pix', statusPagamento: 'pendente', valorRecebido: 'R$ 0,00', dataPagamento: ''
     })) d.getElementById(id).value = value;
     const carrier = [...d.getElementById('companhiaAerea').options].find(o => /LATAM/i.test(o.text));

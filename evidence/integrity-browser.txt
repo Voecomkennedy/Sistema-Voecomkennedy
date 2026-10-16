@@ -1,0 +1,85 @@
+RUN two native tabs preserve simultaneous inclusions
+PASS two native tabs preserve simultaneous inclusions
+RUN two editors reject an old record after other-tab commit
+PASS two editors reject an old record after other-tab commit
+RUN three proposals for one contact preserve ten passengers after reload
+PASS three proposals for one contact preserve ten passengers after reload
+RUN conversion failure rolls back both sale and quote
+PASS conversion failure rolls back both sale and quote
+RUN conversion reload/repeat retains one original sale
+PASS conversion reload/repeat retains one original sale
+RUN durable uncertain request survives reload; old ack retains new edit
+PASS durable uncertain request survives reload; old ack retains new edit
+RUN account switch preserves private namespace and rejects late mutation
+PASS account switch preserves private namespace and rejects late mutation
+RUN selective recovery is read-only preview and a new revision
+PASS selective recovery is read-only preview and a new revision
+RUN stale recovery preview cannot replace later edit
+PASS stale recovery preview cannot replace later edit
+RUN deleted proposal can be recovered without deleting other proposals
+PASS deleted proposal can be recovered without deleting other proposals
+RUN raw synchronous storage methods fail closed after initialization
+PASS raw synchronous storage methods fail closed after initialization
+RUN real People form preserves stale editor and displays conflict
+PASS real People form preserves stale editor and displays conflict
+RUN same legacy ID in different collections returns the correct saved entity
+PASS same legacy ID in different collections returns the correct saved entity
+RUN IDB quota fault rolls back state and history together
+PASS IDB quota fault rolls back state and history together
+RUN projection quota retains committed authority and reload recovers it
+PASS projection quota retains committed authority and reload recovers it
+RUN legacy tab bypass is preserved and blocks writes even when backup fails
+PASS legacy tab bypass is preserved and blocks writes even when backup fails
+RUN legacy write racing queued transaction is preserved before projection
+PASS legacy write racing queued transaction is preserved before projection
+RUN legacy write racing queued transaction is preserved before projection even with recovery quota
+PASS legacy write racing queued transaction is preserved before projection even with recovery quota
+RUN storage event bytes survive a newer cache value and a stale projection-busy marker
+PASS storage event bytes survive a newer cache value and a stale projection-busy marker
+RUN older durable projection is recognized without discarding the newest authority
+PASS older durable projection is recognized without discarding the newest authority
+RUN partially projected conversion reloads its complete durable sale and quote
+PASS partially projected conversion reloads its complete durable sale and quote
+RUN old tab cannot read or mutate the new account through legacy fallback
+PASS old tab cannot read or mutate the new account through legacy fallback
+RUN full cloud sends across two tabs share one confirmed snapshot
+PASS full cloud sends across two tabs share one confirmed snapshot
+RUN lost cloud reply plus later edit resumes after actual reload without overwrite choice
+PASS lost cloud reply plus later edit resumes after actual reload without overwrite choice
+RUN failed local ack stays pending and retry recognizes the committed cloud request
+PASS failed local ack stays pending and retry recognizes the committed cloud request
+RUN cloud error keeps durable changes and explicit retry confirms them
+PASS cloud error keeps durable changes and explicit retry confirms them
+RUN old cloud ack during a newer native edit cannot turn the indicator green
+PASS old cloud ack during a newer native edit cannot turn the indicator green
+RUN actual recovery UI previews without writing and restores only the chosen proposal
+PASS actual recovery UI previews without writing and restores only the chosen proposal
+RUN actual recovery UI refuses a preview invalidated by another tab
+PASS actual recovery UI refuses a preview invalidated by another tab
+RUN recovery UI restores a legacy proposal found only before the first local transaction
+PASS recovery UI restores a legacy proposal found only before the first local transaction
+RUN compact remote metadata loads without bodies and selected state restores only one proposal
+PASS compact remote metadata loads without bodies and selected state restores only one proposal
+RUN compact delayed state cannot overwrite a newer selection
+PASS compact delayed state cannot overwrite a newer selection
+RUN compact delayed state is rejected after account switch
+PASS compact delayed state is rejected after account switch
+RUN compact reader falls back only for missing RPC and keeps old snapshots readable
+PASS compact reader falls back only for missing RPC and keeps old snapshots readable
+RUN compact reader rejects unsupported format without enabling recovery
+PASS compact reader rejects unsupported format without enabling recovery
+RUN compact reader preserves typed records but blocks ambiguous selective recovery
+PASS compact reader preserves typed records but blocks ambiguous selective recovery
+RUN native sales page restores archived sale through the transaction and reports quota errors
+PASS native sales page restores archived sale through the transaction and reports quota errors
+RUN native quotation form keeps three independent proposals and edits only one
+PASS native quotation form keeps three independent proposals and edits only one
+RUN native proposal PDF continues after the committed save cannot schedule backup
+PASS native proposal PDF continues after the committed save cannot schedule backup
+RUN Pix-only native form saves, downloads an actual PDF and reopens from durable storage without card rates
+PASS Pix-only native form saves, downloads an actual PDF and reopens from durable storage without card rates
+RUN contact save after Novo preserves contact without retargeting the new form
+PASS contact save after Novo preserves contact without retargeting the new form
+RUN backup scheduling failure cannot report an already durable mutation as failed
+PASS backup scheduling failure cannot report an already durable mutation as failed
+{"passed":42,"failed":0,"production_requests":0,"playwright":"1.55.1","browser":"155.0.8059.80","scope":"fresh native browser contexts and synthetic loopback fixtures"}

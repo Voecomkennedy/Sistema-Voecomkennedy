@@ -424,7 +424,7 @@ test('sale form receives the registered client from a quote', { timeout: 20000 }
         assert.equal(a.window.document.getElementById('valorVenda').value, 'R$ 4.778,43');
         const d = a.window.document;
         d.getElementById('localizador_1').value = 'TEST123';
-        d.getElementById('valorLucro').value = 'R$ 100,00';
+        d.getElementById('valorCusto').value = 'R$ 1.400,00';
         d.getElementById('formaPagamento').value = 'pix';
         d.getElementById('statusPagamento').value = 'pendente';
         d.getElementById('valorRecebido').value = 'R$ 0,00';

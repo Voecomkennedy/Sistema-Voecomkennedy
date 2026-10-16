@@ -86,7 +86,7 @@
                             </div>
                         </form>
                         <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente e salve. O PDF salva esta cotação antes de gerar o arquivo. Use Nova proposta para criar outro orçamento.</p>
-                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261015-pix1" class="proposal-frame" style="height:1350px"></iframe>
+                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261016-dates1" class="proposal-frame" style="height:1350px"></iframe>
                     </div>
                 </details>
             </div>
@@ -509,6 +509,7 @@
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
     <script src="js/storage.js?v=16"></script>
+    <script src="cotador/js/date-fields.js?v=1"></script>
     <script src="js/utils.js?v=11"></script>
     <script src="cotador/js/passenger-pricing.js?v=1"></script>
     <script src="cotador/js/proposal-pdf.js?v=20261015-pix1"></script>
@@ -587,6 +588,7 @@
         function toggleVolta() {
             const tipoViagem = document.getElementById('tipoViagem').value;
             document.getElementById('secaoVolta').style.display = tipoViagem === 'ida-volta' ? 'block' : 'none';
+            atualizarCalendarios();
         }
 
         // Preencher bagagem automaticamente
@@ -634,27 +636,35 @@
             }
         }
 
-        // Atualizar minDate dos calendários de forma inteligente
+        // Civil dates are checked without changing what the user typed.
         function atualizarCalendarios() {
-            const dataSaidaIda = document.getElementById('dataSaidaIda').value;
-            const dataChegadaIda = document.getElementById('dataChegadaIda').value;
-            const dataSaidaVolta = document.getElementById('dataSaidaVolta').value;
-
-            // Data de Chegada Ida: min = Data de Saída Ida
-            if (dataSaidaIda) {
-                document.getElementById('dataChegadaIda').min = dataSaidaIda;
+            const ida = document.getElementById('dataSaidaIda');
+            const chegadaIda = document.getElementById('dataChegadaIda');
+            const volta = document.getElementById('dataSaidaVolta');
+            const chegadaVolta = document.getElementById('dataChegadaVolta');
+            const retorno = document.getElementById('tipoViagem').value === 'ida-volta';
+            for (const el of [ida,chegadaIda,volta,chegadaVolta]) { el.removeAttribute('min'); DateFields.setError(el,''); }
+            DateFields.validate(ida, {required:true, min:cotacaoEditandoId ? '' : DateFields.today(), label:'A ida de uma nova viagem'});
+            DateFields.validate(chegadaIda, {required:true});
+            DateFields.order(chegadaIda, ida.value, 'A chegada da ida não pode ser anterior à saída.');
+            volta.required = chegadaVolta.required = retorno;
+            if (retorno) {
+                DateFields.validate(volta, {required:true}); DateFields.validate(chegadaVolta, {required:true});
+                DateFields.order(volta, chegadaIda.value || ida.value, 'A volta não pode ser anterior à chegada da ida.');
+                DateFields.order(chegadaVolta, volta.value, 'A chegada da volta não pode ser anterior à saída.');
             }
-
-            // Data de Saída Volta: min = Data de Chegada Ida
-            if (dataChegadaIda) {
-                document.getElementById('dataSaidaVolta').min = dataChegadaIda;
-            }
-
-            // Data de Chegada Volta: min = Data de Saída Volta
-            if (dataSaidaVolta) {
-                document.getElementById('dataChegadaVolta').min = dataSaidaVolta;
+            for (const direcao of retorno ? ['Ida','Volta'] : ['Ida']) {
+                const saida = document.getElementById('dataSaida'+direcao), chegada = document.getElementById('dataChegada'+direcao);
+                const h1 = document.getElementById('horaSaida'+direcao), h2 = document.getElementById('horaChegada'+direcao);
+                DateFields.setError(h2, '');
+                if (saida.value && saida.value === chegada.value && h1.value && h2.value && h2.value <= h1.value) {
+                    DateFields.setError(h2, 'A chegada deve ser posterior à saída. Confira também a data de chegada.');
+                }
             }
         }
+        document.getElementById('formCotacao').addEventListener('input', event => {
+            if (['date','time'].includes(event.target.type)) atualizarCalendarios();
+        });
 
         // Toggle paradas IDA
         function toggleParadasIda() {
@@ -892,13 +902,17 @@
                 toggleTipoCotacao();
             }
 
+            atualizarCalendarios();
             modalCotacao.show();
         }
 
         // Salvar cotação
         async function salvarCotacao() {
             const form = document.getElementById('formCotacao');
+            atualizarCalendarios();
             if (!form.checkValidity()) {
+                const invalido = [...form.elements].find(el => el.willValidate && !el.validity.valid);
+                if (invalido) DateFields.focus(invalido);
                 form.reportValidity();
                 return;
             }

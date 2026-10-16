@@ -10,7 +10,7 @@ async function app() {
     beforeParse(w) { require('../../tests/fixtures/card-rates.cjs').install(w); w.HTMLElement.prototype.scrollIntoView = () => {}; w.alert = () => {}; }
   });
   const w = dom.window;
-  for (const file of ['passenger-pricing.js','airport-timezones.js','flight-time.js','timing-form.js']) w.eval(fs.readFileSync(path.join(root, 'js', file), 'utf8'));
+  for (const file of ['passenger-pricing.js','airport-timezones.js','flight-time.js','date-fields.js','timing-form.js']) w.eval(fs.readFileSync(path.join(root, 'js', file), 'utf8'));
   if (w.document.readyState === 'loading') await new Promise(resolve => w.document.addEventListener('DOMContentLoaded', resolve, { once: true }));
   const el = id => w.document.getElementById(id);
   const set = (id, value) => {

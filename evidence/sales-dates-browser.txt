@@ -1,0 +1,5 @@
+PASS native conversion: updated original ID, retained fields, cent profit, focused error and idempotent save.
+PASS native date keyboard segments and sequential four-digit year typing: 2027-12-15
+PASS proposal native dates: incomplete year preserved and suggested, year rollover and connection chronology.
+PASS new past travel blocked, desktop and mobile screenshots saved.
+PASS 4 browser groups; no JavaScript errors; zero operational or production requests.

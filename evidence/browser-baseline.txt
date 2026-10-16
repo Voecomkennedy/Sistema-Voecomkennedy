@@ -1,0 +1,2 @@
+REPRODUCED main: quick client completion creates another ID and saving fails at the link guard.
+REPRODUCED main: a new trip accepts a past departure.

@@ -86,7 +86,7 @@
                             </div>
                         </form>
                         <p id="propostaEstado" class="text-muted small" role="status">Selecione um cliente e salve. O PDF salva esta cotação antes de gerar o arquivo. Use Nova proposta para criar outro orçamento.</p>
-                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261015-pix1" class="proposal-frame" style="height:1350px"></iframe>
+                        <iframe id="quadroProposta" title="Editor da proposta completa" data-src="cotador/index.html?embedded=1&amp;v=20261016-dates1" class="proposal-frame" style="height:1350px"></iframe>
                     </div>
                 </details>
             </div>
@@ -509,6 +509,9 @@
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
     <script src="js/storage.js?v=16"></script>
+    <script src="cotador/js/date-fields.js?v=1"></script>
+    <script src="cotador/js/airport-timezones.js?v=20260924-1"></script>
+    <script src="cotador/js/flight-time.js?v=20260924-1"></script>
     <script src="js/utils.js?v=11"></script>
     <script src="cotador/js/passenger-pricing.js?v=1"></script>
     <script src="cotador/js/proposal-pdf.js?v=20261015-pix1"></script>
@@ -587,6 +590,7 @@
         function toggleVolta() {
             const tipoViagem = document.getElementById('tipoViagem').value;
             document.getElementById('secaoVolta').style.display = tipoViagem === 'ida-volta' ? 'block' : 'none';
+            atualizarCalendarios();
         }
 
         // Preencher bagagem automaticamente
@@ -605,56 +609,81 @@
             campoBagagem.value = bagagens[tarifa] || '';
         }
 
-        // Calcular tempo de voo (automático, mas pode ser editado manualmente)
+        // Reuse the editor's airport-local clock conversion. Unknown zones need manual review.
+        const temposCotacaoAutomaticos = new WeakMap();
+        function pontosVooCotacao(tipo) {
+            const direcao = tipo === 'ida' ? 'Ida' : 'Volta';
+            const origem = document.getElementById('origemCotacao').value;
+            const destino = document.getElementById('destinoCotacao').value;
+            return (tipo === 'ida' ? [origem,destino] : [destino,origem]).map((airport,i) => ({
+                airport,
+                zone: window.AIRPORT_TIMEZONES?.[FlightTime.airportCode(airport)],
+                date: document.getElementById((i ? 'dataChegada' : 'dataSaida')+direcao).value,
+                time: document.getElementById((i ? 'horaChegada' : 'horaSaida')+direcao).value
+            }));
+        }
+        function duracaoVooCotacao(tipo) {
+            const pontos = pontosVooCotacao(tipo);
+            if (!pontos.every(p => p.zone && DateFields.parse(p.date) && p.time)) return null;
+            return FlightTime.elapsed(...pontos);
+        }
         function calcularTempoVoo(tipo) {
-            const prefixo = tipo === 'ida' ? 'Ida' : 'Volta';
-            const dataSaida = document.getElementById(`dataSaida${prefixo}`).value;
-            const horaSaida = document.getElementById(`horaSaida${prefixo}`).value;
-            const dataChegada = document.getElementById(`dataChegada${prefixo}`).value;
-            const horaChegada = document.getElementById(`horaChegada${prefixo}`).value;
-
-            if (!dataSaida || !horaSaida || !dataChegada || !horaChegada) return;
-
-            const inicio = new Date(`${dataSaida} ${horaSaida}`);
-            const fim = new Date(`${dataChegada} ${horaChegada}`);
-            const diff = fim - inicio;
-
-            if (diff <= 0) {
-                document.getElementById(`tempoTotal${prefixo}`).value = 'Erro: chegada antes da saída';
-                return;
-            }
-
-            const horas = Math.floor(diff / (1000 * 60 * 60));
-            const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-            // Só atualiza se o campo estiver vazio ou se for o cálculo automático
-            const campoTempo = document.getElementById(`tempoTotal${prefixo}`);
-            if (!campoTempo.value || campoTempo.value.includes('Erro:')) {
-                campoTempo.value = `${horas}h ${minutos}min`;
+            const campo = document.getElementById(tipo === 'ida' ? 'tempoTotalIda' : 'tempoTotalVolta');
+            const automatico = !campo.value || campo.value.startsWith('Erro:') || campo.value === temposCotacaoAutomaticos.get(campo);
+            if (!automatico) return; // Explicitly entered or restored historical duration.
+            try {
+                const duracao = duracaoVooCotacao(tipo);
+                campo.value = duracao?.text || '';
+                temposCotacaoAutomaticos.set(campo,campo.value);
+            } catch (error) {
+                campo.value = 'Erro: ' + error.message;
+                temposCotacaoAutomaticos.set(campo,campo.value);
             }
         }
 
-        // Atualizar minDate dos calendários de forma inteligente
+        // Validate civil dates first, then airport instants. Never compare clocks across zones.
         function atualizarCalendarios() {
-            const dataSaidaIda = document.getElementById('dataSaidaIda').value;
-            const dataChegadaIda = document.getElementById('dataChegadaIda').value;
-            const dataSaidaVolta = document.getElementById('dataSaidaVolta').value;
-
-            // Data de Chegada Ida: min = Data de Saída Ida
-            if (dataSaidaIda) {
-                document.getElementById('dataChegadaIda').min = dataSaidaIda;
+            const ida = document.getElementById('dataSaidaIda');
+            const chegadaIda = document.getElementById('dataChegadaIda');
+            const volta = document.getElementById('dataSaidaVolta');
+            const chegadaVolta = document.getElementById('dataChegadaVolta');
+            const retorno = document.getElementById('tipoViagem').value === 'ida-volta';
+            document.querySelectorAll('#secaoVolta input, #secaoVolta select, #secaoVolta textarea').forEach(el => {
+                el.disabled = !retorno;
+                if (!retorno) DateFields.setError(el,'');
+            });
+            for (const el of [ida,chegadaIda,volta,chegadaVolta]) { el.removeAttribute('min'); DateFields.setError(el,''); }
+            for (const direcao of ['Ida','Volta']) {
+                DateFields.setError(document.getElementById('horaChegada'+direcao),'');
+                DateFields.setError(document.getElementById('horaSaida'+direcao),'');
             }
-
-            // Data de Saída Volta: min = Data de Chegada Ida
-            if (dataChegadaIda) {
-                document.getElementById('dataSaidaVolta').min = dataChegadaIda;
+            for (const id of ['dataSaidaVolta','dataChegadaVolta','horaSaidaVolta','horaChegadaVolta']) document.getElementById(id).required = retorno;
+            DateFields.validate(ida, {required:true, min:cotacaoEditandoId ? '' : DateFields.today(), label:'A ida de uma nova viagem'});
+            DateFields.validate(chegadaIda, {required:true});
+            if (retorno) {
+                DateFields.validate(volta, {required:true}); DateFields.validate(chegadaVolta, {required:true});
+                // Arrival outbound and departure inbound share the destination airport.
+                DateFields.order(volta, chegadaIda.value, 'A volta não pode ser anterior à chegada da ida.');
+                const hChegada = document.getElementById('horaChegadaIda').value;
+                const hVolta = document.getElementById('horaSaidaVolta');
+                if (!volta.validationMessage && volta.value && volta.value === chegadaIda.value && hChegada && hVolta.value && hVolta.value <= hChegada) {
+                    DateFields.setError(hVolta,'A volta deve sair depois da chegada da ida no aeroporto de destino.');
+                }
             }
-
-            // Data de Chegada Volta: min = Data de Saída Volta
-            if (dataSaidaVolta) {
-                document.getElementById('dataChegadaVolta').min = dataSaidaVolta;
+            for (const tipo of retorno ? ['ida','volta'] : ['ida']) {
+                try { duracaoVooCotacao(tipo); }
+                catch (error) { DateFields.setError(document.getElementById(tipo === 'ida' ? 'horaChegadaIda' : 'horaChegadaVolta'),error.message); }
             }
         }
+        function validarEdicaoHorarioCotacao(event) {
+            if (['tempoTotalIda','tempoTotalVolta'].includes(event.target.id)) temposCotacaoAutomaticos.delete(event.target);
+            if (['date','time'].includes(event.target.type) || ['origemCotacao','destinoCotacao'].includes(event.target.id)) {
+                atualizarCalendarios(); calcularTempoVoo('ida');
+                if (document.getElementById('tipoViagem').value === 'ida-volta') calcularTempoVoo('volta');
+            }
+        }
+        document.getElementById('formCotacao').addEventListener('input', validarEdicaoHorarioCotacao);
+        document.getElementById('formCotacao').addEventListener('change', validarEdicaoHorarioCotacao);
 
         // Toggle paradas IDA
         function toggleParadasIda() {
@@ -837,6 +866,7 @@
 
         // Abrir modal
         function abrirModalCotacao(cotacaoId = null) {
+            ['tempoTotalIda','tempoTotalVolta'].forEach(id => temposCotacaoAutomaticos.delete(document.getElementById(id)));
             cotacaoEditandoId = cotacaoId;
             StorageManager.abrirEditor('COTACOES', cotacaoId);
 
@@ -892,13 +922,17 @@
                 toggleTipoCotacao();
             }
 
+            atualizarCalendarios();
             modalCotacao.show();
         }
 
         // Salvar cotação
         async function salvarCotacao() {
             const form = document.getElementById('formCotacao');
+            atualizarCalendarios();
             if (!form.checkValidity()) {
+                const invalido = [...form.elements].find(el => el.willValidate && !el.validity.valid);
+                if (invalido) DateFields.focus(invalido);
                 form.reportValidity();
                 return;
             }
@@ -939,7 +973,8 @@
             }
 
             // Coletar dados das paradas de VOLTA
-            const temConexaoVolta = document.getElementById('temConexaoVolta').value;
+            const retorno = document.getElementById('tipoViagem').value === 'ida-volta';
+            const temConexaoVolta = retorno ? document.getElementById('temConexaoVolta').value : 'direto';
             const paradasVolta = [];
             if (temConexaoVolta !== 'direto') {
                 for (let i = 1; i <= parseInt(temConexaoVolta); i++) {
@@ -977,11 +1012,11 @@
                 paradasIda: paradasIda,
 
                 // Voo de VOLTA
-                dataSaidaVolta: document.getElementById('dataSaidaVolta').value,
-                horaSaidaVolta: document.getElementById('horaSaidaVolta').value,
-                dataChegadaVolta: document.getElementById('dataChegadaVolta').value,
-                horaChegadaVolta: document.getElementById('horaChegadaVolta').value,
-                tempoTotalVolta: document.getElementById('tempoTotalVolta').value,
+                dataSaidaVolta: retorno ? document.getElementById('dataSaidaVolta').value : '',
+                horaSaidaVolta: retorno ? document.getElementById('horaSaidaVolta').value : '',
+                dataChegadaVolta: retorno ? document.getElementById('dataChegadaVolta').value : '',
+                horaChegadaVolta: retorno ? document.getElementById('horaChegadaVolta').value : '',
+                tempoTotalVolta: retorno ? document.getElementById('tempoTotalVolta').value : '',
                 temConexaoVolta: temConexaoVolta,
                 paradasVolta: paradasVolta,
 

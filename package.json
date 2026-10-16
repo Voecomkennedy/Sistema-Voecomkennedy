@@ -8,7 +8,8 @@
     "test:integrity:browser": "node scripts/test-integrity-browser.cjs",
     "test:integrity:db": "node scripts/test-integrity-db.cjs",
     "test:integrity:compact:db": "node scripts/test-integrity-compact-db.cjs",
-    "test:integrity:compact:sdk": "node scripts/test-integrity-compact-sdk.cjs"
+    "test:integrity:compact:sdk": "node scripts/test-integrity-compact-sdk.cjs",
+    "test:sales:browser": "node scripts/test-sales-dates-browser.cjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.117.3",

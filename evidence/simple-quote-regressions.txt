@@ -1,0 +1,13 @@
+✔ simple quote disables invalid hidden return, restores validation on round trip and saves only the active itinerary (365.665375ms)
+✔ simple quote saves HND-LAX with arrival clock before departure and calculates its ten-hour duration (205.147667ms)
+✔ simple quote crosses the date line in both directions and compares return at the destination local clock (124.297208ms)
+✔ simple quote retains actual impossible-flight and strict-date guards after route edits (122.210167ms)
+✔ simple quote updates an automatic duration after correcting clocks and preserves an explicit manual duration (115.305416ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1296.694125

@@ -1,0 +1,7 @@
+PASS native conversion: updated original ID, retained fields, cent profit, focused error and idempotent save.
+PASS simple quote: hidden invalid return is disabled, round-trip restores validation, one-way saves without discarded return.
+PASS simple quote: HND-LAX earlier local clock is ten hours; date-line round trip saves and still rejects premature return.
+PASS native date keyboard segments and sequential four-digit year typing: 2027-12-15
+PASS proposal native dates: incomplete year preserved and suggested, year rollover and connection chronology.
+PASS new past travel blocked, desktop and mobile screenshots saved.
+PASS 6 browser groups; no JavaScript errors; zero operational or production requests.

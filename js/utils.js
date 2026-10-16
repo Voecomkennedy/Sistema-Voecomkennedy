@@ -67,7 +67,7 @@ const Utils = {
         const txt = n.toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }).replace(/[^\d.,]/g, '');
+        }).replace(/[^\d.,-]/g, '');
         return 'R$ ' + txt;
     },
 
@@ -97,6 +97,16 @@ const Utils = {
             data: `${valor.getFullYear()}-${pad(valor.getMonth() + 1)}-${pad(valor.getDate())}`,
             hora: `${pad(valor.getHours())}:${pad(valor.getMinutes())}`
         };
+    },
+
+    dataHoraBrasilParaInputs(date = new Date()) {
+        const valor = date instanceof Date ? date : new Date(date);
+        if (isNaN(valor.getTime())) return { data: '', hora: '' };
+        const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        }).formatToParts(valor).map(p => [p.type, p.value]));
+        return { data: `${parts.year}-${parts.month}-${parts.day}`, hora: `${parts.hour}:${parts.minute}` };
     },
 
     formatCPF(cpf) {

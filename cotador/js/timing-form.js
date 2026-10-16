@@ -8,9 +8,10 @@
   const addedFields = { proposta: [], voucher: [] };
   const dates = new Map();
   let restoring = false;
-  const localToday = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); };
+  let historicalProposal = false;
+  const localToday = () => DateFields.today();
   function setAuto(id, next) {
-    const el = $(id); if (!el || !next || restoring) return;
+    const el = $(id); if (!el || !next || restoring || (el.type === 'date' && !DateFields.parse(next))) return;
     const state = dates.get(id);
     if ((!state && !el.value) || (state?.source === 'auto' && el.value === state.value)) {
       el.value = next; dates.set(id, { source: 'auto', value: next });
@@ -29,7 +30,7 @@
       const suffix = direction === 'ida' ? '' : '-v';
       const [from,to] = proposalRoute(direction);
       const depTime = value('p-hora-dep' + suffix), arrTime = value('p-hora-cheg' + suffix);
-      if (departure && depTime && arrTime && zone(from) && zone(to)) {
+      if (DateFields.parse(departure) && depTime && arrTime && zone(from) && zone(to)) {
         const choices = [-1,0,1,2].flatMap(delta => {
           const d = new Date(departure + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + delta);
           const candidate = d.toISOString().slice(0,10);
@@ -190,6 +191,7 @@
   }
   function restore(section, saved) {
     restoring = true;
+    if (section === 'proposta') historicalProposal = true;
     const data = saved?.version === 1 ? saved : null;
     const nativeDates = section === 'proposta' ? ['p-data-ida','p-data-volta'] :
       ['v-ida-data-dep1','v-ida-data-cheg1','v-ida-data-dep2','v-ida-data-cheg2',
@@ -207,17 +209,33 @@
   }
   function reset(section) {
     restore(section);
-    if (section === 'proposta') { dates.clear(); setAuto('p-data-ida', localToday()); autoDates(); refresh(); }
+    if (section === 'proposta') { historicalProposal = false; dates.clear(); setAuto('p-data-ida', localToday()); autoDates(); refresh(); }
   }
   function validate(section) {
+    if (!validateDates(section, true)) return false;
     refresh();
     const active = groups.filter(g => g.section === section && g.active());
+    const samePlace = (a,b) => a.airport && a.airport.trim().toUpperCase() === b.airport.trim().toUpperCase();
+    const localReversed = (a,b) => DateFields.parse(a.date) && DateFields.parse(b.date) &&
+      (b.date < a.date || (a.date === b.date && a.time && b.time && b.time <= a.time));
+    for (const g of active.filter(g => g.connection)) {
+      const [a,b] = g.points();
+      if (samePlace(a,b) && localReversed(a,b)) return fail(g,
+        'A saída da conexão deve ser posterior à chegada nesse aeroporto.', groupFields(g)[2] || groupFields(g)[0]);
+    }
     // A connection may be omitted entirely. Partial schedules must never produce a guessed wait.
     const invalid = active.find(g => !g.valid && (!g.connection || g.toggle.checked ||
       g.points().some(p => p.time) ||
       (g.section === 'proposta' && ['chegada','saida'].some(part =>
         dates.get('p-conexao-'+g.direction+g.connection+'-'+part+'-data')?.source === 'manual'))));
     if (invalid) return fail(invalid, 'Confira a duração: ' + invalid.status.textContent);
+    // A reviewed duration cannot override impossible schedules with known zones.
+    for (const g of active.filter(g => g.toggle.checked)) {
+      if (g.points().every(p => p.zone && DateFields.parse(p.date) && p.time)) {
+        try { g.result = FlightTime.elapsed(...g.points()); }
+        catch (error) { return fail(g, error.message); }
+      }
+    }
     // Verify the chronological order of explicit connection schedules in the complete itinerary.
     if (section === 'proposta') for (const direction of ['ida', 'volta']) {
       const total = active.find(g => g.id === 'p-duracao-' + direction);
@@ -225,7 +243,8 @@
       let previous = total.result.departure;
       for (const g of active.filter(g => g.direction === direction && g.result)) {
         if (g.result.departure <= previous || g.result.arrival >= total.result.arrival) {
-          return fail(g, 'A conexão está fora da ordem ou do período da viagem. Confira as datas e horas locais.');
+          const part = g.result.departure <= previous ? 'chegada' : 'saida';
+          return fail(g, 'A conexão está fora da ordem ou do período da viagem. Confira as datas e horas locais.', $('p-conexao-'+direction+g.connection+'-'+part+'-data'));
         }
         previous = g.result.arrival;
       }
@@ -233,22 +252,57 @@
     if (section === 'proposta') {
       const ida = active.find(g => g.id === 'p-duracao-ida');
       const volta = active.find(g => g.id === 'p-duracao-volta');
-      if (ida?.result && volta?.result && volta.result.departure <= ida.result.arrival) {
-        return fail(volta, 'A volta deve sair depois da chegada da ida, considerando os fusos. Confira as datas locais.');
+      if (ida && volta && ((ida.result && volta.result && volta.result.departure <= ida.result.arrival) ||
+          (samePlace(ida.points()[1],volta.points()[0]) && localReversed(ida.points()[1],volta.points()[0])))) {
+        const start = value('p-data-ida'), end = value('p-data-volta');
+        const next = `${Number(start.slice(0,4))+1}${end.slice(4)}`;
+        const hint = end < start && end.slice(0,4) === start.slice(0,4) && DateFields.parse(next)
+          ? ` Se a viagem cruza o ano, confira se a volta é ${DateFields.display(next)}.` : '';
+        return fail(volta, 'A volta deve sair depois da chegada da ida, considerando os fusos. Confira as datas locais.'+hint, $('p-data-volta'));
       }
     }
     return true;
   }
-  function fail(g, message) {
+  function groupFields(g) {
+    if (g.section === 'proposta') {
+      if (g.connection) return ['chegada-data','chegada-hora','saida-data','saida-hora'].map(t => $('p-conexao-'+g.direction+g.connection+'-'+t));
+      const direction = g.id.endsWith('volta') ? 'volta' : 'ida', suffix = direction === 'ida' ? '' : '-v';
+      return [$('p-data-'+direction),$('p-hora-dep'+suffix),$('p-data-chegada-'+direction),$('p-hora-cheg'+suffix)];
+    }
+    const match = g.id.match(/^v-(ida|volta)-dur([12])$/);
+    if (match) return ['data-dep','hora-dep','data-cheg','hora-cheg'].map(t => $('v-'+match[1]+'-'+t+match[2]));
+    return [$('v-'+g.direction+'-data-dep2'),$('v-'+g.direction+'-hora-dep2')];
+  }
+  function validateDates(section, report = false) {
+    const active = groups.filter(g => g.section === section && g.active());
+    const all = [...new Set(groups.filter(g => g.section === section).flatMap(groupFields))].filter(Boolean);
+    all.forEach(el => DateFields.setError(el,''));
+    const fields = [...new Set(active.flatMap(g => {
+      // Omitted connection schedules may be left blank, including with a manual wait.
+      if (g.connection && !g.points().some(p => p.time) && !groupFields(g).some(el => el?.type === 'date' && dates.get(el.id)?.source === 'manual')) return [];
+      return groupFields(g);
+    }))].filter(Boolean);
+    for (const el of fields) {
+      if (el.type !== 'date') continue;
+      const min = section === 'proposta' && el.id === 'p-data-ida' && !historicalProposal ? localToday() : '';
+      DateFields.validate(el, {required: true, min, label:'A ida de uma nova viagem'});
+    }
+    const invalid = fields.find(el => el.validationMessage);
+    if (invalid && report) return DateFields.focus(invalid);
+    return !invalid;
+  }
+  function fail(g, message, field = null) {
     showToast(message); g.status.textContent = message;
-    g.output.closest('details')?.setAttribute('open', '');
-    g.output.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    g.output.focus(); return false;
+    const fields = groupFields(g).filter(Boolean);
+    const target = field || fields.find(el => !el.value || el.validity.badInput) || fields.find(el => el.type === 'date' && /chegada|dep2/.test(el.id)) || fields[0];
+    if (target) { DateFields.setError(target,message); DateFields.focus(target); }
+    else { g.output.scrollIntoView({block:'center'}); g.output.focus(); }
+    return false;
   }
   window.TimingUI = { refresh, snapshot, restore, reset, validate };
   document.addEventListener('DOMContentLoaded', () => {
     initProposal(); initVoucher(); setAuto('p-data-ida', localToday()); autoDates(); refresh(); window.TimingUI.ready = true;
-    document.addEventListener('input', event => { trackDate(event); autoDates(); refresh(); });
-    document.addEventListener('change', event => { trackDate(event); autoDates(); refresh(); });
+    document.addEventListener('input', event => { trackDate(event); autoDates(); refresh(); validateDates('proposta'); validateDates('voucher'); });
+    document.addEventListener('change', event => { trackDate(event); autoDates(); refresh(); validateDates('proposta'); validateDates('voucher'); });
   });
 })();

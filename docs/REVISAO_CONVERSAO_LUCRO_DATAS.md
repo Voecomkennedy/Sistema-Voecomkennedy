@@ -57,3 +57,16 @@ Nenhuma escrita foi feita no Supabase de produção, nenhuma venda real foi fina
 Não houve push, PR ou deploy. A publicação correta deste repositório é GitHub Pages; não foi usado Netlify. Não foram executadas rotinas de pós-venda nem enviadas mensagens. Não foi alterado o painel separado de ofertas, nem criada VM. As cópias anteriores do repositório foram preservadas; esta revisão usa clone isolado na pasta da tarefa.
 
 Após revisar e publicar, o responsável pode abrir a cotação e usar **Completar cadastro do cliente vinculado**, conferir os dados e concluir a conversão. Esta revisão não toma essa decisão pela venda real.
+
+## Correção após revisão independente de b240fba
+
+Os dois achados P2 no formulário simples foram corrigidos:
+
+1. Ao mudar para Só ida, todos os controles da seção de volta são desativados e têm os erros customizados removidos. O preenchimento permanece no formulário para alternar novamente para Ida e Volta, quando os campos voltam a ser validados. Ao salvar Só ida, o registro não recebe dados do trecho descartado. Fechar e abrir outro formulário não retém esses erros.
+2. O formulário simples passou a reutilizar `FlightTime` e o mapa existente de fusos dos aeroportos para calcular duração e validar a cronologia. Deixou de comparar relógios de aeroportos distintos e datas locais de saída/chegada. HND → LAX em 01/02/2027, 17:00 → 10:00 locais, é aceito e calcula 10h00. A viagem AKL → LAX com chegada no dia local anterior e volta posterior à chegada também salva corretamente. A volta ainda precisa sair após a chegada da ida no aeroporto de destino. Durações calculadas automaticamente acompanham a correção dos horários; valores digitados manualmente ou restaurados do histórico permanecem sob controle do usuário. Sem fuso reconhecido, a duração depende de conferência manual, sem inferência baseada no fuso do dispositivo.
+
+Foram adicionados cinco testes DOM em `tests/panel-dom.test.cjs` e dois grupos no roteiro de Chrome. Além dos dois achados, eles conferem a alternância de volta para Ida e Volta, preservação dos campos, reabertura, salvamento sem trecho inativo, linha internacional de data, correção de rota, bloqueio de cronologia impossível e ano incompleto.
+
+Conjunto final aprovado: **218 testes do painel + 55 do cotador**, **42 cenários de integridade** e **6 grupos nativos no Chrome**; zero requisições operacionais ou à produção. Os logs na pasta `evidence` foram atualizados; `simple-quote-regressions.txt` registra os cinco novos testes isoladamente e `simple-quote-date-line.png` mostra o formulário válido na virada internacional de data.
+
+Esta rodada alterou somente arquivos locais e fixtures sintéticas. Não houve push, deploy ou acesso à venda real.

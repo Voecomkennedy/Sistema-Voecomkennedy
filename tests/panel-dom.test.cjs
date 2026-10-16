@@ -473,3 +473,105 @@ test('legacy quote opens in its original editor without rewriting the stored rec
         assert.equal(saved.observacao, 'Revisado');
     } finally { a.dom.window.close(); }
 });
+
+function fillSimpleQuote(w, values = {}) {
+    w.abrirModalCotacao();
+    const fields = {
+        nomeCliente:'Cliente sintético', origemCotacao:'BSB', destinoCotacao:'GRU', companhiaCotacao:'LATAM',
+        tipoTarifa:'Light', quantidadeMilhas:'1000', valorMilheiro:'25', tipoViagem:'ida-volta',
+        dataSaidaIda:'2027-02-01', dataChegadaIda:'2027-02-01', horaSaidaIda:'10:00', horaChegadaIda:'12:00',
+        dataSaidaVolta:'2027-02-05', dataChegadaVolta:'2027-02-05', horaSaidaVolta:'12:00', horaChegadaVolta:'14:00',
+        ...values
+    };
+    for (const [id,value] of Object.entries(fields)) w.document.getElementById(id).value=value;
+    // Closed synthetic pricing isolates this regression from card rate loading.
+    for (const [id,value] of Object.entries({valorPorPessoa:'R$ 1.000,00',valorTotalPix:'R$ 1.000,00',valorParcela:'R$ 100,00',totalParcelado:'R$ 1.000,00'})) w.document.getElementById(id).textContent=value;
+    w.toggleVolta();
+}
+
+test('simple quote disables invalid hidden return, restores validation on round trip and saves only the active itinerary', async () => {
+    const a=await page('cotacoes');
+    try {
+        const w=a.window,d=w.document;
+        fillSimpleQuote(w,{horaChegadaVolta:'10:00'});
+        assert.equal(d.getElementById('horaChegadaVolta').validity.customError,true);
+        await w.salvarCotacao();assert.equal(w.StorageManager.getCotacoes().length,0);
+        d.getElementById('tipoViagem').value='so-ida';w.toggleVolta();
+        assert.equal(d.getElementById('secaoVolta').style.display,'none');
+        for(const el of d.querySelectorAll('#secaoVolta input, #secaoVolta select')) {
+            assert.equal(el.disabled,true);assert.equal(el.willValidate,false);assert.equal(el.validity.customError,false);
+        }
+        assert.equal(d.getElementById('horaChegadaVolta').value,'10:00');
+        d.getElementById('tipoViagem').value='ida-volta';w.toggleVolta();
+        assert.equal(d.getElementById('horaChegadaVolta').disabled,false);
+        assert.equal(d.getElementById('horaChegadaVolta').validity.customError,true);
+        d.getElementById('tipoViagem').value='so-ida';w.toggleVolta();
+        assert.equal(d.getElementById('formCotacao').checkValidity(),true);
+        await w.salvarCotacao();const saved=w.StorageManager.getCotacoes()[0];
+        assert.equal(saved.tipoViagem,'so-ida');assert.equal(saved.dataSaidaVolta,'');assert.equal(saved.horaChegadaVolta,'');
+        assert.equal(saved.paradasVolta.length,0);
+        fillSimpleQuote(w);assert.equal(d.getElementById('formCotacao').checkValidity(),true);
+    } finally {a.dom.window.close();}
+});
+
+test('simple quote saves HND-LAX with arrival clock before departure and calculates its ten-hour duration', async () => {
+    const a=await page('cotacoes');
+    try {
+        const w=a.window,d=w.document;
+        fillSimpleQuote(w,{tipoViagem:'so-ida',origemCotacao:'HND',destinoCotacao:'LAX',horaSaidaIda:'17:00',horaChegadaIda:'10:00'});
+        w.calcularTempoVoo('ida');
+        assert.equal(d.getElementById('horaChegadaIda').validationMessage,'');
+        assert.equal(d.getElementById('tempoTotalIda').value,'10h 00m');
+        assert.equal(d.getElementById('formCotacao').checkValidity(),true);
+        await w.salvarCotacao();assert.equal(w.StorageManager.getCotacoes()[0].tempoTotalIda,'10h 00m');
+    } finally {a.dom.window.close();}
+});
+
+test('simple quote crosses the date line in both directions and compares return at the destination local clock', async () => {
+    const a=await page('cotacoes');
+    try {
+        const w=a.window,d=w.document;
+        fillSimpleQuote(w,{origemCotacao:'AKL',destinoCotacao:'LAX',
+            dataSaidaIda:'2027-02-02',horaSaidaIda:'01:00',dataChegadaIda:'2027-02-01',horaChegadaIda:'16:00',
+            dataSaidaVolta:'2027-02-01',horaSaidaVolta:'23:00',dataChegadaVolta:'2027-02-03',horaChegadaVolta:'12:00'});
+        assert.equal(d.getElementById('formCotacao').checkValidity(),true);
+        d.getElementById('horaSaidaVolta').value='15:00';w.atualizarCalendarios();
+        assert.match(d.getElementById('horaSaidaVolta').validationMessage,/depois da chegada/);
+        await w.salvarCotacao();assert.equal(w.StorageManager.getCotacoes().length,0);
+        d.getElementById('horaSaidaVolta').value='23:00';w.atualizarCalendarios();
+        await w.salvarCotacao();assert.equal(w.StorageManager.getCotacoes().length,1);
+        assert.equal(w.StorageManager.getCotacoes()[0].dataChegadaIda,'2027-02-01');
+    } finally {a.dom.window.close();}
+});
+
+test('simple quote retains actual impossible-flight and strict-date guards after route edits', async () => {
+    const a=await page('cotacoes');
+    try {
+        const w=a.window,d=w.document;
+        fillSimpleQuote(w,{tipoViagem:'so-ida',horaSaidaIda:'12:00',horaChegadaIda:'10:00'});
+        assert.match(d.getElementById('horaChegadaIda').validationMessage,/posterior/);
+        await w.salvarCotacao();assert.equal(w.StorageManager.getCotacoes().length,0);
+        d.getElementById('origemCotacao').value='HND';d.getElementById('destinoCotacao').value='LAX';
+        d.getElementById('origemCotacao').dispatchEvent(new w.Event('input',{bubbles:true}));
+        assert.equal(d.getElementById('horaChegadaIda').validationMessage,'');
+        d.getElementById('dataSaidaIda').value='0027-02-01';w.atualizarCalendarios();
+        assert.match(d.getElementById('dataSaidaIda').validationMessage,/quatro dígitos/);
+        assert.equal(d.getElementById('dataSaidaIda').value,'0027-02-01');
+    } finally {a.dom.window.close();}
+});
+
+test('simple quote updates an automatic duration after correcting clocks and preserves an explicit manual duration', async () => {
+    const a=await page('cotacoes');
+    try {
+        const w=a.window,d=w.document;
+        fillSimpleQuote(w,{origemCotacao:'AKL',destinoCotacao:'LAX',
+            dataSaidaIda:'2027-02-02',horaSaidaIda:'01:00',dataChegadaIda:'2027-02-01',horaChegadaIda:'16:00',
+            dataSaidaVolta:'2027-02-01',horaSaidaVolta:'15:00',dataChegadaVolta:'2027-02-03',horaChegadaVolta:'12:00'});
+        w.calcularTempoVoo('volta');assert.equal(d.getElementById('tempoTotalVolta').value,'24h 00m');
+        const time=d.getElementById('horaSaidaVolta');time.value='23:00';time.dispatchEvent(new w.Event('input',{bubbles:true}));
+        assert.equal(d.getElementById('tempoTotalVolta').value,'16h 00m');
+        const manual=d.getElementById('tempoTotalVolta');manual.value='16h 30m';manual.dispatchEvent(new w.Event('input',{bubbles:true}));
+        time.value='22:00';time.dispatchEvent(new w.Event('input',{bubbles:true}));
+        assert.equal(manual.value,'16h 30m');
+    } finally {a.dom.window.close();}
+});

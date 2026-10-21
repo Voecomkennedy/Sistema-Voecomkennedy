@@ -78,6 +78,16 @@
                                     <div id="contatoPropostaTelefoneAjuda" class="form-text">Com DDD. Para outro país, inclua + e o código do país.</div>
                                 </div>
                             </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label" for="contatoPropostaOrigem">Origem inicial do cliente</label>
+                                <select class="form-select" id="contatoPropostaOrigem">
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="grupo_promocoes">Grupo de promoções</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
                             <p id="contatoPropostaEstado" class="small mt-3 mb-2" role="status" aria-live="polite"></p>
                             <div id="contatosPropostaEncontrados" class="mb-3" hidden></div>
                             <div class="d-flex flex-wrap gap-2">
@@ -508,7 +518,8 @@
 
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
-    <script src="js/storage.js?v=16"></script>
+    <script src="js/atribuicao.js?v=1"></script>
+    <script src="js/storage.js?v=17"></script>
     <script src="cotador/js/date-fields.js?v=1"></script>
     <script src="cotador/js/airport-timezones.js?v=20260924-1"></script>
     <script src="cotador/js/flight-time.js?v=20260924-1"></script>
@@ -1871,7 +1882,7 @@
     <script src="js/card-rates-ui.js?v=1"></script>
     <script src="js/client-picker.js?v=2"></script>
     <script src="js/proposal-integration.js?v=20261015-pix1"></script>
-    <script src="js/proposal-contact.js?v=3"></script>
+    <script src="js/proposal-contact.js?v=4"></script>
     <script>AppBootstrap.iniciar();</script>
 </body>
 </html>

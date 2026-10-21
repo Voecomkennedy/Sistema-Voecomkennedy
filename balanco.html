@@ -72,7 +72,30 @@
                             <option value="nao_informado">Não informada</option>
                         </select>
                     </div>
-                    <div class="col-xl-3 col-md-4">
+                    <div class="col-md-3 mb-2">
+                                <label class="form-label" for="origemClienteBalanco">Origem inicial do cliente</label>
+                                <select class="form-select" id="origemClienteBalanco" onchange="atualizarBalanco()">
+                                    <option value="todos">Todos</option>
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="grupo_promocoes">Grupo de promoções</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label" for="origemVendaBalanco">Origem da venda</label>
+                                <select class="form-select" id="origemVendaBalanco" onchange="atualizarBalanco()">
+                                    <option value="todos">Todos</option>
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="alerta_grupo">Alerta do grupo</option>
+                                    <option value="atendimento_direto">Atendimento direto</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="col-xl-3 col-md-4">
                         <label class="form-label" for="buscaBalanco">Cliente ou localizador</label>
                         <input class="form-control" id="buscaBalanco" placeholder="Buscar na seleção" oninput="atualizarBalanco()">
                     </div>
@@ -108,6 +131,7 @@
             Revise as vendas pendentes antes de usar estes números em um fechamento.
         </div>
 
+        <p id="contagemOrigens" class="text-muted" role="status"></p>
         <section class="row g-3 mb-2 panel-stat-strip" aria-label="Indicadores financeiros">
             <div class="col-xxl col-lg-4 col-md-6">
                 <div class="card balance-metric h-100"><div class="card-body">
@@ -198,7 +222,8 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/storage.js?v=16"></script>
+    <script src="js/atribuicao.js?v=1"></script>
+    <script src="js/storage.js?v=17"></script>
     <script src="js/utils.js?v=11"></script>
     <script>
         let vendasClassificadasExibidas = [];
@@ -262,7 +287,10 @@
             const busca = normalizarTexto(document.getElementById('buscaBalanco').value.trim());
             const pessoas = new Map(StorageManager.getPessoas().map(pessoa => [String(pessoa.id), pessoa]));
 
-            return StorageManager.getVendas().filter(venda => {
+            return Atribuicao.filtrar(StorageManager.getVendas(), StorageManager.getPessoas(), {
+                cliente: document.getElementById('origemClienteBalanco').value,
+                venda: document.getElementById('origemVendaBalanco').value
+            }).filter(venda => {
                 if (!vendaNoPeriodo(venda, limites)) return false;
                 if (tipo !== 'todos' && tipoDaVenda(venda) !== tipo) return false;
                 if (situacao !== 'todas') {
@@ -289,6 +317,10 @@
 
         function atualizarBalanco() {
             const selecionadas = filtrarVendas();
+            const pacotes = selecionadas.filter(v => tipoDaVenda(v) === 'pacote').length;
+            const naoInformadas = selecionadas.filter(v => Atribuicao.normalizar(v.origemVenda) === 'nao_informado').length;
+            const passagens = selecionadas.length - pacotes;
+            document.getElementById('contagemOrigens').textContent = `${selecionadas.length} ${selecionadas.length === 1 ? 'venda' : 'vendas'} na seleção: ${pacotes} ${pacotes === 1 ? 'pacote' : 'pacotes'} e ${passagens} ${passagens === 1 ? 'passagem' : 'passagens'}. Origem da venda não informada: ${naoInformadas}. Valores abaixo seguem a cobertura financeira.`;
             const balanco = StorageManager.calcularBalancoConfiavel(selecionadas);
             const geral = StorageManager.calcularBalancoConfiavel(StorageManager.getVendas());
             vendasClassificadasExibidas = [...balanco.classificadas].sort((a, b) => String(b.dataVenda).localeCompare(String(a.dataVenda)));
@@ -372,7 +404,7 @@
                 return `<tr>
                     <td>${Utils.escapeHTML(Utils.formatDate(venda.dataVenda))}</td>
                     <td><strong>${Utils.escapeHTML(codigos)}</strong></td>
-                    <td>${Utils.escapeHTML(cliente?.nome || 'Cliente não identificado')}</td>
+                    <td>${Utils.escapeHTML(cliente?.nome || 'Cliente não identificado')}<small class="d-block text-muted">Origem inicial: ${Utils.escapeHTML(Atribuicao.rotulo('cliente', cliente?.origemCliente))}<br>Origem da venda: ${Utils.escapeHTML(Atribuicao.rotulo('venda', venda.origemVenda))}</small></td>
                     <td>${Utils.escapeHTML(statusVenda[financeiro.statusVenda] || 'Não informada')}</td>
                     <td>${Utils.escapeHTML(statusPagamento[financeiro.statusPagamento] || 'Não informado')}</td>
                     <td>${Utils.escapeHTML(Utils.formatCurrency(financeiro.receitaProjetada))}</td>
@@ -392,7 +424,7 @@
         function exportarBalanco() {
             if (!vendasClassificadasExibidas.length) return;
             const pessoas = new Map(StorageManager.getPessoas().map(pessoa => [String(pessoa.id), pessoa]));
-            const cabecalho = ['Data da venda', 'Localizador', 'Cliente', 'Tipo', 'Situação', 'Pagamento', 'Vendido líquido', 'Custo líquido', 'Recebido líquido', 'Resultado realizado', 'Saldo a receber'];
+            const cabecalho = ['Data da venda', 'Localizador', 'Cliente', 'Tipo', 'Origem inicial do cliente', 'Origem da venda', 'Situação', 'Pagamento', 'Vendido líquido', 'Custo líquido', 'Recebido líquido', 'Resultado realizado', 'Saldo a receber'];
             const linhas = vendasClassificadasExibidas.map(venda => {
                 const cliente = pessoas.get(String(venda.clienteId));
                 const financeiro = StorageManager.obterResumoFinanceiroVenda(venda);
@@ -402,6 +434,8 @@
                     StorageManager.getCodigosVenda(venda).join(' | '),
                     cliente?.nome || '',
                     tipoDaVenda(venda),
+                    Atribuicao.rotulo('cliente', cliente?.origemCliente),
+                    Atribuicao.rotulo('venda', venda.origemVenda),
                     financeiro.statusVenda,
                     financeiro.statusPagamento,
                     financeiro.receitaProjetada.toFixed(2).replace('.', ','),

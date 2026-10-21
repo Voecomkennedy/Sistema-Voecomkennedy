@@ -124,7 +124,7 @@
                 showMatches(exact.length ? exact : matches, fingerprint, !exact.length);
                 return;
             }
-            const contact = await StorageManager.gravar('addPessoa', [{ tipo: 'cliente', nome, telefone }]);
+            const contact = await StorageManager.gravar('addPessoa', [{ tipo: 'cliente', nome, telefone, origemCliente: $('contatoPropostaOrigem').value }]);
             if (!contact?.id || !StorageManager.getClienteById(contact.id)) throw new Error('Não foi possível gravar o contato. Tente novamente.');
             if (version !== formVersion) {
                 $('propostaEstado').textContent = 'O contato foi cadastrado. O formulário mudou durante a gravação; selecione o contato quando for usá-lo.';

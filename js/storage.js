@@ -1,5 +1,10 @@
 // Storage Manager - Funções para gerenciar LocalStorage
 const StorageManager = {
+    validarOrigemComercial(tipo, valor) {
+        const comuns = ['nao_informado', 'indicacao', 'instagram', 'outro'];
+        const opcoes = [...comuns, ...(tipo === 'cliente' ? ['grupo_promocoes'] : ['alerta_grupo', 'atendimento_direto'])];
+        if (!opcoes.includes(valor)) throw new Error('Origem comercial inválida. Selecione uma opção.');
+    },
     _editores: new Map(),
     abrirEditor(name, id) {
         if (id != null) this._editores.set(this.KEYS[name] + ':' + String(id),
@@ -83,6 +88,7 @@ const StorageManager = {
     },
 
     addVenda(venda) {
+        if (Object.hasOwn(venda, 'origemVenda')) this.validarOrigemComercial('venda', venda.origemVenda);
         const vendas = this.getTodasVendas();
         const agora = new Date().toISOString();
         venda.id = this.generateId();
@@ -95,6 +101,7 @@ const StorageManager = {
     },
 
     updateVenda(id, vendaAtualizada) {
+        if (Object.hasOwn(vendaAtualizada, 'origemVenda')) this.validarOrigemComercial('venda', vendaAtualizada.origemVenda);
         const vendas = this.getTodasVendas();
         const index = vendas.findIndex(v => v.id === id);
         if (index !== -1) {
@@ -434,6 +441,7 @@ const StorageManager = {
     },
 
     normalizarPessoa(pessoa) {
+        if (pessoa && Object.hasOwn(pessoa, 'origemCliente')) this.validarOrigemComercial('cliente', pessoa.origemCliente);
         if (pessoa && pessoa.nome && typeof Utils !== 'undefined' && Utils.formatarNomeProprio) {
             pessoa.nome = Utils.formatarNomeProprio(pessoa.nome);
         }

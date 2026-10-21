@@ -267,6 +267,17 @@
                                 </div>
                             </div>
 
+                            <div class="col-md-6 mb-3" id="campoOrigemCliente" hidden>
+                                <label class="form-label" for="origemCliente">Origem inicial do cliente</label>
+                                <select class="form-select" id="origemCliente">
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="grupo_promocoes">Grupo de promoções</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+
                             <!-- Observações (para todos) -->
                             <div class="row mt-4">
                                 <div class="col-12 mb-3">
@@ -291,7 +302,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Custom JS -->
-    <script src="js/storage.js?v=16"></script>
+    <script src="js/atribuicao.js?v=1"></script>
+    <script src="js/storage.js?v=17"></script>
     <script src="js/utils.js?v=11"></script>
 
     <script>
@@ -359,6 +371,7 @@
             const camposComuns = document.getElementById('camposComuns');
             const camposPessoaFisica = document.getElementById('camposPessoaFisica');
             const camposFornecedor = document.getElementById('camposFornecedor');
+            document.getElementById('campoOrigemCliente').hidden = tipo !== 'cliente';
 
             if (!tipo) {
                 camposComuns.style.display = 'none';
@@ -418,6 +431,7 @@
                 }
 
                 document.getElementById('observacoes').value = pessoa.observacoes || '';
+                document.getElementById('origemCliente').value = Atribuicao.normalizar(pessoa.origemCliente);
             } else {
                 document.getElementById('tituloModal').innerHTML = '<i class="bi bi-person-plus me-2" aria-hidden="true"></i>Novo cadastro';
                 document.getElementById('formPessoa').reset();
@@ -472,6 +486,7 @@
             }
 
             pessoa.observacoes = document.getElementById('observacoes').value;
+            if (tipo === 'cliente') pessoa.origemCliente = document.getElementById('origemCliente').value;
 
             if (pessoaEditandoId) {
                 // Uma edição de telefone/documento não reformata um nome legado intacto.

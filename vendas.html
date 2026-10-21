@@ -141,6 +141,37 @@
                                     <i class="bi bi-x-circle"></i>
                                 </button>
                             </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label" for="filtroProduto">Produto</label>
+                                <select class="form-select" id="filtroProduto" onchange="aplicarFiltros()">
+                                    <option value="todos">Todos</option>
+                                    <option value="aereo">Passagem</option>
+                                    <option value="pacote">Pacote</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label" for="filtroOrigemCliente">Origem inicial do cliente</label>
+                                <select class="form-select" id="filtroOrigemCliente" onchange="aplicarFiltros()">
+                                    <option value="todos">Todos</option>
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="grupo_promocoes">Grupo de promoções</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label" for="filtroOrigemVenda">Origem da venda</label>
+                                <select class="form-select" id="filtroOrigemVenda" onchange="aplicarFiltros()">
+                                    <option value="todos">Todos</option>
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="alerta_grupo">Alerta do grupo</option>
+                                    <option value="atendimento_direto">Atendimento direto</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
                             <div class="col-12 mt-2">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="incluirArquivadas" onchange="aplicarFiltros()">
@@ -313,7 +344,17 @@
                                             <label for="novoClienteEmail" class="form-label">E-mail</label>
                                             <input type="email" class="form-control" id="novoClienteEmail">
                                         </div>
-                                    </div>
+                                    </div><div class="col-12 mb-3">
+                                <label class="form-label" for="novoClienteOrigem">Origem inicial do cliente</label>
+                                <select class="form-select" id="novoClienteOrigem">
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="grupo_promocoes">Grupo de promoções</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+
                                     <div class="d-flex justify-content-end gap-2">
                                         <button type="button" class="btn btn-outline-secondary btn-sm"
                                                 onclick="cancelarCadastroClienteRapido()">
@@ -362,7 +403,18 @@
 
                         <!-- Tipo da Venda -->
                         <h6 class="mb-3 mt-4"><i class="bi bi-tags-fill me-2"></i>Tipo da Venda</h6>
-                        <div class="row">
+                        <div class="col-12 mb-3">
+                                <label class="form-label" for="origemVenda">Origem desta venda</label>
+                                <select class="form-select" id="origemVenda">
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="alerta_grupo">Alerta do grupo</option>
+                                    <option value="atendimento_direto">Atendimento direto</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="row">
                             <div class="col-md-12 mb-3">
                                 <div class="btn-group" role="group" aria-label="Tipo da venda">
                                     <input type="radio" class="btn-check" name="tipoVenda" id="tipoVendaAereo" value="aereo" checked onchange="toggleTipoVenda()">
@@ -637,14 +689,14 @@
                                 <div class="form-check form-switch mb-2">
                                     <input class="form-check-input" type="checkbox" id="dataVendaAutomatica" checked onchange="toggleDataVenda()">
                                     <label class="form-check-label" for="dataVendaAutomatica">
-                                        <strong>Data Automática</strong> <small class="text-muted">(usar data/hora atual)</small>
+                                        <strong>Usar data/hora atual</strong> <small class="text-muted">Desmarque para lançar uma venda de outro dia.</small>
                                     </label>
                                 </div>
                             </div>
                         </div>
                         <div class="row" id="campoDataVendaManual" style="display: none;">
                             <div class="col-md-6 mb-3">
-                                <label for="dataVendaManual" class="form-label">Data da Venda *</label>
+                                <label for="dataVendaManual" class="form-label">Data da Venda *</label><div class="form-text">Informe quando a venda aconteceu, inclusive em dias anteriores. A data do cadastro é registrada separadamente.</div>
                                 <input type="date" class="form-control" id="dataVendaManual">
                                 <small class="text-muted">Quando a venda foi realmente efetuada</small>
                             </div>
@@ -831,7 +883,8 @@
 
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
-    <script src="js/storage.js?v=16"></script>
+    <script src="js/atribuicao.js?v=1"></script>
+    <script src="js/storage.js?v=17"></script>
     <script src="cotador/js/date-fields.js?v=1"></script>
     <script src="js/utils.js?v=12"></script>
 
@@ -1335,6 +1388,7 @@
                 .trim();
 
             document.getElementById('novoClienteNome').value = vinculado?.nome || nomeAtual || '';
+            document.getElementById('novoClienteOrigem').value = Atribuicao.normalizar(vinculado?.origemCliente);
             document.getElementById('listaClientesResultado').style.display = 'none';
             bloco.style.display = 'block';
             document.getElementById('novoClienteNome').focus();
@@ -1351,6 +1405,7 @@
             document.getElementById('novoClienteNascimento').value = '';
             document.getElementById('novoClienteTelefone').value = '';
             document.getElementById('novoClienteEmail').value = '';
+            document.getElementById('novoClienteOrigem').value = 'nao_informado';
         }
 
         async function salvarCadastroClienteRapido() {
@@ -1375,7 +1430,8 @@
                 cpf,
                 dataNascimento: document.getElementById('novoClienteNascimento').value,
                 telefone: document.getElementById('novoClienteTelefone').value,
-                email: document.getElementById('novoClienteEmail').value
+                email: document.getElementById('novoClienteEmail').value,
+                origemCliente: document.getElementById('novoClienteOrigem').value
             };
             let cliente;
             const editando = clienteCadastroEditandoId !== null;
@@ -1916,6 +1972,18 @@
             return { data: '', hora: '' };
         }
 
+        // Reabrir um registro antigo não deve reformatar sua data/hora ao mudar o canal.
+        function preservarDataHoraHistorica(venda, original) {
+            const exibido = obterDataHoraOriginalVenda(original);
+            if (venda.dataVenda === exibido.data && venda.horaVenda === exibido.hora) {
+                for (const campo of ['dataVenda', 'horaVenda']) {
+                    if (Object.hasOwn(original, campo)) venda[campo] = original[campo];
+                    else delete venda[campo];
+                }
+            }
+            return venda;
+        }
+
         function limparVinculoCotacao() {
             if (cotacaoCarregamentoTimer !== null) clearTimeout(cotacaoCarregamentoTimer);
             cotacaoCarregamentoTimer = null;
@@ -1930,6 +1998,7 @@
         }
 
         function prepararFormularioVendaLimpo() {
+            document.getElementById('origemVenda').value = 'nao_informado';
             vendaSalvaNoFormularioId = null;
             financeiroHistorico = null;
             limparVinculoCotacao();
@@ -2022,7 +2091,8 @@
             const volta = document.getElementById('dataVolta');
             const dataManual = document.getElementById('dataVendaManual');
             const hoje = DateFields.today();
-            DateFields.validate(ida, {required:true, min:vendaEditandoId ? '' : hoje, label:'A ida de uma nova viagem'});
+            // Vendas registram viagens já vendidas, inclusive depois do embarque.
+            DateFields.validate(ida, {required:true, label:'A data de embarque'});
             DateFields.validate(volta);
             DateFields.order(volta, ida.value, 'A data de volta não pode ser anterior à ida.');
             if (document.getElementById('dataVendaAutomatica').checked) DateFields.setError(dataManual,'');
@@ -2089,6 +2159,7 @@
 
                 // Preencher campos básicos
                 document.getElementById('vendaId').value = venda.id;
+                document.getElementById('origemVenda').value = Atribuicao.normalizar(venda.origemVenda);
                 const localizadores = Array.isArray(venda.localizadores) && venda.localizadores.length
                     ? venda.localizadores
                     : (venda.localizador ? [venda.localizador] : []);
@@ -2271,6 +2342,7 @@
             const tipoVenda = document.querySelector('input[name="tipoVenda"]:checked')?.value || 'aereo';
             const venda = {
                 tipoVenda: tipoVenda,
+                origemVenda: document.getElementById('origemVenda').value,
                 itensPacote: tipoVenda === 'pacote' ? obterItensPacoteVenda() : {},
                 nomeHotel: tipoVenda === 'pacote'
                     ? document.getElementById('nomeHotelPacote').value.trim()
@@ -2327,6 +2399,8 @@
                 dataVenda: dataVenda,
                 horaVenda: horaVenda
             };
+
+            if (vendaEditandoId && financeiroHistorico && !dataAutomatica) preservarDataHoraHistorica(venda, financeiroHistorico.registro);
 
             if (financeiroHistorico && document.getElementById('valorVenda').value === financeiroHistorico.venda && document.getElementById('valorCusto').value === financeiroHistorico.custo) {
                 for (const campo of ['valorVenda','valorCusto','valorLucro']) {
@@ -2902,6 +2976,11 @@
                     : StorageManager.normalizarStatusPagamento(venda) === statusPagamento);
             }
 
+            vendas = Atribuicao.filtrar(vendas, StorageManager.getPessoas(), {
+                produto: document.getElementById('filtroProduto').value,
+                cliente: document.getElementById('filtroOrigemCliente').value,
+                venda: document.getElementById('filtroOrigemVenda').value
+            });
             // Filtro de busca
             const busca = _normalizar(document.getElementById('busca').value).trim();
             if (busca) {
@@ -3064,8 +3143,8 @@
 
                 html += `
                     <tr class="${venda.excluidaEm ? 'table-secondary opacity-75' : ''}">
-                        <td><strong>${Utils.escapeHTML(localizadoresDisplay)}</strong>${tipoVendaBadge}</td>
-                        <td>${Utils.escapeHTML(cliente ? cliente.nome : 'N/A')}</td>
+                        <td><strong>${Utils.escapeHTML(localizadoresDisplay)}</strong>${tipoVendaBadge}<small class="d-block text-muted">Origem da venda: ${Utils.escapeHTML(Atribuicao.rotulo('venda', venda.origemVenda))}</small></td>
+                        <td>${Utils.escapeHTML(cliente ? cliente.nome : 'N/A')}<small class="d-block text-muted">Origem inicial: ${Utils.escapeHTML(Atribuicao.rotulo('cliente', cliente?.origemCliente))}</small></td>
                         <td>${Utils.escapeHTML(nomeOrigem)} → ${Utils.escapeHTML(nomeDestino)}</td>
                         <td>${Utils.escapeHTML(Utils.formatDate(venda.dataEmbarque))}</td>
                         <td>${voltaTexto}</td>
@@ -3081,6 +3160,7 @@
                                    <i class="bi bi-file-pdf action-icon" style="color: #dc3545;" onclick="gerarPDF(${Utils.literalJSSeguro(venda.id)})" title="Gerar PDF"></i>
                                    <i class="bi bi-arrow-counterclockwise action-icon text-warning" onclick="abrirMovimentoFinanceiro(${Utils.literalJSSeguro(venda.id)})" title="Cancelamento ou reembolso"></i>
                                    <i class="bi bi-archive action-icon delete" onclick="excluirVenda(${Utils.literalJSSeguro(venda.id)})" title="Arquivar"></i>`}
+                            <button type="button" class="btn btn-sm btn-outline-secondary" aria-label="Editar origem desta venda" onclick="abrirOrigemVenda(${Utils.literalJSSeguro(venda.id)})">Origem</button>
                             <i class="bi bi-clock-history action-icon text-secondary" onclick="abrirHistoricoVenda(${Utils.literalJSSeguro(venda.id)})" title="Ver histórico"></i>
                         </td>
                     </tr>
@@ -3090,8 +3170,37 @@
             tbody.innerHTML = html;
         }
 
+
+        let origemVendaEditandoId = null;
+        let modalOrigemVenda = null;
+        function abrirOrigemVenda(id) {
+            const venda = StorageManager.getVendaById(id);
+            if (!venda) return;
+            origemVendaEditandoId = id;
+            StorageManager.abrirEditor('VENDAS', id);
+            document.getElementById('origemVendaRetroativa').value = Atribuicao.normalizar(venda.origemVenda);
+            document.getElementById('erroOrigemVenda').textContent = '';
+            if (!modalOrigemVenda) modalOrigemVenda = new bootstrap.Modal(document.getElementById('modalOrigemVenda'));
+            modalOrigemVenda.show();
+        }
+        async function salvarOrigemVendaRetroativa() {
+            const button = document.getElementById('salvarOrigemVenda');
+            if (button.disabled || origemVendaEditandoId === null) return;
+            button.disabled = true;
+            try {
+                const origemVenda = Atribuicao.validar('venda', document.getElementById('origemVendaRetroativa').value);
+                const venda = await StorageManager.gravar('updateVenda', [origemVendaEditandoId, {origemVenda}]);
+                if (!venda) throw new Error('Venda não encontrada.');
+                modalOrigemVenda.hide();
+                origemVendaEditandoId = null;
+                carregarVendas();
+            } catch (error) { document.getElementById('erroOrigemVenda').textContent = error.message; }
+            finally { button.disabled = false; }
+        }
+
         // Limpar filtros
         function limparFiltros() {
+            for (const id of ['filtroProduto','filtroOrigemCliente','filtroOrigemVenda']) document.getElementById(id).value = 'todos';
             document.getElementById('busca').value = '';
             document.getElementById('filtroPeriodo').value = 'todos';
             document.getElementById('ordenacao').value = 'data_desc';
@@ -3104,6 +3213,18 @@
             carregarVendas();
         }
     </script>
+    <div class="modal fade" id="modalOrigemVenda" tabindex="-1" aria-labelledby="tituloOrigemVenda" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 id="tituloOrigemVenda" class="modal-title">Origem da venda</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div><div class="modal-body"><p>Classificação manual. Datas, cliente, valores e dados da viagem serão preservados.</p><div class="col-12 mb-3">
+                                <label class="form-label" for="origemVendaRetroativa">Origem desta venda</label>
+                                <select class="form-select" id="origemVendaRetroativa">
+                                    <option value="nao_informado">Não informado</option>
+                                    <option value="alerta_grupo">Alerta do grupo</option>
+                                    <option value="atendimento_direto">Atendimento direto</option>
+                                    <option value="indicacao">Indicação</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                            </div>
+                            <p id="erroOrigemVenda" role="status" class="text-danger"></p></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" id="salvarOrigemVenda" onclick="salvarOrigemVendaRetroativa()">Salvar origem</button></div></div></div></div>
     <!-- CLOUD-AUTH: integracao com a nuvem (Supabase) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=10"></script>

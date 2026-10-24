@@ -57,6 +57,27 @@
             color: #7f8c8d;
             font-size: 0.9em;
         }
+        .sale-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            min-inline-size: 8rem;
+            max-inline-size: 11rem;
+        }
+        .sale-tags .badge {
+            max-inline-size: 100%;
+            white-space: normal;
+            text-align: start;
+        }
+        .sale-origin-tag {
+            background-color: #475569;
+            color: #fff;
+        }
+        .sale-origin-tag[data-origin="alerta_grupo"] { background-color: #1A3D63; }
+        .sale-origin-tag[data-origin="atendimento_direto"] { background-color: #166534; }
+        .sale-origin-tag[data-origin="indicacao"] { background-color: #6D28D9; }
+        .sale-origin-tag[data-origin="instagram"] { background-color: #9D174D; }
+        .sale-origin-tag[data-origin="outro"] { background-color: #92400E; }
     </style>
     <link rel="stylesheet" href="css/card-rates.css?v=1">
     <link rel="stylesheet" href="css/panel-direction.css?v=1">
@@ -3138,12 +3159,24 @@
                     localizadoresDisplay = 'N/A';
                 }
                 const tipoVendaBadge = (venda.tipoVenda || 'aereo') === 'pacote'
-                    ? '<br><span class="badge bg-info text-dark mt-1">Pacote</span>'
+                    ? '<span class="badge bg-info text-dark">Pacote</span>'
                     : '';
+                const origemVendaInformada = Object.hasOwn(Atribuicao.venda, venda.origemVenda)
+                    && venda.origemVenda !== 'nao_informado';
+                const origemVendaRotulo = Utils.escapeHTML(Atribuicao.rotulo('venda', origemVendaInformada ? venda.origemVenda : null));
+                const origemVendaBadge = origemVendaInformada
+                    ? `<span class="badge sale-origin-tag" data-origin="${Utils.escapeHTML(venda.origemVenda)}" aria-label="Origem da venda: ${origemVendaRotulo}" title="Origem da venda: ${origemVendaRotulo}">${origemVendaRotulo}</span>`
+                    : '';
+                const tagsVenda = tipoVendaBadge || origemVendaBadge
+                    ? `<div class="sale-tags mt-1">${tipoVendaBadge}${origemVendaBadge}</div>`
+                    : '';
+                const origemVendaNaoInformada = origemVendaInformada
+                    ? ''
+                    : `<small class="d-block text-muted sale-origin-unknown">Origem da venda: ${origemVendaRotulo}</small>`;
 
                 html += `
                     <tr class="${venda.excluidaEm ? 'table-secondary opacity-75' : ''}">
-                        <td><strong>${Utils.escapeHTML(localizadoresDisplay)}</strong>${tipoVendaBadge}<small class="d-block text-muted">Origem da venda: ${Utils.escapeHTML(Atribuicao.rotulo('venda', venda.origemVenda))}</small></td>
+                        <td><strong>${Utils.escapeHTML(localizadoresDisplay)}</strong>${tagsVenda}${origemVendaNaoInformada}</td>
                         <td>${Utils.escapeHTML(cliente ? cliente.nome : 'N/A')}<small class="d-block text-muted">Origem inicial: ${Utils.escapeHTML(Atribuicao.rotulo('cliente', cliente?.origemCliente))}</small></td>
                         <td>${Utils.escapeHTML(nomeOrigem)} → ${Utils.escapeHTML(nomeDestino)}</td>
                         <td>${Utils.escapeHTML(Utils.formatDate(venda.dataEmbarque))}</td>

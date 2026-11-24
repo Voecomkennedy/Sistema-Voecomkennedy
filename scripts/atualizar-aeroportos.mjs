@@ -2,8 +2,8 @@ import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const URL_AEROPORTOS = 'https://davidmegginson.github.io/ourairports-data/airports.csv';
-const URL_PAISES = 'https://davidmegginson.github.io/ourairports-data/countries.csv';
+const URL_AEROPORTOS = 'https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv';
+const URL_PAISES = 'https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/countries.csv';
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function parseCsv(texto) {
@@ -72,7 +72,10 @@ const prioridadeTipo = new Map([
 
 const candidatos = aeroportosFonte
     .filter(aeroporto =>
-        aeroporto.scheduled_service === 'yes' &&
+        // No Brasil a marcação de voo regular da fonte é incompleta (ex.: PLU,
+        // JSO, VAG ficavam de fora), então entram todos os aeroportos com IATA.
+        (aeroporto.scheduled_service === 'yes' ||
+            (aeroporto.iso_country === 'BR' && ['large_airport', 'medium_airport', 'small_airport'].includes(aeroporto.type))) &&
         aeroporto.type !== 'closed' &&
         /^[A-Z]{3}$/.test(aeroporto.iata_code || '')
     )
@@ -112,7 +115,7 @@ const aeroportos = [...porCodigo.values()].sort((a, b) => {
 const dataGeracao = new Date().toISOString().slice(0, 10);
 const conteudo = `// Base de aeroportos comerciais com código IATA.
 // Fonte pública: OurAirports (${URL_AEROPORTOS})
-// Gerado em: ${dataGeracao}. Filtro: em operação, serviço regular e código IATA de 3 letras.
+// Gerado em: ${dataGeracao}. Filtro: em operação, serviço regular (no Brasil, todos os aeroportos) e código IATA de 3 letras.
 // A base oficial completa da IATA é licenciada; valide casos críticos com a companhia aérea.
 const AEROPORTOS_IATA = [
 ${aeroportos.map(aeroporto => `    ${JSON.stringify(aeroporto)}`).join(',\n')}

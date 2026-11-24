@@ -905,7 +905,8 @@
     <!-- Custom JS -->
     <script src="js/aeroportos-data.js?v=10"></script>
     <script src="js/atribuicao.js?v=1"></script>
-    <script src="js/storage.js?v=18"></script>
+    <script src="js/storage.js?v=19"></script>
+    <script src="js/select-busca.js?v=1"></script>
     <script src="cotador/js/date-fields.js?v=1"></script>
     <script src="js/utils.js?v=12"></script>
 
@@ -1538,14 +1539,16 @@
 
         // Carregar companhias aéreas
         function carregarCompanhias() {
-            const companhias = StorageManager.getCompanhias();
-            const optionsHTML = companhias.map(c => `<option value="${Utils.escapeHTML(c.codigo)}">${Utils.escapeHTML(c.codigo)} - ${Utils.escapeHTML(c.nome)}</option>`).join('');
+            const optionsHTML = StorageManager.opcoesCompanhiasHTML();
 
             const select = document.getElementById('companhiaAerea');
             select.innerHTML = '<option value="">Selecione a companhia</option>' + optionsHTML;
 
             const selectVolta = document.getElementById('companhiaAereaVolta');
             selectVolta.innerHTML = '<option value="">Selecione a companhia</option>' + optionsHTML;
+
+            SelectBusca.aplicarTodos(['companhiaAerea', 'companhiaAereaVolta'],
+                { placeholder: 'Buscar companhia...', vazio: 'Nenhuma companhia encontrada' });
         }
 
         function toggleCompanhiaVolta() {

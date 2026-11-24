@@ -4440,18 +4440,37 @@ const IATA_DB = [
   ['PPT','Papeete','Aeroporto Internacional de Tahiti'],
 ];
 
+function normIata(v) {
+  return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+}
+
+function escIata(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function iataAC(input, listId) {
-  const q = input.value.toUpperCase().trim();
+  const q = normIata(input.value);
   const list = document.getElementById(listId);
   if (!q || q.length < 2) { list.classList.remove('open'); return; }
-  const matches = IATA_DB.filter(([code,city,airport]) =>
-    code.startsWith(q) || city.toUpperCase().includes(q) || airport.toUpperCase().includes(q)
-  ).slice(0, 8);
+  // Código exato primeiro, depois cidades que começam com o termo, depois o resto.
+  const scored = [];
+  IATA_DB.forEach(([code, city, airport], idx) => {
+    const c = normIata(city), a = normIata(airport);
+    let rank = -1;
+    if (code === q) rank = 0;
+    else if (code.startsWith(q)) rank = 1;
+    else if (c.startsWith(q)) rank = 2;
+    else if (c.includes(q)) rank = 3;
+    else if (a.includes(q)) rank = 4;
+    if (rank >= 0) scored.push({ rank, idx, code, city, airport });
+  });
+  const matches = scored.sort((x, y) => x.rank - y.rank || x.idx - y.idx).slice(0, 8);
   if (!matches.length) { list.classList.remove('open'); return; }
-  list.innerHTML = matches.map(([code,city,airport]) =>
-    `<div class="iata-item" onmousedown="selectIata(event,'${input.id}','${listId}','${code}','${city}')">
-      <span class="iata-code">${code}</span>
-      <div><div style="font-weight:600;font-size:.78rem">${city}</div><div class="iata-name">${airport}</div></div>
+  list.innerHTML = matches.map(({ code, city, airport }) =>
+    `<div class="iata-item" data-code="${escIata(code)}" data-city="${escIata(city)}"
+          onmousedown="selectIata(event,'${input.id}','${listId}',this.dataset.code,this.dataset.city)">
+      <span class="iata-code">${escIata(code)}</span>
+      <div><div style="font-weight:600;font-size:.78rem">${escIata(city)}</div><div class="iata-name">${escIata(airport)}</div></div>
     </div>`
   ).join('');
   list.classList.add('open');
@@ -6093,6 +6112,22 @@ document.addEventListener('DOMContentLoaded', refreshCardRates);
 <script src="js/date-fields.js?v=1"></script>
 <script src="js/timing-form.js?v=20261016-1"></script>
 <script src="js/airline-logos.js?v=20260924-1"></script>
+<script src="../js/aeroportos-data.js?v=11"></script>
+<script>
+// Completa a lista do editor com a base geral de aeroportos do sistema
+// (a mesma de Vendas e Cotações), mantendo os nomes já revisados daqui.
+(function () {
+  if (!Array.isArray(window.AEROPORTOS_IATA)) return;
+  const conhecidos = new Set(IATA_DB.map(r => r[0]));
+  window.AEROPORTOS_IATA.forEach(a => {
+    if (!conhecidos.has(a.codigo)) {
+      IATA_DB.push([a.codigo, a.nome, a.aeroporto]);
+      conhecidos.add(a.codigo);
+    }
+    if (a.pais === 'Brasil') BR_AIRPORTS.add(a.codigo);
+  });
+})();
+</script>
 <script src="../js/select-busca.js?v=1"></script>
 <style>
 .sb-list{border-radius:16px;border-color:rgba(179,207,229,.92);box-shadow:var(--sh-lg)}
